@@ -1,0 +1,26 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "9ogd_0dRf9rgHrxkbtmoM"
+uri = "file://artifacts/mobile/assets/images/icon.png"
+type = "image"
+title = "rpg_idle_icon"
+
+[[generated]]
+id = "3Z6oO9wpQUdVg83LJ1y0D"
+uri = "file://artifacts/mobile/assets/images/zone_forest.png"
+type = "image"
+title = "forest_zone"
+
+[[generated]]
+id = "nGTeu9n198Ey9MH_jCa49"
+uri = "file://artifacts/mobile/assets/images/zone_cave.png"
+type = "image"
+title = "cave_zone"
+
+[[generated]]
+id = "T9wjncX7hPy0K0Z-GcaP1"
+uri = "file://artifacts/mobile/assets/images/zone_castle.png"
+type = "image"
+title = "castle_zone"
