@@ -2,9 +2,11 @@ import { ElementId, ResistanceMap } from "./elements";
 
 export type RaceId =
   | "anao_montanha" | "anao_runico" | "elfo_negro" | "alto_elfo" | "orc"
-  | "humano" | "meio_elfo" | "meio_orc" | "diaconato" | "fada"
+  | "humano" | "meio_elfo" | "meio_orc" | "draconato" | "fada"
   | "halfling" | "harpia" | "sereia" | "vampiro" | "homem_lobo"
   | "homem_tigre" | "homem_gato" | "homem_lagarto" | "kitsune";
+
+export type Gender = "masculino" | "feminino";
 
 export interface RaceStats {
   hp: number;
@@ -35,6 +37,7 @@ export interface RaceDef {
   name: string;
   emoji: string;
   color: string;
+  category: string;
   lore: string;
   primaryElements: ElementId[];
   learnableElements: ElementId[];
@@ -54,9 +57,10 @@ export const RACES: RaceDef[] = [
   {
     id: "anao_montanha",
     name: "Anão das Montanhas",
-    emoji: "⛏️",
+    emoji: "⚒️",
     color: "#A1887F",
-    lore: "Forjados pelo ferro das montanhas, os Anões das Montanhas são imbatíveis em resistência. Seu corpo rígido é como a rocha que habitam.",
+    category: "TANQUE",
+    lore: "Forjados pelo ferro das montanhas, os Anões são imbatíveis em resistência. Seu corpo rígido é como a rocha que habitam — inabaláveis.",
     primaryElements: ["terra", "metal"],
     learnableElements: ["fogo", "trovao", "arcano"],
     stats: { ...EMPTY_STATS, hp: 60, armor: 12, atkF: 8, critBonus: 0.02, luck: 0.0001, dodge: 0.001, speed: -2, hpRegen: 2 },
@@ -71,8 +75,9 @@ export const RACES: RaceDef[] = [
   {
     id: "anao_runico",
     name: "Anão Rúnico",
-    emoji: "🔣",
+    emoji: "🔮",
     color: "#7E57C2",
+    category: "MAGO",
     lore: "Mestres das runas ancestrais, os Anões Rúnicos gravaram a magia em seus próprios corpos. Cada runa em sua pele é um feitiço latente.",
     primaryElements: ["terra", "runico"],
     learnableElements: ["arcano", "metal", "trovao"],
@@ -90,6 +95,7 @@ export const RACES: RaceDef[] = [
     name: "Elfo Negro",
     emoji: "🌑",
     color: "#7C4DFF",
+    category: "ASSASSINO",
     lore: "Nascidos nas sombras das florestas proibidas, os Elfos Negros dominam o veneno e a escuridão. Seus ataques são silenciosos como a morte.",
     primaryElements: ["escuridao", "veneno"],
     learnableElements: ["sombra", "vento", "arcano"],
@@ -107,6 +113,7 @@ export const RACES: RaceDef[] = [
     name: "Alto Elfo",
     emoji: "☀️",
     color: "#FFD54F",
+    category: "MAGO",
     lore: "Aristocratas da magia, os Altos Elfos nasceram com afinidade inata à luz e ao arcano. São os mais poderosos usuários de magia do mundo.",
     primaryElements: ["luz", "arcano"],
     learnableElements: ["sagrado", "divino", "vento"],
@@ -116,7 +123,7 @@ export const RACES: RaceDef[] = [
       { name: "Raio de Pureza", type: "ativa", description: "Feixe de luz pura que causa dano dobrado contra criaturas das trevas.", icon: "sun" },
       { name: "Barreira Arcana", type: "ativa", description: "Escudo mágico que absorve 50% do HP máximo em dano mágico.", icon: "shield" },
       { name: "Chuva de Meteoros", type: "ativa", description: "Invoca meteoros arcanos que atingem o inimigo 5 vezes.", icon: "star" },
-      { name: "Graça Élfica", type: "passiva", description: "Feitiços têm 20% de chance de causar 50% mais dano sem custo extra.", icon: "sparkles" } as RaceAbility,
+      { name: "Graça Élfica", type: "passiva", description: "Feitiços têm 20% de chance de causar 50% mais dano sem custo extra.", icon: "star" } as RaceAbility,
     ],
   },
   {
@@ -124,6 +131,7 @@ export const RACES: RaceDef[] = [
     name: "Orc",
     emoji: "🪓",
     color: "#558B2F",
+    category: "GUERREIRO",
     lore: "Guerreiros nascidos para a batalha, os Orcs canalizam a raiva tribal em força bruta incomparável. Quanto mais sangue, mais fortes ficam.",
     primaryElements: ["fogo", "terra"],
     learnableElements: ["metal", "trovao", "caos"],
@@ -141,6 +149,7 @@ export const RACES: RaceDef[] = [
     name: "Humano",
     emoji: "👤",
     color: "#FF9800",
+    category: "VERSÁTIL",
     lore: "Sem dons inatos, os Humanos compensam com adaptabilidade inigualável. Sua sorte e determinação os tornam imprevisíveis em batalha.",
     primaryElements: [],
     learnableElements: ["fogo", "agua", "terra", "trovao", "gelo", "vento", "escuridao", "luz"],
@@ -158,7 +167,8 @@ export const RACES: RaceDef[] = [
     name: "Meio-Elfo",
     emoji: "🌿",
     color: "#26C6DA",
-    lore: "Filhos de dois mundos, os Meio-Elfos carregam a leveza élfica com a resiliência humana. Mestres da versatilidade.",
+    category: "LADINO",
+    lore: "Filhos de dois mundos, os Meio-Elfos carregam a leveza élfica com a resiliência humana. Mestres da versatilidade e do equilíbrio.",
     primaryElements: ["luz", "vento"],
     learnableElements: ["natureza", "arcano", "agua"],
     stats: { ...EMPTY_STATS, hp: 25, atkF: 8, atkM: 8, critBonus: 0.02, dodge: 0.02, luck: 0.0001, speed: 2 },
@@ -175,6 +185,7 @@ export const RACES: RaceDef[] = [
     name: "Meio-Orc",
     emoji: "🛡️",
     color: "#8D6E63",
+    category: "GUERREIRO",
     lore: "Herdeiros da força orca e da inteligência humana, os Meio-Orcs são guerreiros pragmáticos que encontram poder no sofrimento.",
     primaryElements: ["fogo", "terra"],
     learnableElements: ["metal", "veneno", "caos"],
@@ -188,11 +199,12 @@ export const RACES: RaceDef[] = [
     ],
   },
   {
-    id: "diaconato",
-    name: "Diaconato",
+    id: "draconato",
+    name: "Draconato",
     emoji: "🐉",
     color: "#FF5722",
-    lore: "Descendentes de dragões que cruzaram com mortais, os Diaconatos carregam em suas veias o poder primordial das criaturas mais antigas do mundo.",
+    category: "GUERREIRO",
+    lore: "Descendentes de dragões que cruzaram com mortais, os Draconatos carregam em suas veias o poder primordial das criaturas mais antigas do mundo.",
     primaryElements: ["fogo", "trovao"],
     learnableElements: ["infernal", "vento", "terra", "void"],
     stats: { ...EMPTY_STATS, hp: 40, armor: 8, atkF: 12, atkM: 12, critBonus: 0.02, luck: 0.0001, dodge: 0.01, hpRegen: 1 },
@@ -209,6 +221,7 @@ export const RACES: RaceDef[] = [
     name: "Fada",
     emoji: "🧚",
     color: "#F48FB1",
+    category: "SUPORTE",
     lore: "Seres de pura energia mágica, as Fadas são imprevisíveis e encantadoras. Sua sorte é lendária e sua ilusão, impenetrável.",
     primaryElements: ["vento", "luz"],
     learnableElements: ["arcano", "natureza", "sagrado"],
@@ -226,6 +239,7 @@ export const RACES: RaceDef[] = [
     name: "Halfling",
     emoji: "🍀",
     color: "#66BB6A",
+    category: "LADINO",
     lore: "Pequenos mas extraordinariamente sortudos, os Halflings transformam o destino em sua arma mais poderosa. Nada é impossível quando a sorte está ao seu lado.",
     primaryElements: ["terra", "vento"],
     learnableElements: ["natureza", "agua", "arcano"],
@@ -243,6 +257,7 @@ export const RACES: RaceDef[] = [
     name: "Harpia",
     emoji: "🦅",
     color: "#78909C",
+    category: "ASSASSINO",
     lore: "Senhoras dos céus, as Harpias atacam em mergulho devastador antes do inimigo perceber sua presença. Velocidade é sua armadura.",
     primaryElements: ["vento", "trovao"],
     learnableElements: ["tempestade", "gelo", "escuridao"],
@@ -257,9 +272,10 @@ export const RACES: RaceDef[] = [
   },
   {
     id: "sereia",
-    name: "Sereia/Tritão",
+    name: "Sereia / Tritão",
     emoji: "🧜",
     color: "#00ACC1",
+    category: "MAGO",
     lore: "Guardiões das profundezas, Sereias e Tritões controlam correntes oceânicas e gelo abissal. Sua voz tem poder de cativar e destruir.",
     primaryElements: ["agua", "gelo"],
     learnableElements: ["tempestade", "void", "natureza"],
@@ -277,7 +293,8 @@ export const RACES: RaceDef[] = [
     name: "Vampiro",
     emoji: "🧛",
     color: "#C62828",
-    lore: "Imortais malditos que se alimentam da força vital dos outros. Cada gota de sangue roubado os torna mais poderosos.",
+    category: "ASSASSINO",
+    lore: "Imortais malditos que se alimentam da força vital dos outros. Cada gota de sangue roubado os torna mais poderosos e ávidos.",
     primaryElements: ["sangue", "escuridao"],
     learnableElements: ["sombra", "void", "caos"],
     stats: { ...EMPTY_STATS, hp: 25, atkF: 14, critBonus: 0.04, lifeSteal: 0.06, luck: 0.0002, dodge: 0.03, speed: 2, hpRegen: 1 },
@@ -294,6 +311,7 @@ export const RACES: RaceDef[] = [
     name: "Homem-Lobo",
     emoji: "🐺",
     color: "#607D8B",
+    category: "GUERREIRO",
     lore: "Amaldiçoados pela lua, os Homens-Lobo carregam a fúria bestial dentro de si. Quando a lua cheia surge, tornam-se incontroláveis e imparáveis.",
     primaryElements: ["terra", "escuridao"],
     learnableElements: ["sombra", "natureza", "sangue"],
@@ -311,6 +329,7 @@ export const RACES: RaceDef[] = [
     name: "Homem-Tigre",
     emoji: "🐯",
     color: "#F57C00",
+    category: "ASSASSINO",
     lore: "Ágeis como o vento e mortais como o fogo, os Homens-Tigre são caçadores natos. Seus críticos são lendários entre os guerreiros do mundo.",
     primaryElements: ["vento", "fogo"],
     learnableElements: ["trovao", "metal", "sombra"],
@@ -326,8 +345,9 @@ export const RACES: RaceDef[] = [
   {
     id: "homem_gato",
     name: "Homem-Gato",
-    emoji: "🐈",
+    emoji: "🐱",
     color: "#BDBDBD",
+    category: "LADINO",
     lore: "Graciosos e misteriosos, os Homens-Gato dançam entre as sombras e o vento. Jamais são pegos desprevenidos, e raramente ficam parados.",
     primaryElements: ["vento", "escuridao"],
     learnableElements: ["sombra", "arcano", "natureza"],
@@ -345,6 +365,7 @@ export const RACES: RaceDef[] = [
     name: "Homem-Lagarto",
     emoji: "🦎",
     color: "#388E3C",
+    category: "TANQUE",
     lore: "Antigos como a terra e resistentes como as pedras, os Homens-Lagarto são a muralha viva do mundo. Suas escamas defletem o que a maioria não suporta.",
     primaryElements: ["terra", "agua"],
     learnableElements: ["veneno", "metal", "natureza"],
@@ -362,6 +383,7 @@ export const RACES: RaceDef[] = [
     name: "Kitsune",
     emoji: "🦊",
     color: "#FF7043",
+    category: "MAGO",
     lore: "Espíritos-raposa de poder ancestral, os Kitsune crescem mais sábios e poderosos com cada rabo que desenvolvem. Sua astúcia é sua arma definitiva.",
     primaryElements: ["fogo", "arcano"],
     learnableElements: ["runico", "vento", "luz", "void"],

@@ -20,7 +20,7 @@ import {
   getExpToNext,
   getSkillCost,
 } from "@/constants/game";
-import { RaceId, getRaceById, LUCK_MAX, DODGE_MAX } from "@/constants/races";
+import { RaceId, Gender, getRaceById, LUCK_MAX, DODGE_MAX } from "@/constants/races";
 
 export interface EquipmentItem {
   instanceId: string;
@@ -51,6 +51,7 @@ export interface CurrentMonster {
 interface Hero {
   classId: ClassId | null;
   raceId: RaceId | null;
+  gender: Gender | null;
   level: number;
   exp: number;
   expToNext: number;
@@ -104,6 +105,7 @@ interface GameContextValue {
   isLoading: boolean;
   selectClass: (classId: ClassId) => void;
   selectRace: (raceId: RaceId) => void;
+  selectGender: (gender: Gender) => void;
   toggleBattle: () => void;
   selectZoneAndStage: (zone: number, stage: number) => void;
   equipItem: (instanceId: string) => void;
@@ -125,6 +127,7 @@ const STORAGE_KEY = "rpg_idle_v4";
 const DEFAULT_HERO: Hero = {
   classId: null,
   raceId: null,
+  gender: null,
   level: 1,
   exp: 0,
   expToNext: 100,
@@ -339,6 +342,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           parsed.battle.isActive = false;
           // Migrate old saves: add missing hero fields
           if (parsed.hero.raceId === undefined) parsed.hero.raceId = null;
+          if (parsed.hero.gender === undefined) parsed.hero.gender = null;
           if (parsed.hero.baseAtkM === undefined) parsed.hero.baseAtkM = 10;
           if (parsed.hero.luck === undefined) parsed.hero.luck = 0.0001;
           if (parsed.hero.dodge === undefined) parsed.hero.dodge = 0.001;
@@ -558,6 +562,13 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     }));
   }, []);
 
+  const selectGender = useCallback((gender: Gender) => {
+    setState((prev) => ({
+      ...prev,
+      hero: { ...prev.hero, gender },
+    }));
+  }, []);
+
   const selectClass = useCallback((classId: ClassId) => {
     const cd = CLASSES.find((c) => c.id === classId)!;
     const initialMonster = spawnMonster(1, 1);
@@ -702,6 +713,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           ...DEFAULT_HERO,
           classId: prev.hero.classId,
           raceId: prev.hero.raceId,
+          gender: prev.hero.gender,
           maxHp: cd.baseHp,
           currentHp: cd.baseHp,
           baseAtk: cd.baseAtk,
@@ -730,6 +742,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         isLoading,
         selectClass,
         selectRace,
+        selectGender,
         toggleBattle,
         selectZoneAndStage,
         equipItem,
