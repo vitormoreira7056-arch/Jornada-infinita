@@ -28,9 +28,11 @@ const C = {
   muted: "#6060A0",
   mutedLight: "#9090C0",
   danger: "#E84560",
-  dangerDim: "#E8456022",
+  dangerBg: "#E8456018",
+  dangerBorder: "#E8456044",
   success: "#34D399",
-  successDim: "#34D39922",
+  successBg: "#34D39918",
+  successBorder: "#34D39944",
 } as const;
 
 function BrandHeader({ compact = false }: { compact?: boolean }) {
@@ -43,6 +45,16 @@ function BrandHeader({ compact = false }: { compact?: boolean }) {
       </View>
       <Text style={[styles.brandTitle, compact && styles.brandTitleCompact]}>RPG IDLE</Text>
       {!compact && <Text style={styles.brandSubtitle}>Your Legend Begins</Text>}
+    </View>
+  );
+}
+
+function ErrorBanner({ message }: { message: string }) {
+  if (!message) return null;
+  return (
+    <View style={styles.errorBanner}>
+      <Feather name="alert-triangle" size={14} color={C.danger} />
+      <Text style={styles.errorBannerText}>{message}</Text>
     </View>
   );
 }
@@ -83,19 +95,8 @@ function InputField({
   return (
     <View style={styles.fieldWrapper}>
       <Text style={styles.label}>{label}</Text>
-      <View
-        style={[
-          styles.inputRow,
-          focused && styles.inputRowFocused,
-          !!error && styles.inputRowError,
-        ]}
-      >
-        <Feather
-          name={icon}
-          size={16}
-          color={focused ? C.gold : C.muted}
-          style={styles.inputIcon}
-        />
+      <View style={[styles.inputRow, focused && styles.inputRowFocused, !!error && styles.inputRowError]}>
+        <Feather name={icon} size={16} color={focused ? C.gold : C.muted} style={styles.inputIcon} />
         <TextInput
           ref={inputRef}
           style={styles.textInput}
@@ -116,15 +117,15 @@ function InputField({
         {rightElement}
       </View>
       {!!error && (
-        <View style={styles.messageRow}>
+        <View style={styles.fieldError}>
           <Feather name="alert-circle" size={12} color={C.danger} />
-          <Text style={styles.errorText}>{error}</Text>
+          <Text style={styles.fieldErrorText}>{error}</Text>
         </View>
       )}
       {!error && !!hint && (
-        <View style={styles.messageRow}>
-          <Feather name="info" size={12} color={C.muted} />
-          <Text style={styles.hintText}>{hint}</Text>
+        <View style={styles.fieldHint}>
+          <Feather name="info" size={11} color={C.muted} />
+          <Text style={styles.fieldHintText}>{hint}</Text>
         </View>
       )}
     </View>
@@ -132,7 +133,7 @@ function InputField({
 }
 
 export default function SignUpScreen() {
-  const { signUp, errors, fetchStatus } = useSignUp();
+  const { signUp } = useSignUp();
   const { isSignedIn } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -143,115 +144,184 @@ export default function SignUpScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [verifyCode, setVerifyCode] = useState("");
-  const [confirmError, setConfirmError] = useState("");
+
+  const [loading, setLoading] = useState(false);
+  const [globalError, setGlobalError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const passwordRef = useRef<TextInput>(null);
   const confirmRef = useRef<TextInput>(null);
-  const loading = fetchStatus === "fetching";
+
+  const [step, setStep] = useState<"form" | "verify">("form");
+
+  const clearErrors = () => {
+    setGlobalError("");
+    setFieldErrors({});
+  };
 
   const navigate = () => router.replace("/(tabs)" as never);
 
+  const parseClerkError = (err: unknown): { global: string; fields: Record<string, string> } => {
+    const result = { global: "", fields: {} as Record<string, string> };
+    if (!err || typeof err !== "object") {
+      result.global = "Ocorreu um erro inesperado. Tente novamente.";
+      return result;
+    }
+    const e = err as Record<string, unknown>;
+
+    if (Array.isArray(e.errors)) {
+      const clerkErrors = e.errors as Array<{ message: string; meta?: { paramName?: string } }>;
+      for (const ce of clerkErrors) {
+        const field = ce.meta?.paramName;
+        if (field) {
+          result.fields[field] = ce.message;
+        } else {
+          result.global = result.global || ce.message;
+        }
+      }
+      if (!result.global && clerkErrors.length > 0) {
+        result.global = clerkErrors[0].message;
+      }
+    } else if (typeof e.message === "string") {
+      result.global = e.message;
+    } else {
+      result.global = "Erro ao criar conta. Verifique seus dados.";
+    }
+    return result;
+  };
+
   const handleRegister = async () => {
-    setConfirmError("");
-    if (password !== confirmPassword) {
-      setConfirmError("Passwords do not match");
+    clearErrors();
+
+    if (!email.trim()) {
+      setFieldErrors({ email_address: "Por favor insira seu e-mail" });
       return;
     }
-    const { error } = await signUp.password({ emailAddress: email, password });
-    if (error) return;
-    await signUp.verifications.sendEmailCode();
+    if (password.length < 8) {
+      setFieldErrors({ password: "A senha deve ter pelo menos 8 caracteres" });
+      return;
+    }
+    if (password !== confirmPassword) {
+      setFieldErrors({ confirmPassword: "As senhas não coincidem" });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { error } = await signUp.password({ emailAddress: email.trim(), password });
+
+      if (error) {
+        const parsed = parseClerkError(error);
+        setGlobalError(parsed.global);
+        setFieldErrors(parsed.fields);
+        return;
+      }
+
+      await signUp.verifications.sendEmailCode();
+      setStep("verify");
+    } catch (err: unknown) {
+      const parsed = parseClerkError(err);
+      setGlobalError(parsed.global || "Erro de conexão. Verifique sua internet.");
+      setFieldErrors(parsed.fields);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleVerify = async () => {
-    await signUp.verifications.verifyEmailCode({ code: verifyCode });
-    if (signUp.status === "complete") {
-      await signUp.finalize({ navigate: ({ session }) => { if (!session?.currentTask) navigate(); } });
+    clearErrors();
+    if (verifyCode.length < 6) return;
+
+    setLoading(true);
+    try {
+      await signUp.verifications.verifyEmailCode({ code: verifyCode });
+
+      if (signUp.status === "complete") {
+        await signUp.finalize({
+          navigate: ({ session }) => {
+            if (!session?.currentTask) navigate();
+          },
+        });
+      } else {
+        setGlobalError("Verificação incompleta. Tente novamente.");
+      }
+    } catch (err: unknown) {
+      const parsed = parseClerkError(err);
+      setGlobalError(parsed.global || "Código inválido ou expirado. Tente novamente.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    clearErrors();
+    setLoading(true);
+    try {
+      await signUp.verifications.sendEmailCode();
+    } catch (err: unknown) {
+      setGlobalError("Não foi possível reenviar o código.");
+    } finally {
+      setLoading(false);
     }
   };
 
   if (isSignedIn) return null;
 
-  const isVerifying =
-    signUp.status === "missing_requirements" &&
-    signUp.unverifiedFields.includes("email_address") &&
-    signUp.missingFields.length === 0;
-
-  if (isVerifying) {
+  if (step === "verify") {
     return (
-      <KeyboardAvoidingView
-        style={{ flex: 1, backgroundColor: C.bg }}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-      >
-        <ScrollView
-          contentContainerStyle={{ flexGrow: 1, paddingTop: insets.top, paddingBottom: insets.bottom }}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
+      <KeyboardAvoidingView style={{ flex: 1, backgroundColor: C.bg }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+        <ScrollView contentContainerStyle={{ flexGrow: 1, paddingTop: insets.top, paddingBottom: insets.bottom }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           <BrandHeader compact />
           <View style={styles.card}>
             <View style={styles.cardHeader}>
               <View style={styles.verifyIconBadge}>
                 <Feather name="mail" size={22} color={C.gold} />
               </View>
-              <Text style={styles.cardTitle}>Verify Your Email</Text>
+              <Text style={styles.cardTitle}>Verifique seu E-mail</Text>
               <Text style={styles.cardSubtitle}>
-                We sent a 6-digit code to{"\n"}
-                <Text style={{ color: C.gold }}>{email}</Text>
+                Enviamos um código de 6 dígitos para{"\n"}
+                <Text style={{ color: C.gold, fontWeight: "600" }}>{email}</Text>
               </Text>
             </View>
 
+            <ErrorBanner message={globalError} />
+
             <View style={styles.otpWrapper}>
               <TextInput
-                style={[styles.otpInput, !!errors?.fields?.code && styles.otpInputError]}
+                style={[styles.otpInput, !!globalError && styles.otpInputError]}
                 value={verifyCode}
-                onChangeText={setVerifyCode}
+                onChangeText={(v) => { setVerifyCode(v); clearErrors(); }}
                 placeholder="000000"
                 placeholderTextColor={C.muted}
                 keyboardType="number-pad"
                 maxLength={6}
                 textAlign="center"
                 selectionColor={C.gold}
+                editable={!loading}
               />
-              {!!errors?.fields?.code && (
-                <View style={styles.messageRow}>
-                  <Feather name="alert-circle" size={12} color={C.danger} />
-                  <Text style={styles.errorText}>{errors.fields.code.message}</Text>
-                </View>
-              )}
             </View>
 
             <Pressable
-              style={({ pressed }) => [
-                styles.primaryBtn,
-                (loading || verifyCode.length < 6) && styles.primaryBtnDisabled,
-                pressed && styles.primaryBtnPressed,
-              ]}
+              style={({ pressed }) => [styles.primaryBtn, (loading || verifyCode.length < 6) && styles.primaryBtnDisabled, pressed && styles.primaryBtnPressed]}
               onPress={handleVerify}
               disabled={loading || verifyCode.length < 6}
             >
               {loading ? (
-                <ActivityIndicator size="small" color={C.bg} />
+                <><ActivityIndicator size="small" color={C.bg} /><Text style={styles.primaryBtnText}>Verificando...</Text></>
               ) : (
-                <>
-                  <Feather name="check-circle" size={16} color={C.bg} />
-                  <Text style={styles.primaryBtnText}>Confirm & Begin Quest</Text>
-                </>
+                <><Feather name="check-circle" size={16} color={C.bg} /><Text style={styles.primaryBtnText}>Confirmar e Entrar no Jogo</Text></>
               )}
             </Pressable>
 
-            <View style={styles.verifyFooter}>
-              <Text style={styles.footerText}>Didn't receive it?</Text>
-              <Pressable onPress={() => signUp.verifications.sendEmailCode()}>
-                <Text style={styles.footerLink}> Resend Code</Text>
-              </Pressable>
-            </View>
+            <Pressable style={styles.secondaryBtn} onPress={handleResend} disabled={loading}>
+              <Text style={styles.secondaryBtnText}>Não recebeu? <Text style={{ color: C.gold }}>Reenviar código</Text></Text>
+            </Pressable>
 
             <View style={styles.successBadge}>
               <Feather name="shield" size={13} color={C.success} />
-              <Text style={styles.successText}>Your account is secured with email verification</Text>
+              <Text style={styles.successText}>Sua conta está protegida com verificação de e-mail</Text>
             </View>
           </View>
-
           <View nativeID="clerk-captcha" />
         </ScrollView>
       </KeyboardAvoidingView>
@@ -259,46 +329,40 @@ export default function SignUpScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: C.bg }}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
-      <ScrollView
-        contentContainerStyle={{ flexGrow: 1, paddingTop: insets.top, paddingBottom: insets.bottom }}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
+    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: C.bg }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+      <ScrollView contentContainerStyle={{ flexGrow: 1, paddingTop: insets.top, paddingBottom: insets.bottom }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <BrandHeader />
-
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>Create Your Account</Text>
-            <Text style={styles.cardSubtitle}>Join thousands of heroes on their quest</Text>
+            <Text style={styles.cardTitle}>Criar Conta</Text>
+            <Text style={styles.cardSubtitle}>Junte-se a milhares de heróis na sua jornada</Text>
           </View>
 
+          <ErrorBanner message={globalError} />
+
           <InputField
-            label="Email Address"
+            label="E-mail"
             icon="mail"
             value={email}
-            onChangeText={setEmail}
-            placeholder="hero@realm.com"
+            onChangeText={(v) => { setEmail(v); clearErrors(); }}
+            placeholder="heroi@realm.com"
             keyboardType="email-address"
             autoCapitalize="none"
-            error={errors?.fields?.emailAddress?.message}
+            error={fieldErrors.email_address || fieldErrors.emailAddress}
             returnKeyType="next"
             onSubmitEditing={() => passwordRef.current?.focus()}
           />
 
           <InputField
-            label="Password"
+            label="Senha"
             icon="lock"
             value={password}
-            onChangeText={setPassword}
-            placeholder="Create a strong passphrase"
+            onChangeText={(v) => { setPassword(v); clearErrors(); }}
+            placeholder="Mínimo 8 caracteres"
             secureTextEntry={!showPassword}
             autoCapitalize="none"
-            error={errors?.fields?.password?.message}
-            hint="Minimum 8 characters"
+            error={fieldErrors.password}
+            hint={password.length > 0 && password.length < 8 ? `${password.length}/8 caracteres` : "Mínimo de 8 caracteres"}
             returnKeyType="next"
             onSubmitEditing={() => confirmRef.current?.focus()}
             inputRef={passwordRef}
@@ -310,14 +374,14 @@ export default function SignUpScreen() {
           />
 
           <InputField
-            label="Confirm Password"
+            label="Confirmar Senha"
             icon="lock"
             value={confirmPassword}
-            onChangeText={(v) => { setConfirmPassword(v); setConfirmError(""); }}
-            placeholder="Repeat your passphrase"
+            onChangeText={(v) => { setConfirmPassword(v); clearErrors(); }}
+            placeholder="Repita sua senha"
             secureTextEntry={!showConfirm}
             autoCapitalize="none"
-            error={confirmError}
+            error={fieldErrors.confirmPassword}
             returnKeyType="go"
             onSubmitEditing={handleRegister}
             inputRef={confirmRef}
@@ -329,47 +393,35 @@ export default function SignUpScreen() {
           />
 
           <Pressable
-            style={({ pressed }) => [
-              styles.primaryBtn,
-              (!email || !password || !confirmPassword || loading) && styles.primaryBtnDisabled,
-              pressed && styles.primaryBtnPressed,
-            ]}
+            style={({ pressed }) => [styles.primaryBtn, (!email || !password || !confirmPassword || loading) && styles.primaryBtnDisabled, pressed && styles.primaryBtnPressed]}
             onPress={handleRegister}
             disabled={!email || !password || !confirmPassword || loading}
           >
             {loading ? (
-              <ActivityIndicator size="small" color={C.bg} />
+              <><ActivityIndicator size="small" color={C.bg} /><Text style={styles.primaryBtnText}>Criando conta...</Text></>
             ) : (
-              <>
-                <Feather name="user-plus" size={16} color={C.bg} />
-                <Text style={styles.primaryBtnText}>Begin Your Quest</Text>
-              </>
+              <><Feather name="user-plus" size={16} color={C.bg} /><Text style={styles.primaryBtnText}>Começar Aventura</Text></>
             )}
           </Pressable>
 
           <View style={styles.dividerRow}>
             <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>or</Text>
+            <Text style={styles.dividerText}>ou</Text>
             <View style={styles.dividerLine} />
           </View>
 
           <View style={styles.footerRow}>
-            <Text style={styles.footerText}>Already a hero? </Text>
+            <Text style={styles.footerText}>Já tem uma conta? </Text>
             <Link href="/(auth)/sign-in" asChild>
-              <Pressable>
-                <Text style={styles.footerLink}>Sign In</Text>
-              </Pressable>
+              <Pressable><Text style={styles.footerLink}>Entrar</Text></Pressable>
             </Link>
           </View>
 
           <View style={styles.securityNote}>
             <Feather name="shield" size={12} color={C.muted} />
-            <Text style={styles.securityText}>
-              Email verification required · Your data is protected
-            </Text>
+            <Text style={styles.securityText}>Verificação de e-mail obrigatória · Dados protegidos</Text>
           </View>
         </View>
-
         <View nativeID="clerk-captcha" />
       </ScrollView>
     </KeyboardAvoidingView>
@@ -377,275 +429,51 @@ export default function SignUpScreen() {
 }
 
 const styles = StyleSheet.create({
-  brandContainer: {
-    alignItems: "center",
-    paddingTop: 36,
-    paddingBottom: 28,
-    gap: 8,
-  },
-  brandContainerCompact: {
-    paddingTop: 24,
-    paddingBottom: 20,
-    gap: 6,
-  },
-  emblemOuter: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: C.goldGlow,
-    borderWidth: 1,
-    borderColor: C.goldDim,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 4,
-  },
-  emblemOuterCompact: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-  },
-  emblemInner: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: C.goldDim,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  emblemInnerCompact: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-  },
-  brandTitle: {
-    fontSize: 30,
-    fontWeight: "800",
-    color: C.gold,
-    letterSpacing: 6,
-    fontFamily: "Inter_700Bold",
-  },
-  brandTitleCompact: {
-    fontSize: 22,
-    letterSpacing: 5,
-  },
-  brandSubtitle: {
-    fontSize: 13,
-    color: C.mutedLight,
-    letterSpacing: 2,
-    fontFamily: "Inter_400Regular",
-  },
-  card: {
-    flex: 1,
-    backgroundColor: C.card,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    padding: 28,
-    paddingBottom: 40,
-    borderTopWidth: 1,
-    borderLeftWidth: 1,
-    borderRightWidth: 1,
-    borderColor: C.border,
-    gap: 16,
-  },
-  cardHeader: {
-    alignItems: "center",
-    marginBottom: 4,
-    gap: 6,
-  },
-  verifyIconBadge: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: C.goldGlow,
-    borderWidth: 1,
-    borderColor: C.goldDim,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  cardTitle: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: C.text,
-    fontFamily: "Inter_700Bold",
-  },
-  cardSubtitle: {
-    fontSize: 13,
-    color: C.muted,
-    fontFamily: "Inter_400Regular",
-    textAlign: "center",
-    lineHeight: 19,
-  },
-  fieldWrapper: {
-    gap: 6,
-  },
-  label: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: C.mutedLight,
-    letterSpacing: 0.5,
-    fontFamily: "Inter_600SemiBold",
-    textTransform: "uppercase",
-  },
-  inputRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: C.input,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: C.border,
-    paddingHorizontal: 14,
-    height: 52,
-  },
-  inputRowFocused: {
-    borderColor: C.borderFocus,
-    backgroundColor: "#161626",
-  },
-  inputRowError: {
-    borderColor: C.dangerDim,
-  },
-  inputIcon: {
-    marginRight: 10,
-  },
-  textInput: {
-    flex: 1,
-    fontSize: 15,
-    color: C.text,
-    fontFamily: "Inter_400Regular",
-  },
-  eyeBtn: {
-    padding: 6,
-    marginLeft: 4,
-  },
-  messageRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    marginTop: 2,
-  },
-  errorText: {
-    fontSize: 12,
-    color: C.danger,
-    fontFamily: "Inter_400Regular",
-    flex: 1,
-  },
-  hintText: {
-    fontSize: 12,
-    color: C.muted,
-    fontFamily: "Inter_400Regular",
-    flex: 1,
-  },
-  primaryBtn: {
-    backgroundColor: C.gold,
-    borderRadius: 14,
-    height: 54,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    marginTop: 4,
-  },
-  primaryBtnDisabled: {
-    opacity: 0.45,
-  },
-  primaryBtnPressed: {
-    opacity: 0.85,
-    transform: [{ scale: 0.985 }],
-  },
-  primaryBtnText: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: C.bg,
-    fontFamily: "Inter_700Bold",
-    letterSpacing: 0.5,
-  },
-  dividerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    marginVertical: 4,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: C.border,
-  },
-  dividerText: {
-    fontSize: 12,
-    color: C.muted,
-    fontFamily: "Inter_400Regular",
-  },
-  footerRow: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  verifyFooter: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: 4,
-  },
-  footerText: {
-    fontSize: 14,
-    color: C.muted,
-    fontFamily: "Inter_400Regular",
-  },
-  footerLink: {
-    fontSize: 14,
-    color: C.gold,
-    fontWeight: "600",
-    fontFamily: "Inter_600SemiBold",
-  },
-  securityNote: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    paddingTop: 4,
-  },
-  securityText: {
-    fontSize: 11,
-    color: C.muted,
-    fontFamily: "Inter_400Regular",
-    textAlign: "center",
-  },
-  successBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    backgroundColor: C.successDim,
-    borderRadius: 10,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: C.success + "44",
-    marginTop: 4,
-  },
-  successText: {
-    fontSize: 12,
-    color: C.success,
-    fontFamily: "Inter_400Regular",
-    flex: 1,
-  },
-  otpWrapper: {
-    gap: 6,
-    marginVertical: 8,
-  },
-  otpInput: {
-    backgroundColor: C.input,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: C.border,
-    height: 80,
-    fontSize: 36,
-    fontWeight: "700",
-    color: C.gold,
-    letterSpacing: 14,
-    textAlign: "center",
-    fontFamily: "Inter_700Bold",
-  },
-  otpInputError: {
-    borderColor: C.dangerDim,
-  },
+  brandContainer: { alignItems: "center", paddingTop: 36, paddingBottom: 28, gap: 8 },
+  brandContainerCompact: { paddingTop: 24, paddingBottom: 20, gap: 6 },
+  emblemOuter: { width: 80, height: 80, borderRadius: 40, backgroundColor: C.goldGlow, borderWidth: 1, borderColor: C.goldDim, justifyContent: "center", alignItems: "center", marginBottom: 4 },
+  emblemOuterCompact: { width: 56, height: 56, borderRadius: 28 },
+  emblemInner: { width: 60, height: 60, borderRadius: 30, backgroundColor: C.goldDim, justifyContent: "center", alignItems: "center" },
+  emblemInnerCompact: { width: 40, height: 40, borderRadius: 20 },
+  brandTitle: { fontSize: 30, fontWeight: "800", color: C.gold, letterSpacing: 6, fontFamily: "Inter_700Bold" },
+  brandTitleCompact: { fontSize: 22, letterSpacing: 5 },
+  brandSubtitle: { fontSize: 13, color: C.mutedLight, letterSpacing: 2, fontFamily: "Inter_400Regular" },
+  card: { flex: 1, backgroundColor: C.card, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 28, paddingBottom: 40, borderTopWidth: 1, borderLeftWidth: 1, borderRightWidth: 1, borderColor: C.border, gap: 16 },
+  cardHeader: { alignItems: "center", marginBottom: 4, gap: 6 },
+  verifyIconBadge: { width: 56, height: 56, borderRadius: 28, backgroundColor: C.goldGlow, borderWidth: 1, borderColor: C.goldDim, justifyContent: "center", alignItems: "center", marginBottom: 8 },
+  cardTitle: { fontSize: 22, fontWeight: "700", color: C.text, fontFamily: "Inter_700Bold" },
+  cardSubtitle: { fontSize: 13, color: C.muted, fontFamily: "Inter_400Regular", textAlign: "center", lineHeight: 19 },
+  errorBanner: { flexDirection: "row", alignItems: "flex-start", gap: 10, backgroundColor: C.dangerBg, borderRadius: 12, padding: 14, borderWidth: 1, borderColor: C.dangerBorder },
+  errorBannerText: { flex: 1, fontSize: 13, color: C.danger, fontFamily: "Inter_400Regular", lineHeight: 18 },
+  fieldWrapper: { gap: 6 },
+  label: { fontSize: 12, fontWeight: "600", color: C.mutedLight, letterSpacing: 0.5, fontFamily: "Inter_600SemiBold", textTransform: "uppercase" },
+  inputRow: { flexDirection: "row", alignItems: "center", backgroundColor: C.input, borderRadius: 12, borderWidth: 1, borderColor: C.border, paddingHorizontal: 14, height: 52 },
+  inputRowFocused: { borderColor: C.borderFocus, backgroundColor: "#161626" },
+  inputRowError: { borderColor: C.dangerBorder },
+  inputIcon: { marginRight: 10 },
+  textInput: { flex: 1, fontSize: 15, color: C.text, fontFamily: "Inter_400Regular" },
+  eyeBtn: { padding: 6, marginLeft: 4 },
+  fieldError: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: 2 },
+  fieldErrorText: { fontSize: 12, color: C.danger, fontFamily: "Inter_400Regular", flex: 1 },
+  fieldHint: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: 2 },
+  fieldHintText: { fontSize: 12, color: C.muted, fontFamily: "Inter_400Regular", flex: 1 },
+  primaryBtn: { backgroundColor: C.gold, borderRadius: 14, height: 54, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 4 },
+  primaryBtnDisabled: { opacity: 0.45 },
+  primaryBtnPressed: { opacity: 0.85, transform: [{ scale: 0.985 }] },
+  primaryBtnText: { fontSize: 16, fontWeight: "700", color: C.bg, fontFamily: "Inter_700Bold", letterSpacing: 0.3 },
+  dividerRow: { flexDirection: "row", alignItems: "center", gap: 12, marginVertical: 4 },
+  dividerLine: { flex: 1, height: 1, backgroundColor: C.border },
+  dividerText: { fontSize: 12, color: C.muted, fontFamily: "Inter_400Regular" },
+  footerRow: { flexDirection: "row", justifyContent: "center", alignItems: "center" },
+  footerText: { fontSize: 14, color: C.muted, fontFamily: "Inter_400Regular" },
+  footerLink: { fontSize: 14, color: C.gold, fontWeight: "600", fontFamily: "Inter_600SemiBold" },
+  securityNote: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingTop: 4 },
+  securityText: { fontSize: 11, color: C.muted, fontFamily: "Inter_400Regular", textAlign: "center" },
+  successBadge: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, backgroundColor: C.successBg, borderRadius: 10, padding: 12, borderWidth: 1, borderColor: C.successBorder, marginTop: 4 },
+  successText: { fontSize: 12, color: C.success, fontFamily: "Inter_400Regular", flex: 1 },
+  secondaryBtn: { alignItems: "center", paddingVertical: 10 },
+  secondaryBtnText: { fontSize: 13, color: C.mutedLight, fontFamily: "Inter_400Regular" },
+  otpWrapper: { gap: 6, marginVertical: 8 },
+  otpInput: { backgroundColor: C.input, borderRadius: 14, borderWidth: 1, borderColor: C.border, height: 80, fontSize: 36, fontWeight: "700", color: C.gold, letterSpacing: 14, textAlign: "center", fontFamily: "Inter_700Bold" },
+  otpInputError: { borderColor: C.dangerBorder },
 });
