@@ -20,6 +20,7 @@ import {
   getExpToNext,
   getSkillCost,
 } from "@/constants/game";
+import { RaceId, getRaceById, LUCK_MAX, DODGE_MAX } from "@/constants/races";
 
 export interface EquipmentItem {
   instanceId: string;
@@ -49,15 +50,23 @@ export interface CurrentMonster {
 
 interface Hero {
   classId: ClassId | null;
+  raceId: RaceId | null;
   level: number;
   exp: number;
   expToNext: number;
   currentHp: number;
   maxHp: number;
   baseAtk: number;
+  baseAtkM: number;
   baseDef: number;
   critRate: number;
   critDmg: number;
+  luck: number;
+  dodge: number;
+  lifeSteal: number;
+  speed: number;
+  magicPower: number;
+  fortune: number;
   prestigeCount: number;
   prestigeBonus: number;
 }
@@ -92,7 +101,9 @@ export interface GameState {
 
 interface GameContextValue {
   state: GameState;
+  isLoading: boolean;
   selectClass: (classId: ClassId) => void;
+  selectRace: (raceId: RaceId) => void;
   toggleBattle: () => void;
   selectZoneAndStage: (zone: number, stage: number) => void;
   equipItem: (instanceId: string) => void;
@@ -109,23 +120,33 @@ interface GameContextValue {
 }
 
 const GameContext = createContext<GameContextValue | null>(null);
-const STORAGE_KEY = "rpg_idle_v3";
+const STORAGE_KEY = "rpg_idle_v4";
+
+const DEFAULT_HERO: Hero = {
+  classId: null,
+  raceId: null,
+  level: 1,
+  exp: 0,
+  expToNext: 100,
+  currentHp: 100,
+  maxHp: 100,
+  baseAtk: 20,
+  baseAtkM: 10,
+  baseDef: 10,
+  critRate: 0.05,
+  critDmg: 1.5,
+  luck: 0.0001,
+  dodge: 0.001,
+  lifeSteal: 0,
+  speed: 0,
+  magicPower: 0,
+  fortune: 0,
+  prestigeCount: 0,
+  prestigeBonus: 1,
+};
 
 const DEFAULT_STATE: GameState = {
-  hero: {
-    classId: null,
-    level: 1,
-    exp: 0,
-    expToNext: 100,
-    currentHp: 100,
-    maxHp: 100,
-    baseAtk: 20,
-    baseDef: 10,
-    critRate: 0.05,
-    critDmg: 1.5,
-    prestigeCount: 0,
-    prestigeBonus: 1,
-  },
+  hero: DEFAULT_HERO,
   resources: { gold: 0, gems: 0, totalGoldEarned: 0, totalKills: 0 },
   battle: {
     isActive: false,
@@ -186,8 +207,8 @@ function spawnMonster(zone: number, stage: number): CurrentMonster {
   };
 }
 
-function tryDropEquipment(zone: number, stage: number): EquipmentItem | null {
-  const dropChance = 0.18 + stage * 0.02;
+function tryDropEquipment(zone: number, stage: number, fortune: number): EquipmentItem | null {
+  const dropChance = 0.18 + stage * 0.02 + fortune / 100;
   if (Math.random() > dropChance) return null;
 
   const slots: EquipSlot[] = ["weapon", "armor", "ring"];
@@ -222,14 +243,29 @@ function tryDropEquipment(zone: number, stage: number): EquipmentItem | null {
   };
 }
 
+function getRaceStats(state: GameState) {
+  if (!state.hero.raceId) return null;
+  return getRaceById(state.hero.raceId)?.stats ?? null;
+}
+
 export function computePlayerAtk(state: GameState): number {
   const equipAtk = Object.values(state.equippedItems).reduce(
-    (sum, eq) => sum + (eq?.atkBonus ?? 0),
-    0
+    (sum, eq) => sum + (eq?.atkBonus ?? 0), 0
   );
   const powerBonus = (state.skillLevels["power"] ?? 0) * 5;
+  const raceAtk = getRaceStats(state)?.atkF ?? 0;
   return Math.floor(
-    (state.hero.baseAtk + equipAtk) *
+    (state.hero.baseAtk + equipAtk + raceAtk) *
+      (1 + powerBonus / 100) *
+      state.hero.prestigeBonus
+  );
+}
+
+export function computePlayerAtkM(state: GameState): number {
+  const raceAtkM = getRaceStats(state)?.atkM ?? 0;
+  const powerBonus = (state.skillLevels["power"] ?? 0) * 3;
+  return Math.floor(
+    (state.hero.baseAtkM + raceAtkM) *
       (1 + powerBonus / 100) *
       state.hero.prestigeBonus
   );
@@ -237,24 +273,55 @@ export function computePlayerAtk(state: GameState): number {
 
 export function computePlayerDef(state: GameState): number {
   const equipDef = Object.values(state.equippedItems).reduce(
-    (sum, eq) => sum + (eq?.defBonus ?? 0),
-    0
+    (sum, eq) => sum + (eq?.defBonus ?? 0), 0
   );
   const defBonus = (state.skillLevels["iron_skin"] ?? 0) * 6;
-  return Math.floor((state.hero.baseDef + equipDef) * (1 + defBonus / 100));
+  const raceArmor = getRaceStats(state)?.armor ?? 0;
+  return Math.floor((state.hero.baseDef + equipDef + raceArmor) * (1 + defBonus / 100));
 }
 
 export function computePlayerMaxHp(state: GameState): number {
   const equipHp = Object.values(state.equippedItems).reduce(
-    (sum, eq) => sum + (eq?.hpBonus ?? 0),
-    0
+    (sum, eq) => sum + (eq?.hpBonus ?? 0), 0
   );
   const hpBonus = (state.skillLevels["fortitude"] ?? 0) * 8;
-  return Math.floor((state.hero.maxHp + equipHp) * (1 + hpBonus / 100));
+  const raceHp = getRaceStats(state)?.hp ?? 0;
+  return Math.floor((state.hero.maxHp + equipHp + raceHp) * (1 + hpBonus / 100));
+}
+
+export function computePlayerCritRate(state: GameState): number {
+  const equipCrit = Object.values(state.equippedItems).reduce(
+    (sum, eq) => sum + (eq?.critBonus ?? 0), 0
+  );
+  const critRateBonus = (state.skillLevels["precision"] ?? 0) * 2 / 100;
+  const raceCrit = getRaceStats(state)?.critBonus ?? 0;
+  return state.hero.critRate + equipCrit + critRateBonus + raceCrit;
+}
+
+export function computePlayerDodge(state: GameState): number {
+  const raceDodge = getRaceStats(state)?.dodge ?? 0;
+  return Math.min(state.hero.dodge + raceDodge, DODGE_MAX);
+}
+
+export function computePlayerLuck(state: GameState): number {
+  const raceLuck = getRaceStats(state)?.luck ?? 0;
+  return Math.min(state.hero.luck + raceLuck, LUCK_MAX);
+}
+
+export function computePlayerLifeSteal(state: GameState): number {
+  const raceLS = getRaceStats(state)?.lifeSteal ?? 0;
+  return state.hero.lifeSteal + raceLS;
+}
+
+export function computePlayerFortune(state: GameState): number {
+  const raceFortune = getRaceStats(state)?.fortune ?? 0;
+  const skillFortune = (state.skillLevels["fortune"] ?? 0) * 10;
+  return state.hero.fortune + raceFortune + skillFortune;
 }
 
 export function GameProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<GameState>(DEFAULT_STATE);
+  const [isLoading, setIsLoading] = useState(true);
   const stateRef = useRef<GameState>(state);
   const battleTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isBattlingRef = useRef(false);
@@ -270,20 +337,31 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         if (saved) {
           const parsed = JSON.parse(saved) as GameState;
           parsed.battle.isActive = false;
+          // Migrate old saves: add missing hero fields
+          if (parsed.hero.raceId === undefined) parsed.hero.raceId = null;
+          if (parsed.hero.baseAtkM === undefined) parsed.hero.baseAtkM = 10;
+          if (parsed.hero.luck === undefined) parsed.hero.luck = 0.0001;
+          if (parsed.hero.dodge === undefined) parsed.hero.dodge = 0.001;
+          if (parsed.hero.lifeSteal === undefined) parsed.hero.lifeSteal = 0;
+          if (parsed.hero.speed === undefined) parsed.hero.speed = 0;
+          if (parsed.hero.magicPower === undefined) parsed.hero.magicPower = 0;
+          if (parsed.hero.fortune === undefined) parsed.hero.fortune = 0;
           setState(parsed);
         }
       } catch {}
+      setIsLoading(false);
     })();
   }, []);
 
   useEffect(() => {
+    if (isLoading) return;
     const timer = setTimeout(async () => {
       try {
         await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(state));
       } catch {}
     }, 2500);
     return () => clearTimeout(timer);
-  }, [state]);
+  }, [state, isLoading]);
 
   useEffect(() => {
     const shouldBattle = state.battle.isActive && state.hero.currentHp > 0 && !!state.hero.classId;
@@ -296,15 +374,18 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           if (!prev.battle.isActive || !prev.battle.currentMonster) return prev;
 
           const totalAtk = computePlayerAtk(prev);
-          const equipCrit = Object.values(prev.equippedItems).reduce(
-            (sum, eq) => sum + (eq?.critBonus ?? 0),
-            0
-          );
-          const critRateBonus = (prev.skillLevels["precision"] ?? 0) * 2 / 100;
-          const critRate = prev.hero.critRate + equipCrit + critRateBonus;
+          const critRate = computePlayerCritRate(prev);
+          const dodge = computePlayerDodge(prev);
+          const luck = computePlayerLuck(prev);
+          const lifeSteal = computePlayerLifeSteal(prev);
+          const fortune = computePlayerFortune(prev);
+          const hpRegen = getRaceStats(prev)?.hpRegen ?? 0;
+
           const isCrit = Math.random() < critRate;
+          const isLucky = Math.random() < luck;
 
           let atkMult = isCrit ? prev.hero.critDmg : 1;
+          if (isLucky) atkMult *= 1.15;
           let newPowerStrikeReady = prev.battle.powerStrikeReady;
           if (prev.battle.powerStrikeReady) {
             atkMult *= 3;
@@ -315,18 +396,28 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           const dmgToMonster = Math.max(1, Math.floor(rawDmg));
 
           const totalDef = computePlayerDef(prev);
-          let dmgToPlayer = Math.max(1, Math.floor(prev.battle.currentMonster.atk - totalDef * 0.5));
+          const dodged = Math.random() < dodge;
+          let dmgToPlayer = dodged ? 0 : Math.max(1, Math.floor(prev.battle.currentMonster.atk - totalDef * 0.5));
           if (prev.battle.battleCryActive > 0) {
             dmgToPlayer = Math.floor(dmgToPlayer * 0.4);
           }
 
-          const newMonsterHp = prev.battle.currentMonster.currentHp - dmgToMonster;
-          const newPlayerHp = Math.max(0, prev.hero.currentHp - dmgToPlayer);
+          const healFromLS = Math.floor(dmgToMonster * lifeSteal);
+          const healFromRegen = hpRegen;
+          const totalHeal = healFromLS + healFromRegen;
+          const maxHp = computePlayerMaxHp(prev);
 
-          const critTag = isCrit ? (prev.battle.powerStrikeReady ? " [POWER+CRIT]" : " [CRIT]") : "";
-          const shieldTag = prev.battle.battleCryActive > 0 ? " [SHIELD]" : "";
+          const newMonsterHp = prev.battle.currentMonster.currentHp - dmgToMonster;
+          const newPlayerHp = Math.max(0, Math.min(maxHp, prev.hero.currentHp - dmgToPlayer + totalHeal));
+
+          const critTag = isCrit ? " [CRIT]" : "";
+          const luckyTag = isLucky ? " [SORTE]" : "";
+          const dodgeTag = dodged ? " [ESQUIVA]" : "";
+          const shieldTag = prev.battle.battleCryActive > 0 ? " [ESCUDO]" : "";
+          const lsTag = totalHeal > 0 ? ` [+${totalHeal}HP]` : "";
+          const psTag = prev.battle.powerStrikeReady ? " [PODER]" : "";
           const newLog = [
-            `ATK${critTag}: ${dmgToMonster} | RCV${shieldTag}: ${dmgToPlayer}`,
+            `ATK${critTag}${luckyTag}${psTag}: ${dmgToMonster} | DEF${dodgeTag}${shieldTag}: ${dmgToPlayer}${lsTag}`,
             ...prev.battle.log,
           ].slice(0, 30);
 
@@ -335,8 +426,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           const newBcActive = Math.max(0, prev.battle.battleCryActive - 1);
 
           if (newMonsterHp <= 0) {
-            const goldSkillBonus = (prev.skillLevels["fortune"] ?? 0) * 10 / 100;
-            const goldEarned = Math.floor(prev.battle.currentMonster.goldReward * (1 + goldSkillBonus));
+            const goldEarned = Math.floor(prev.battle.currentMonster.goldReward * (1 + fortune / 100));
             const expEarned = prev.battle.currentMonster.expReward;
 
             let newExp = prev.hero.exp + expEarned;
@@ -346,7 +436,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
             let newBaseAtk = prev.hero.baseAtk;
             let newBaseDef = prev.hero.baseDef;
             const extraLog: string[] = [
-              `Defeated ${prev.battle.currentMonster.name}! +${goldEarned}g +${expEarned}xp`,
+              `Derrotou ${prev.battle.currentMonster.name}! +${goldEarned}g +${expEarned}xp`,
             ];
 
             while (newExp >= newExpToNext) {
@@ -357,10 +447,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
               newMaxHp += cd.hpPerLevel;
               newBaseAtk += cd.atkPerLevel;
               newBaseDef += cd.defPerLevel;
-              extraLog.push(`Level Up! You are now Lv.${newLevel}!`);
+              extraLog.push(`Level Up! Você é agora Nv.${newLevel}!`);
             }
 
-            const droppedItem = tryDropEquipment(prev.battle.zone, prev.battle.stage);
+            const droppedItem = tryDropEquipment(prev.battle.zone, prev.battle.stage, fortune);
             const newInventory = [...prev.inventory];
             if (droppedItem && newInventory.length < 30) {
               newInventory.push(droppedItem);
@@ -376,11 +466,15 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
               const nextZone = newZone + 1;
               if (nextZone <= ZONES.length && !newUnlocked.includes(nextZone)) {
                 newUnlocked.push(nextZone);
-                extraLog.push(`ZONE UNLOCKED: ${ZONES[nextZone - 1].name}!`);
+                extraLog.push(`ZONA DESBLOQUEADA: ${ZONES[nextZone - 1].name}!`);
               }
             }
 
             const nextMonster = spawnMonster(newZone, newStage);
+            const newHpAfterKill = Math.min(
+              computePlayerMaxHp({ ...prev, hero: { ...prev.hero, maxHp: newMaxHp } }),
+              newPlayerHp
+            );
 
             return {
               ...prev,
@@ -392,7 +486,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
                 maxHp: newMaxHp,
                 baseAtk: newBaseAtk,
                 baseDef: newBaseDef,
-                currentHp: Math.min(prev.hero.currentHp, computePlayerMaxHp({ ...prev, hero: { ...prev.hero, maxHp: newMaxHp } })),
+                currentHp: newHpAfterKill,
               },
               resources: {
                 ...prev.resources,
@@ -422,7 +516,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
               battle: {
                 ...prev.battle,
                 isActive: false,
-                log: ["Defeated! Tap Revive to continue.", ...newLog].slice(0, 30),
+                log: ["Derrotado! Toque em Reviver para continuar.", ...newLog].slice(0, 30),
               },
             };
           } else {
@@ -457,6 +551,13 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     };
   }, [state.battle.isActive, state.hero.classId]);
 
+  const selectRace = useCallback((raceId: RaceId) => {
+    setState((prev) => ({
+      ...prev,
+      hero: { ...prev.hero, raceId },
+    }));
+  }, []);
+
   const selectClass = useCallback((classId: ClassId) => {
     const cd = CLASSES.find((c) => c.id === classId)!;
     const initialMonster = spawnMonster(1, 1);
@@ -468,6 +569,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         maxHp: cd.baseHp,
         currentHp: cd.baseHp,
         baseAtk: cd.baseAtk,
+        baseAtkM: Math.floor(cd.baseAtk * 0.4),
         baseDef: cd.baseDef,
         critRate: cd.baseCritRate,
         critDmg: cd.baseCritDmg,
@@ -582,7 +684,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           ...prev.battle,
           currentMonster: monster,
           isActive: false,
-          log: ["Revived with 50% HP.", ...prev.battle.log].slice(0, 30),
+          log: ["Revivido com 50% HP.", ...prev.battle.log].slice(0, 30),
         },
       };
     });
@@ -597,11 +699,13 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       return {
         ...DEFAULT_STATE,
         hero: {
-          ...DEFAULT_STATE.hero,
+          ...DEFAULT_HERO,
           classId: prev.hero.classId,
+          raceId: prev.hero.raceId,
           maxHp: cd.baseHp,
           currentHp: cd.baseHp,
           baseAtk: cd.baseAtk,
+          baseAtkM: Math.floor(cd.baseAtk * 0.4),
           baseDef: cd.baseDef,
           critRate: cd.baseCritRate,
           critDmg: cd.baseCritDmg,
@@ -623,7 +727,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     <GameContext.Provider
       value={{
         state,
+        isLoading,
         selectClass,
+        selectRace,
         toggleBattle,
         selectZoneAndStage,
         equipItem,

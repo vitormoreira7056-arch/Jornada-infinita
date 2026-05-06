@@ -9,6 +9,7 @@ import React from "react";
 import { ActivityIndicator, Platform, StyleSheet, View, useColorScheme } from "react-native";
 
 import { useColors } from "@/hooks/useColors";
+import { useGame } from "@/context/GameContext";
 
 function NativeTabLayout() {
   return (
@@ -138,9 +139,10 @@ function ClassicTabLayout() {
 }
 
 export default function TabLayout() {
-  const { isSignedIn, isLoaded } = useAuth();
+  const { isSignedIn, isLoaded: authLoaded } = useAuth();
+  const { state, isLoading: gameLoading } = useGame();
 
-  if (!isLoaded) {
+  if (!authLoaded || gameLoading) {
     return (
       <View style={{ flex: 1, backgroundColor: "#08080F", justifyContent: "center", alignItems: "center" }}>
         <ActivityIndicator size="large" color="#C8A84B" />
@@ -150,6 +152,10 @@ export default function TabLayout() {
 
   if (!isSignedIn) {
     return <Redirect href="/(auth)/sign-in" />;
+  }
+
+  if (!state.hero.raceId) {
+    return <Redirect href="/race-select" />;
   }
 
   if (isLiquidGlassAvailable()) {
