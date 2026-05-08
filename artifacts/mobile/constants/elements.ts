@@ -6,7 +6,9 @@ export type ElementId =
   // Elementos Avançados (8)
   | "gelo" | "trovao" | "natureza" | "metal" | "veneno" | "sangue" | "arcano" | "caos"
   // Elementos Épicos (7)
-  | "void" | "infernal" | "divino" | "sombra" | "tempestade" | "runico" | "astral";
+  | "void" | "infernal" | "divino" | "sombra" | "tempestade" | "runico" | "astral"
+  // Sub-elementos especiais
+  | "sagrado";
 
 // Sub-elementos - Combinações de elementos
 export interface SubElement {
@@ -88,6 +90,7 @@ export const MAIN_ELEMENTS: { id: ElementId; name: string; emoji: string; color:
   { id: "tempestade", name: "Tempestade", emoji: "⛈️", color: "#4682b4", description: "Fúria dos céus" },
   { id: "runico", name: "Rúnico", emoji: "ᚢ", color: "#ff8c00", description: "Magia ancestral" },
   { id: "astral", name: "Astral", emoji: "🌌", color: "#191970", description: "Energia das estrelas" },
+  { id: "sagrado", name: "Sagrado", emoji: "✨", color: "#ffd700", description: "Poder sagrado divino" },
 ];
 
 // Resistências base por elemento
@@ -95,8 +98,8 @@ export function getBaseResistance(element: ElementId): number {
   const resistances: Record<ElementId, number> = {
     fogo: 0, agua: 0, terra: 0, ar: 0, luz: 0, escuridao: 0,
     gelo: 0, trovao: 0, natureza: 0, metal: 0, veneno: 0, sangue: 0,
-    arcano: 0, caos: 0, void: 0, infernal: 0, divino: 0, sombra: 0,
-    tempestade: 0, runico: 0, astral: 0,
+      arcano: 0, caos: 0, void: 0, infernal: 0, divino: 0, sombra: 0,
+    tempestade: 0, runico: 0, astral: 0, sagrado: 0,
   };
   return resistances[element] || 0;
 }
@@ -108,3 +111,6 @@ export function checkElementSynergy(elem1: ElementId, elem2: ElementId): SubElem
     (sub.parentElements[0] === elem2 && sub.parentElements[1] === elem1)
   ) || null;
 }
+
+// Tipo para mapa de resistências
+export type ResistanceMap = Record<ElementId, number>;

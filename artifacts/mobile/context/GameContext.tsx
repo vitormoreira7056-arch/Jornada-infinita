@@ -86,7 +86,7 @@ const DEFAULT_RES: Record<ElementId, number> = {
   fogo: 0, agua: 0, terra: 0, ar: 0, luz: 0, escuridao: 0,
   gelo: 0, trovao: 0, natureza: 0, metal: 0, veneno: 0, sangue: 0,
   arcano: 0, caos: 0, void: 0, infernal: 0, divino: 0, sombra: 0,
-  tempestade: 0, runico: 0, astral: 0,
+  tempestade: 0, runico: 0, astral: 0, sagrado: 0,
 };
 
 const DEFAULT_CURRENCIES: Currencies = {
@@ -346,7 +346,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         res.veneno += item.resPoison; res.metal += item.resMetal; res.natureza += item.resNature;
         res.sangue += item.resBlood; res.void += item.resVoid; res.caos += item.resChaos;
         res.sombra += item.resShadow; res.infernal += item.resInfernal; res.tempestade += item.resStorm;
-        res.runico += item.resRunic; res.divino += item.resDivine;
+        res.runico += item.resRunic; res.divino += item.resDivine; res.sagrado += item.resHoly || 0;
       }
     });
 
