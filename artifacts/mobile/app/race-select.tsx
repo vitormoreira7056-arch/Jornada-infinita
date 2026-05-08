@@ -28,15 +28,7 @@ const VISIBLE_ITEMS = 7;
 const PICKER_HEIGHT = ITEM_HEIGHT * VISIBLE_ITEMS;
 const PAD = ITEM_HEIGHT * Math.floor(VISIBLE_ITEMS / 2);
 
-const CATEGORY_COLORS: Record<string, string> = {
-  TANQUE: "#78909C",
-  GUERREIRO: "#EF5350",
-  MAGO: "#AB47BC",
-  ASSASSINO: "#7C4DFF",
-  LADINO: "#26C6DA",
-  SUPORTE: "#F48FB1",
-  VERSÁTIL: "#FF9800",
-};
+
 
 // ──────── Sub-components ────────
 
@@ -112,11 +104,6 @@ function AttributesModal({ race, visible, onClose }: { race: RaceDef; visible: b
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.modalTitle, { color: race.color }]}>{race.name}</Text>
-                <View style={[styles.categoryPillSm, { backgroundColor: (CATEGORY_COLORS[race.category] ?? "#888") + "30" }]}>
-                  <Text style={[styles.categoryPillSmText, { color: CATEGORY_COLORS[race.category] ?? "#888" }]}>
-                    {race.category}
-                  </Text>
-                </View>
               </View>
               <Pressable onPress={onClose} style={[styles.modalClose, { backgroundColor: "#1A1A30" }]}>
                 <Feather name="x" size={18} color="#7070A0" />
@@ -217,7 +204,6 @@ export default function RaceSelectScreen() {
   const [confirming, setConfirming] = useState(false);
 
   const selectedRace = RACES[selectedIdx];
-  const catColor = CATEGORY_COLORS[selectedRace.category] ?? "#888";
   const topPad = Platform.OS === "web" ? 24 : insets.top;
   const bottomPad = Platform.OS === "web" ? 24 : insets.bottom;
 
@@ -292,10 +278,7 @@ export default function RaceSelectScreen() {
 
             <Text style={[styles.heroRaceName, { color: selectedRace.color }]}>{selectedRace.name}</Text>
 
-            <View style={[styles.categoryPill, { backgroundColor: catColor + "25", borderColor: catColor + "60" }]}>
-              <View style={[styles.categoryDot, { backgroundColor: catColor }]} />
-              <Text style={[styles.categoryPillText, { color: catColor }]}>{selectedRace.category}</Text>
-            </View>
+
 
             <Text style={styles.heroLore} numberOfLines={2}>{selectedRace.lore}</Text>
           </View>
@@ -361,13 +344,7 @@ export default function RaceSelectScreen() {
                       }]}>
                         {race.name}
                       </Text>
-                      {isSelected && (
-                        <View style={[styles.miniCatPill, { backgroundColor: (CATEGORY_COLORS[race.category] ?? "#888") + "30" }]}>
-                          <Text style={[styles.miniCatText, { color: CATEGORY_COLORS[race.category] ?? "#888" }]}>
-                            {race.category}
-                          </Text>
-                        </View>
-                      )}
+
                     </View>
                   </TouchableOpacity>
                 );
@@ -557,12 +534,7 @@ const styles = StyleSheet.create({
   },
   heroEmoji: { fontSize: 52 },
   heroRaceName: { fontSize: 26, fontWeight: "900", textAlign: "center", letterSpacing: 0.5 },
-  categoryPill: {
-    flexDirection: "row", alignItems: "center", gap: 6,
-    paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20, borderWidth: 1,
-  },
-  categoryDot: { width: 6, height: 6, borderRadius: 3 },
-  categoryPillText: { fontSize: 11, fontWeight: "800", letterSpacing: 1 },
+
   heroLore: { fontSize: 13, color: "#6060A0", textAlign: "center", lineHeight: 19, paddingHorizontal: 4 },
   quickStatsRow: {
     flexDirection: "row", flexWrap: "wrap", justifyContent: "center",
@@ -638,8 +610,7 @@ const styles = StyleSheet.create({
   modalHeader: { flexDirection: "row", alignItems: "center", gap: 14 },
   modalEmojiBox: { width: 56, height: 56, borderRadius: 14, alignItems: "center", justifyContent: "center", borderWidth: 1.5 },
   modalTitle: { fontSize: 22, fontWeight: "900", marginBottom: 4 },
-  categoryPillSm: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, alignSelf: "flex-start" },
-  categoryPillSmText: { fontSize: 10, fontWeight: "800", letterSpacing: 0.8 },
+
   modalClose: { width: 36, height: 36, borderRadius: 10, alignItems: "center", justifyContent: "center" },
   loreTxt: { fontSize: 14, color: "#6060A0", lineHeight: 22, fontStyle: "italic" },
   section: { borderWidth: 1, borderRadius: 14, padding: 14, gap: 8, backgroundColor: "#0A0A14" },
