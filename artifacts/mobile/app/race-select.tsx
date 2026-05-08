@@ -11,6 +11,7 @@ import {
   NativeScrollEvent,
   Platform,
   Dimensions,
+  TextInput,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Feather } from "@expo/vector-icons";
@@ -196,10 +197,11 @@ function AttributesModal({ race, visible, onClose }: { race: RaceDef; visible: b
 export default function RaceSelectScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { selectRace, selectGender } = useGame();
+  const { selectRace, selectGender, setPlayerName } = useGame();
   const scrollRef = useRef<ScrollView>(null);
   const [selectedIdx, setSelectedIdx] = useState(0);
   const [gender, setGender] = useState<Gender | null>(null);
+  const [playerName, setPlayerNameLocal] = useState("");
   const [modalVisible, setModalVisible] = useState(false);
   const [confirming, setConfirming] = useState(false);
 
@@ -219,19 +221,20 @@ export default function RaceSelectScreen() {
   }, []);
 
   const handleConfirm = useCallback(async () => {
-    if (confirming || !gender) return;
+    if (confirming || !gender || !playerName.trim()) return;
     setConfirming(true);
     try {
       selectRace(selectedRace.id);
       selectGender(gender);
+      setPlayerName(playerName.trim());
       router.replace("/(tabs)");
     } catch {
       setConfirming(false);
     }
-  }, [selectedRace, gender, confirming, selectRace, selectGender, router]);
+  }, [selectedRace, gender, playerName, confirming, selectRace, selectGender, setPlayerName, router]);
 
   const s = selectedRace.stats;
-  const canConfirm = !!gender && !confirming;
+  const canConfirm = !!gender && !!playerName.trim() && !confirming;
 
   return (
     <View style={styles.root}>
@@ -283,7 +286,24 @@ export default function RaceSelectScreen() {
             <Text style={styles.heroLore} numberOfLines={2}>{selectedRace.lore}</Text>
           </View>
 
-          {/* Quick stats */}
+          {/* Player Name Input */}
+          <View style={styles.nameInputContainer}>
+            <Text style={styles.nameInputLabel}>NOME DO HERÓI</Text>
+            <View style={styles.nameInputRow}>
+              <Feather name="user" size={16} color="#7070A0" style={styles.nameInputIcon} />
+              <TextInput
+                style={styles.nameInput}
+                placeholder="Digite seu nome"
+                placeholderTextColor="#505078"
+                value={playerName}
+                onChangeText={setPlayerNameLocal}
+                maxLength={20}
+                autoCapitalize="words"
+              />
+            </View>
+          </View>
+
+          {/* Quick stats -->
           <View style={[styles.quickStatsRow, { borderTopColor: selectedRace.color + "30" }]}>
             {s.hp !== 0 && <QuickStat icon="heart" value={`${s.hp > 0 ? "+" : ""}${s.hp}`} color="#EF5350" />}
             {s.armor !== 0 && <QuickStat icon="shield" value={`+${s.armor}`} color="#78909C" />}
@@ -483,8 +503,10 @@ export default function RaceSelectScreen() {
             </Text>
           </TouchableOpacity>
 
-          {!gender && (
-            <Text style={styles.genderHint}>Selecione seu gênero para continuar</Text>
+          {(!gender || !playerName.trim()) && (
+            <Text style={styles.genderHint}>
+              {!gender ? "Selecione seu gênero" : "Digite seu nome"} para continuar
+            </Text>
           )}
 
           <Text style={styles.contractNote}>
@@ -536,6 +558,21 @@ const styles = StyleSheet.create({
   heroRaceName: { fontSize: 26, fontWeight: "900", textAlign: "center", letterSpacing: 0.5 },
 
   heroLore: { fontSize: 13, color: "#6060A0", textAlign: "center", lineHeight: 19, paddingHorizontal: 4 },
+  
+  // Name Input
+  nameInputContainer: { marginTop: 8, gap: 6 },
+  nameInputLabel: { fontSize: 10, fontWeight: "700", letterSpacing: 1.5, color: "#7070A0", textAlign: "center" },
+  nameInputRow: {
+    flexDirection: "row", alignItems: "center",
+    backgroundColor: "#0A0A14", borderRadius: 12, borderWidth: 1, borderColor: "#252540",
+    paddingHorizontal: 14, height: 48,
+  },
+  nameInputIcon: { marginRight: 10 },
+  nameInput: {
+    flex: 1, fontSize: 16, color: "#E8E8F0", fontWeight: "600",
+    textAlign: "center",
+  },
+  
   quickStatsRow: {
     flexDirection: "row", flexWrap: "wrap", justifyContent: "center",
     gap: 12, paddingTop: 14, borderTopWidth: 1,
@@ -556,8 +593,6 @@ const styles = StyleSheet.create({
   raceItem: { width: "100%", alignItems: "center", justifyContent: "center" },
   raceItemInner: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 28, width: "100%" },
   raceName: { flex: 1 },
-  miniCatPill: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 8 },
-  miniCatText: { fontSize: 9, fontWeight: "800", letterSpacing: 0.5 },
 
   // Elements
   elemSection: { alignItems: "center", paddingHorizontal: 20, paddingBottom: 4, minHeight: 40 },

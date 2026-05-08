@@ -77,10 +77,22 @@ interface Resources {
   gems: number;
   totalGoldEarned: number;
   totalKills: number;
+  // Currency tiers
+  bronze: number;
+  silver: number;
+  goldCoins: number;
+  diamond: number;
+  mithril: number;
+}
+
+interface PlayerProfile {
+  name: string;
+  title: string;
 }
 
 export interface GameState {
   hero: Hero;
+  profile: PlayerProfile;
   resources: Resources;
   battle: {
     isActive: boolean;
@@ -106,6 +118,7 @@ interface GameContextValue {
   selectClass: (classId: ClassId) => void;
   selectRace: (raceId: RaceId) => void;
   selectGender: (gender: Gender) => void;
+  setPlayerName: (name: string) => void;
   toggleBattle: () => void;
   selectZoneAndStage: (zone: number, stage: number) => void;
   equipItem: (instanceId: string) => void;
@@ -148,9 +161,25 @@ const DEFAULT_HERO: Hero = {
   prestigeBonus: 1,
 };
 
+const DEFAULT_PROFILE: PlayerProfile = {
+  name: "Aventureiro",
+  title: "Novato",
+};
+
 const DEFAULT_STATE: GameState = {
   hero: DEFAULT_HERO,
-  resources: { gold: 0, gems: 0, totalGoldEarned: 0, totalKills: 0 },
+  profile: DEFAULT_PROFILE,
+  resources: { 
+    gold: 0, 
+    gems: 0, 
+    totalGoldEarned: 0, 
+    totalKills: 0,
+    bronze: 0,
+    silver: 0,
+    goldCoins: 0,
+    diamond: 0,
+    mithril: 0,
+  },
   battle: {
     isActive: false,
     zone: 1,
@@ -361,6 +390,14 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
             if (parsed.hero.fortune === undefined) parsed.hero.fortune = 0;
             // Ensure other required fields exist
             if (!parsed.resources) parsed.resources = DEFAULT_STATE.resources;
+            // Migrate currency fields
+            if (parsed.resources.bronze === undefined) parsed.resources.bronze = 0;
+            if (parsed.resources.silver === undefined) parsed.resources.silver = 0;
+            if (parsed.resources.goldCoins === undefined) parsed.resources.goldCoins = 0;
+            if (parsed.resources.diamond === undefined) parsed.resources.diamond = 0;
+            if (parsed.resources.mithril === undefined) parsed.resources.mithril = 0;
+            // Ensure profile exists
+            if (!parsed.profile) parsed.profile = DEFAULT_PROFILE;
             if (!parsed.equippedItems) parsed.equippedItems = {};
             if (!parsed.inventory) parsed.inventory = [];
             if (!parsed.skillLevels) parsed.skillLevels = {};
@@ -590,6 +627,13 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     }));
   }, []);
 
+  const setPlayerName = useCallback((name: string) => {
+    setState((prev) => ({
+      ...prev,
+      profile: { ...prev.profile, name },
+    }));
+  }, []);
+
   const selectClass = useCallback((classId: ClassId) => {
     const cd = CLASSES.find((c) => c.id === classId)!;
     const initialMonster = spawnMonster(1, 1);
@@ -764,6 +808,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         selectClass,
         selectRace,
         selectGender,
+        setPlayerName,
         toggleBattle,
         selectZoneAndStage,
         equipItem,
