@@ -291,10 +291,17 @@ export default function GameLayout() {
           }}
         />
         <Tabs.Screen
+          name="city"
+          options={{
+            title: "CIDADE",
+            tabBarIcon: ({ focused }) => <TabIcon emoji="🏰" focused={focused} />,
+          }}
+        />
+        <Tabs.Screen
           name="adventure"
           options={{
             title: "AVENTURA",
-            tabBarIcon: ({ focused }) => <TabIcon emoji="⚔️" focused={focused} />,
+            tabBarIcon: ({ focused }) => <TabIcon emoji="🗺️" focused={focused} />,
           }}
         />
         <Tabs.Screen

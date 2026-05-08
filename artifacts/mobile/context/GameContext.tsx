@@ -4,6 +4,15 @@ import { RaceId, getRaceById, RaceAbility } from "@/constants/races";
 import { ElementId } from "@/constants/elements";
 import { TierId, QualityId, rollTier, rollQuality, getTotalMultiplier, TIERS, QUALITIES } from "@/constants/tiers";
 import { BiomeId, DungeonDef, DiscoveredDungeon, BIOMES, tryDiscoverDungeon, calculateExpNeeded, TOWER_FLOORS_DATA, TowerFloor, getDiscoveredDungeonsForBiome, getBiomeDiscoveryProgress } from "@/constants/adventure";
+import { MobDef, FOREST_MOBS, findRandomMob, calculateDrops, generateTowerMobs, MOB_RANK_MULTIPLIERS } from "@/constants/mobs";
+
+// Estado do inimigo em combate
+export interface EnemyState {
+  mob: MobDef;
+  currentHp: number;
+  maxHp: number;
+  skillCooldowns: number[];
+}
 
 const USERS_KEY = "rpg_idle_users_v5";
 const CURRENT_USER_KEY = "rpg_idle_current_user_v5";
@@ -109,6 +118,7 @@ export interface GameState {
   
   // Stats base
   baseHp: number;
+  baseMp: number;
   baseAtkF: number;
   baseAtkM: number;
   baseDef: number;
@@ -122,6 +132,7 @@ export interface GameState {
   baseLifeSteal: number;
   baseArmorPen: number;
   baseHpRegen: number;
+  baseMpRegen: number;
   
   // Elemental Resistances base
   baseRes: Record<ElementId, number>;
@@ -140,6 +151,13 @@ export interface GameState {
   // Unlocked content
   maxZone: number;
   completedZones: number[];
+  
+  // Combat
+  currentHp: number;
+  currentMp: number;
+  inCombat: boolean;
+  currentEnemy: EnemyState | null;
+  combatLog: string[];
 }
 
 const DEFAULT_RES: Record<ElementId, number> = {
@@ -175,6 +193,7 @@ const DEFAULT_STATE: GameState = {
   totalDungeonRuns: 0,
   successfulDungeonRuns: 0,
   baseHp: 100,
+  baseMp: 50,
   baseAtkF: 10,
   baseAtkM: 10,
   baseDef: 5,
@@ -187,7 +206,8 @@ const DEFAULT_STATE: GameState = {
   baseDodge: 0.01,
   baseLifeSteal: 0,
   baseArmorPen: 0,
-  baseHpRegen: 0,
+  baseHpRegen: 1,
+  baseMpRegen: 0.5,
   baseRes: { ...DEFAULT_RES },
   activeSkills: [],
   passiveSkillUnlocked: false,
@@ -201,6 +221,13 @@ const DEFAULT_STATE: GameState = {
   inventorySize: 50,
   maxZone: 1,
   completedZones: [],
+  
+  // Combat
+  currentHp: 100,
+  currentMp: 50,
+  inCombat: false,
+  currentEnemy: null,
+  combatLog: [],
 };
 
 interface GameContextType {
@@ -228,6 +255,7 @@ interface GameContextType {
   climbTower: (floor: number) => boolean;
   getTotalStats: () => {
     hp: number;
+    mp: number;
     atkF: number;
     atkM: number;
     def: number;
@@ -241,6 +269,7 @@ interface GameContextType {
     lifeSteal: number;
     armorPen: number;
     hpRegen: number;
+    mpRegen: number;
     res: Record<ElementId, number>;
   };
   getAllRaceStats: (raceId: RaceId) => {
@@ -260,6 +289,15 @@ interface GameContextType {
     hpRegen: number;
     res: Record<ElementId, number>;
   } | null;
+  
+  // Combat
+  startCombat: (mob: MobDef) => void;
+  endCombat: (victory: boolean) => void;
+  playerAttack: () => { damage: number; isCrit: boolean };
+  playerUseSkill: (skillIndex: number) => { success: boolean; damage?: number; message?: string };
+  enemyAttack: () => { damage: number; skillUsed?: string };
+  regenHpMp: () => void;
+  findEncounter: (biomeId: BiomeId) => { type: "mob" | "resource" | "dungeon" | "nothing"; mob?: MobDef; message: string };
 }
 
 const GameContext = createContext<GameContextType | null>(null);
@@ -575,8 +613,12 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     critRate = Math.min(critRate, 0.8);
     dodge = Math.min(dodge, 0.6);
     lifeSteal = Math.min(lifeSteal, 0.25);
+    
+    // MP é baseado no HP (50% do HP)
+    const mp = hp * 0.5;
+    const mpRegen = hp * 0.01; // 1% do HP como regen de MP
 
-    return { hp, atkF, atkM, def, armor, magicRes, critRate, critDmg, atkSpeed, luck, dodge, lifeSteal, armorPen, hpRegen, res };
+    return { hp, mp, atkF, atkM, def, armor, magicRes, critRate, critDmg, atkSpeed, luck, dodge, lifeSteal, armorPen, hpRegen, mpRegen, res };
   };
 
   const getAllRaceStats = (raceId: RaceId) => {
@@ -636,6 +678,13 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         climbTower,
         getTotalStats,
         getAllRaceStats,
+        startCombat,
+        endCombat,
+        playerAttack,
+        playerUseSkill,
+        enemyAttack,
+        regenHpMp,
+        findEncounter,
       }}
     >
       {children}
@@ -855,4 +904,275 @@ function getItemColor(item: Item): string {
     return "#ffffff";
   }
   return TIERS[item.tier].color;
+}
+
+// ============ SISTEMA DE COMBATE ============
+
+// Iniciar combate
+function startCombat(mob: MobDef) {
+  const { setState } = useGame();
+  
+  setState(prev => ({
+    ...prev,
+    inCombat: true,
+    currentEnemy: {
+      mob,
+      currentHp: mob.hp,
+      maxHp: mob.hp,
+      skillCooldowns: mob.skills.map(() => 0),
+    },
+    combatLog: [`⚔️ Combate iniciado contra ${mob.name}!`],
+  }));
+}
+
+// Encerrar combate
+function endCombat(victory: boolean) {
+  const { state, setState, addCurrency } = useGame();
+  if (!state.currentEnemy) return;
+  
+  const mob = state.currentEnemy.mob;
+  
+  if (victory) {
+    // Calcular drops
+    const drops = calculateDrops(mob);
+    
+    // Adicionar moedas
+    if (drops.gold > 0) {
+      // Converter ouro para moedas apropriadas
+      let remaining = drops.gold;
+      const gold = Math.floor(remaining / 10000);
+      remaining %= 10000;
+      const silver = Math.floor(remaining / 100);
+      remaining %= 100;
+      
+      if (gold > 0) addCurrency("gold", gold);
+      if (silver > 0) addCurrency("silver", silver);
+      if (remaining > 0) addCurrency("copper", remaining);
+    }
+    
+    if (drops.diamonds > 0) addCurrency("diamond", drops.diamonds);
+    if (drops.mithril > 0) addCurrency("mithril", drops.mithril);
+    
+    // XP ganho
+    const expGained = Math.floor(mob.level * 10 * (MOB_RANK_MULTIPLIERS[mob.rank]?.statMult || 1));
+    
+    setState(prev => ({
+      ...prev,
+      inCombat: false,
+      currentEnemy: null,
+      exp: prev.exp + expGained,
+      combatLog: [...prev.combatLog, `🎉 Vitória! +${expGained} XP`, 
+        drops.gold > 0 ? `💰 +${drops.gold} ouro` : null,
+        drops.diamonds > 0 ? `💎 +${drops.diamonds} diamantes` : null,
+        drops.mithril > 0 ? `✨ +${drops.mithril} mithril` : null,
+      ].filter(Boolean) as string[],
+    }));
+  } else {
+    setState(prev => ({
+      ...prev,
+      inCombat: false,
+      currentEnemy: null,
+      combatLog: [...prev.combatLog, "💀 Derrota!"],
+    }));
+  }
+}
+
+// Ataque básico do jogador
+function playerAttack(): { damage: number; isCrit: boolean } {
+  const { state, setState } = useGame();
+  if (!state.currentEnemy) return { damage: 0, isCrit: false };
+  
+  const stats = getTotalStats();
+  const enemy = state.currentEnemy;
+  
+  // Calcular dano
+  let damage = stats.atkF - enemy.mob.def;
+  
+  // Chance de crítico
+  const isCrit = Math.random() < stats.critRate;
+  if (isCrit) damage *= stats.critDmg;
+  
+  // Aplicar variação
+  damage *= (0.9 + Math.random() * 0.2);
+  damage = Math.max(1, Math.floor(damage));
+  
+  // Aplicar dano
+  const newHp = Math.max(0, enemy.currentHp - damage);
+  
+  setState(prev => ({
+    ...prev,
+    currentEnemy: prev.currentEnemy ? {
+      ...prev.currentEnemy,
+      currentHp: newHp,
+    } : null,
+    combatLog: [...prev.combatLog, `⚔️ Você causou ${damage}${isCrit ? " CRÍTICO" : ""} de dano!`],
+  }));
+  
+  // Verificar vitória
+  if (newHp <= 0) {
+    setTimeout(() => endCombat(true), 500);
+  }
+  
+  return { damage, isCrit };
+}
+
+// Usar skill
+function playerUseSkill(skillIndex: number): { success: boolean; damage?: number; message?: string } {
+  const { state, setState } = useGame();
+  if (!state.currentEnemy) return { success: false, message: "Não está em combate" };
+  
+  const skill = state.activeSkills[skillIndex];
+  if (!skill || !skill.unlocked) return { success: false, message: "Skill não desbloqueada" };
+  if (skill.cooldown > 0) return { success: false, message: `Skill em cooldown (${skill.cooldown})` };
+  
+  // Verificar mana
+  const manaCost = 10 + (skillIndex * 5);
+  if (state.currentMp < manaCost) return { success: false, message: "Mana insuficiente" };
+  
+  const stats = getTotalStats();
+  const enemy = state.currentEnemy;
+  
+  // Calcular dano da skill (baseado na descrição da habilidade)
+  let damage = stats.atkF * (1.5 + skillIndex * 0.5);
+  
+  // Aplicar efeitos especiais baseados na habilidade
+  const ability = skill.ability;
+  if (ability.description.includes("3 vezes") || ability.description.includes("6 vezes")) {
+    // Multi-hit
+    const hits = ability.description.includes("6") ? 6 : 3;
+    let totalDamage = 0;
+    for (let i = 0; i < hits; i++) {
+      totalDamage += damage * 0.4; // Cada hit causa 40% do dano
+    }
+    damage = totalDamage;
+  }
+  
+  damage = Math.floor(damage);
+  
+  // Aplicar dano
+  const newHp = Math.max(0, enemy.currentHp - damage);
+  
+  setState(prev => ({
+    ...prev,
+    currentMp: prev.currentMp - manaCost,
+    currentEnemy: prev.currentEnemy ? {
+      ...prev.currentEnemy,
+      currentHp: newHp,
+    } : null,
+    activeSkills: prev.activeSkills.map((s, i) => 
+      i === skillIndex ? { ...s, cooldown: s.maxCooldown } : s
+    ),
+    combatLog: [...prev.combatLog, `✨ ${ability.name}! ${damage} de dano!`],
+  }));
+  
+  // Verificar vitória
+  if (newHp <= 0) {
+    setTimeout(() => endCombat(true), 500);
+  }
+  
+  return { success: true, damage };
+}
+
+// Ataque do inimigo
+function enemyAttack(): { damage: number; skillUsed?: string } {
+  const { state, setState } = useGame();
+  if (!state.currentEnemy) return { damage: 0 };
+  
+  const enemy = state.currentEnemy;
+  const stats = getTotalStats();
+  
+  // Escolher ação do inimigo
+  let damage = 0;
+  let skillUsed: string | undefined;
+  
+  // Tentar usar skill se disponível
+  const availableSkills = enemy.mob.skills.filter((s, i) => 
+    enemy.skillCooldowns[i] <= 0 && s.damageMultiplier > 0
+  );
+  
+  if (availableSkills.length > 0 && Math.random() < 0.4) {
+    // Usar skill
+    const skill = availableSkills[Math.floor(Math.random() * availableSkills.length)];
+    damage = enemy.mob.atkF * skill.damageMultiplier;
+    skillUsed = skill.name;
+    
+    // Colocar skill em cooldown
+    const skillIndex = enemy.mob.skills.indexOf(skill);
+    enemy.skillCooldowns[skillIndex] = skill.cooldown;
+  } else {
+    // Ataque básico
+    damage = enemy.mob.atkF;
+  }
+  
+  // Aplicar defesa
+  damage = Math.max(1, damage - stats.def);
+  
+  // Chance de esquiva
+  if (Math.random() < stats.dodge) {
+    setState(prev => ({
+      ...prev,
+      combatLog: [...prev.combatLog, `💨 Você esquivou do ataque!`],
+    }));
+    return { damage: 0 };
+  }
+  
+  // Aplicar dano
+  const newHp = Math.max(0, state.currentHp - damage);
+  
+  setState(prev => ({
+    ...prev,
+    currentHp: newHp,
+    currentEnemy: {
+      ...prev.currentEnemy!,
+      skillCooldowns: prev.currentEnemy!.skillCooldowns.map(c => Math.max(0, c - 1)),
+    },
+    combatLog: [...prev.combatLog, `🗡️ ${enemy.mob.name} causou ${damage} de dano${skillUsed ? ` (${skillUsed})` : ""}!`],
+  }));
+  
+  // Verificar derrota
+  if (newHp <= 0) {
+    setTimeout(() => endCombat(false), 500);
+  }
+  
+  return { damage, skillUsed };
+}
+
+// Regenerar HP/MP
+function regenHpMp() {
+  const { state, setState } = useGame();
+  const stats = getTotalStats();
+  
+  setState(prev => ({
+    ...prev,
+    currentHp: Math.min(stats.hp, prev.currentHp + stats.hpRegen),
+    currentMp: Math.min(stats.hp * 0.5, prev.currentMp + stats.hp * 0.01), // 1% do HP como MP base
+  }));
+}
+
+// Encontrar encontro ao aventurar-se
+function findEncounter(biomeId: BiomeId): { type: "mob" | "resource" | "dungeon" | "nothing"; mob?: MobDef; message: string } {
+  const { state } = useGame();
+  
+  const roll = Math.random() * 100;
+  
+  // 40% chance de mob
+  if (roll < 40) {
+    const mob = findRandomMob(state.level, FOREST_MOBS);
+    if (mob) {
+      return { type: "mob", mob, message: `Você encontrou um ${mob.name}!` };
+    }
+  }
+  
+  // 20% chance de dungeon
+  if (roll < 60) {
+    return { type: "dungeon", message: "Você sente uma presença misteriosa... (sistema de dungeon em breve)" };
+  }
+  
+  // 15% chance de recurso
+  if (roll < 75) {
+    return { type: "resource", message: "Você encontrou alguns recursos! (sistema em breve)" };
+  }
+  
+  // 25% nada
+  return { type: "nothing", message: "Você explorou a área mas não encontrou nada de interessante." };
 }

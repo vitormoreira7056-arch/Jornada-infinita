@@ -110,7 +110,7 @@ function StatBox({ icon, label, value, color }: { icon: string; label: string; v
 }
 
 export default function Home() {
-  const { state } = useGame();
+  const { state, getTotalStats } = useGame();
   const race = state.raceId ? getRaceById(state.raceId) : null;
   const [statsVisible, setStatsVisible] = useState(false);
   const [fadeAnim] = useState(new Animated.Value(0));
@@ -125,6 +125,7 @@ export default function Home() {
 
   const expNeeded = state.level * 100;
   const expProgress = (state.exp / expNeeded) * 100;
+  const stats = getTotalStats();
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
@@ -160,6 +161,24 @@ export default function Home() {
             </View>
             <Text style={styles.xpText}>{state.exp} / {expNeeded} XP</Text>
           </View>
+          
+          {/* HP/MP Mini Bars */}
+          <View style={styles.hpMpContainer}>
+            <View style={styles.miniBar}>
+              <Text style={styles.miniBarIcon}>❤️</Text>
+              <View style={styles.miniBarBg}>
+                <View style={[styles.miniBarFill, { width: `${(state.currentHp / stats.hp) * 100}%`, backgroundColor: "#22c55e" }]} />
+              </View>
+              <Text style={styles.miniBarText}>{Math.floor(state.currentHp)}/{stats.hp}</Text>
+            </View>
+            <View style={styles.miniBar}>
+              <Text style={styles.miniBarIcon}>💧</Text>
+              <View style={styles.miniBarBg}>
+                <View style={[styles.miniBarFill, { width: `${(state.currentMp / stats.mp) * 100}%`, backgroundColor: "#3b82f6" }]} />
+              </View>
+              <Text style={styles.miniBarText}>{Math.floor(state.currentMp)}/{Math.floor(stats.mp)}</Text>
+            </View>
+          </View>
         </View>
 
         {/* Currencies Row */}
@@ -174,40 +193,53 @@ export default function Home() {
           </ScrollView>
         </View>
 
-        {/* Quick Actions - Clean */}
-        <View style={styles.actionsContainer}>
+        {/* City Button - Main Action */}
+        <TouchableOpacity 
+          style={styles.cityButton}
+          onPress={() => router.push("/(game)/city")}
+          activeOpacity={0.85}
+        >
+          <View style={styles.cityButtonGradient} />
+          <Text style={styles.cityButtonIcon}>🏰</Text>
+          <View style={styles.cityButtonContent}>
+            <Text style={styles.cityButtonTitle}>CIDADE</Text>
+            <Text style={styles.cityButtonSubtitle}>Loja, Ferreiro, Imbuidor, Artesão</Text>
+          </View>
+          <Text style={styles.cityButtonArrow}>→</Text>
+        </TouchableOpacity>
+
+        {/* Adventure Button */}
+        <TouchableOpacity 
+          style={styles.adventureButton}
+          onPress={() => router.push("/(game)/adventure")}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.adventureButtonIcon}>🗺️</Text>
+          <View>
+            <Text style={styles.adventureButtonTitle}>AVENTURA</Text>
+            <Text style={styles.adventureButtonSubtitle}>Explore biomas e dungeons</Text>
+          </View>
+          <Text style={styles.adventureButtonArrow}>→</Text>
+        </TouchableOpacity>
+
+        {/* Quick Actions */}
+        <View style={styles.actionsRow}>
           <TouchableOpacity 
-            style={styles.actionButtonLarge}
-            onPress={() => router.push("/(game)/adventure")}
+            style={[styles.actionButtonSmall, { borderColor: "#3b82f640" }]}
+            onPress={() => router.push("/(game)/inventory")}
             activeOpacity={0.85}
           >
-            <View style={styles.actionButtonGradient} />
-            <Text style={styles.actionButtonIconLarge}>⚔️</Text>
-            <View>
-              <Text style={styles.actionButtonTitle}>BATALHAR</Text>
-              <Text style={styles.actionButtonSubtitle}>Iniciar aventura</Text>
-            </View>
-            <Text style={styles.actionButtonArrow}>→</Text>
+            <Text style={styles.actionButtonIconSmall}>🎒</Text>
+            <Text style={[styles.actionButtonTitleSmall, { color: "#3b82f6" }]}>MOCHILA</Text>
           </TouchableOpacity>
-          
-          <View style={styles.actionsRow}>
-            <TouchableOpacity 
-              style={[styles.actionButtonSmall, { borderColor: "#3b82f640" }]}
-              onPress={() => router.push("/(game)/inventory")}
-              activeOpacity={0.85}
-            >
-              <Text style={styles.actionButtonIconSmall}>🎒</Text>
-              <Text style={[styles.actionButtonTitleSmall, { color: "#3b82f6" }]}>MOCHILA</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.actionButtonSmall, { borderColor: "#ec489940" }]}
-              onPress={() => router.push("/(game)/skills")}
-              activeOpacity={0.85}
-            >
-              <Text style={styles.actionButtonIconSmall}>✨</Text>
-              <Text style={[styles.actionButtonTitleSmall, { color: "#ec4899" }]}>SKILLS</Text>
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity 
+            style={[styles.actionButtonSmall, { borderColor: "#ec489940" }]}
+            onPress={() => router.push("/(game)/skills")}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.actionButtonIconSmall}>✨</Text>
+            <Text style={[styles.actionButtonTitleSmall, { color: "#ec4899" }]}>SKILLS</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Race Lore Card */}
@@ -316,6 +348,36 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontWeight: "600",
   },
+  hpMpContainer: {
+    marginTop: 12,
+    gap: 6,
+  },
+  miniBar: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  miniBarIcon: {
+    fontSize: 12,
+    marginRight: 6,
+  },
+  miniBarBg: {
+    flex: 1,
+    height: 6,
+    backgroundColor: "rgba(0,0,0,0.3)",
+    borderRadius: 3,
+    overflow: "hidden",
+  },
+  miniBarFill: {
+    height: "100%",
+    borderRadius: 3,
+  },
+  miniBarText: {
+    color: "#64748b",
+    fontSize: 10,
+    marginLeft: 6,
+    width: 50,
+    textAlign: "right",
+  },
   currenciesContainer: {
     marginBottom: 20,
   },
@@ -339,12 +401,9 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "700",
   },
-  actionsContainer: {
-    paddingHorizontal: 20,
-    gap: 12,
-    marginBottom: 20,
-  },
-  actionButtonLarge: {
+  cityButton: {
+    marginHorizontal: 20,
+    marginBottom: 12,
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#7c3aed",
@@ -353,7 +412,7 @@ const styles = StyleSheet.create({
     position: "relative",
     overflow: "hidden",
   },
-  actionButtonGradient: {
+  cityButtonGradient: {
     position: "absolute",
     top: 0,
     left: 0,
@@ -362,33 +421,69 @@ const styles = StyleSheet.create({
     backgroundColor: "#8b5cf6",
     opacity: 0.3,
   },
-  actionButtonIconLarge: {
-    fontSize: 28,
+  cityButtonIcon: {
+    fontSize: 32,
     marginRight: 16,
     zIndex: 1,
   },
-  actionButtonTitle: {
-    color: "#ffffff",
-    fontSize: 16,
-    fontWeight: "800",
-    letterSpacing: 1,
+  cityButtonContent: {
+    flex: 1,
     zIndex: 1,
   },
-  actionButtonSubtitle: {
+  cityButtonTitle: {
+    color: "#ffffff",
+    fontSize: 18,
+    fontWeight: "800",
+    letterSpacing: 2,
+    zIndex: 1,
+  },
+  cityButtonSubtitle: {
     color: "rgba(255,255,255,0.7)",
     fontSize: 12,
     marginTop: 2,
     zIndex: 1,
   },
-  actionButtonArrow: {
+  cityButtonArrow: {
     color: "#ffffff",
+    fontSize: 24,
+    zIndex: 1,
+  },
+  adventureButton: {
+    marginHorizontal: 20,
+    marginBottom: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(34, 197, 94, 0.2)",
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "rgba(34, 197, 94, 0.3)",
+  },
+  adventureButtonIcon: {
+    fontSize: 28,
+    marginRight: 14,
+  },
+  adventureButtonTitle: {
+    color: "#22c55e",
+    fontSize: 14,
+    fontWeight: "800",
+    letterSpacing: 1,
+  },
+  adventureButtonSubtitle: {
+    color: "rgba(255,255,255,0.5)",
+    fontSize: 11,
+    marginTop: 2,
+  },
+  adventureButtonArrow: {
+    color: "#22c55e",
     fontSize: 20,
     marginLeft: "auto",
-    zIndex: 1,
   },
   actionsRow: {
     flexDirection: "row",
     gap: 12,
+    marginHorizontal: 20,
+    marginBottom: 20,
   },
   actionButtonSmall: {
     flex: 1,
