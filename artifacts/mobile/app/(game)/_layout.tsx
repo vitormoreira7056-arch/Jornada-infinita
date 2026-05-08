@@ -1,8 +1,9 @@
 import { Tabs } from "expo-router";
-import { Text, View, TouchableOpacity, Alert, ScrollView } from "react-native";
+import { Text, View, TouchableOpacity, Alert, ScrollView, Modal, StyleSheet } from "react-native";
 import { useGame } from "@/context/GameContext";
 import { getRaceById } from "@/constants/races";
 import { router } from "expo-router";
+import { useState } from "react";
 
 function TabIcon({ emoji, focused }: { emoji: string; focused: boolean }) {
   return (
@@ -26,24 +27,40 @@ function TabIcon({ emoji, focused }: { emoji: string; focused: boolean }) {
   );
 }
 
-// Currency icon component
-function CurrencyIcon({ icon, value, color }: { icon: string; value: number; color: string }) {
-  if (value === 0) return null;
+// Currency display component
+function CurrencyDisplay({ icon, value, color }: { icon: string; value: number; color: string }) {
+  const formatValue = (val: number) => {
+    if (val >= 1000000) return `${(val / 1000000).toFixed(1)}M`;
+    if (val >= 1000) return `${(val / 1000).toFixed(1)}k`;
+    return val.toString();
+  };
+
   return (
-    <View style={{ flexDirection: "row", alignItems: "center", marginRight: 10 }}>
-      <Text style={{ fontSize: 12, marginRight: 2 }}>{icon}</Text>
-      <Text style={{ color, fontSize: 11, fontWeight: "700" }}>
-        {value >= 1000 ? `${(value / 1000).toFixed(1)}k` : value}
+    <View style={{
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: `${color}15`,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: `${color}30`,
+      marginRight: 6,
+    }}>
+      <Text style={{ fontSize: 11, marginRight: 3 }}>{icon}</Text>
+      <Text style={{ color, fontSize: 10, fontWeight: "700" }}>
+        {formatValue(value)}
       </Text>
     </View>
   );
 }
 
-function Header() {
-  const { state, logout } = useGame();
-  const race = state.raceId ? getRaceById(state.raceId) : null;
+// Menu Modal
+function MenuModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  const { logout } = useGame();
 
   const handleLogout = async () => {
+    onClose();
     Alert.alert(
       "Sair",
       "Deseja sair da conta?",
@@ -62,26 +79,61 @@ function Header() {
   };
 
   return (
+    <Modal
+      animationType="fade"
+      transparent={true}
+      visible={visible}
+      onRequestClose={onClose}
+    >
+      <TouchableOpacity style={menuStyles.overlay} onPress={onClose} activeOpacity={1}>
+        <View style={menuStyles.container}>
+          <View style={menuStyles.header}>
+            <Text style={menuStyles.title}>MENU</Text>
+          </View>
+          
+          <TouchableOpacity style={menuStyles.menuItem} onPress={() => { onClose(); /* TODO: Settings */ }}>
+            <Text style={menuStyles.menuIcon}>⚙️</Text>
+            <Text style={menuStyles.menuText}>Configurações</Text>
+          </TouchableOpacity>
+          
+          <View style={menuStyles.divider} />
+          
+          <TouchableOpacity style={[menuStyles.menuItem, menuStyles.logoutItem]} onPress={handleLogout}>
+            <Text style={menuStyles.menuIcon}>🚪</Text>
+            <Text style={[menuStyles.menuText, menuStyles.logoutText]}>Sair da Conta</Text>
+          </TouchableOpacity>
+        </View>
+      </TouchableOpacity>
+    </Modal>
+  );
+}
+
+function Header() {
+  const { state } = useGame();
+  const race = state.raceId ? getRaceById(state.raceId) : null;
+  const [menuVisible, setMenuVisible] = useState(false);
+
+  return (
     <View style={{
       backgroundColor: "#12121a",
       paddingHorizontal: 16,
-      paddingVertical: 12,
+      paddingVertical: 10,
       paddingTop: 60,
       borderBottomWidth: 1,
       borderBottomColor: "rgba(124, 58, 237, 0.08)",
     }}>
-      {/* Top Row - Player Info */}
+      {/* Top Row - Player Info & Menu */}
       <View style={{
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
-        marginBottom: 12,
+        marginBottom: 10,
       }}>
         <View style={{ flexDirection: "row", alignItems: "center" }}>
           <View style={{
-            width: 46,
-            height: 46,
-            borderRadius: 16,
+            width: 44,
+            height: 44,
+            borderRadius: 14,
             backgroundColor: `${race?.color}12` || "rgba(124, 58, 237, 0.1)",
             justifyContent: "center",
             alignItems: "center",
@@ -110,37 +162,101 @@ function Header() {
         </View>
 
         <TouchableOpacity 
-          onPress={handleLogout}
+          onPress={() => setMenuVisible(true)}
           style={{
             padding: 10,
             borderRadius: 12,
-            backgroundColor: "rgba(239, 68, 68, 0.1)",
+            backgroundColor: "rgba(124, 58, 237, 0.1)",
             borderWidth: 1,
-            borderColor: "rgba(239, 68, 68, 0.2)",
+            borderColor: "rgba(124, 58, 237, 0.2)",
           }}
         >
-          <Text style={{ fontSize: 16 }}>🚪</Text>
+          <Text style={{ fontSize: 18 }}>☰</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Currencies Row - Scrollable */}
+      {/* Currencies Row */}
       <ScrollView 
         horizontal 
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{
-          paddingVertical: 4,
-        }}
+        contentContainerStyle={{ paddingVertical: 2 }}
       >
-        <CurrencyIcon icon="🥉" value={state.currencies.copper} color="#b45309" />
-        <CurrencyIcon icon="🏅" value={state.currencies.bronze} color="#92400e" />
-        <CurrencyIcon icon="🥈" value={state.currencies.silver} color="#94a3b8" />
-        <CurrencyIcon icon="🥇" value={state.currencies.gold} color="#fbbf24" />
-        <CurrencyIcon icon="💎" value={state.currencies.diamond} color="#3b82f6" />
-        <CurrencyIcon icon="⚜️" value={state.currencies.mithril} color="#22d3ee" />
+        <CurrencyDisplay icon="🥉" value={state.currencies.copper} color="#b45309" />
+        <CurrencyDisplay icon="🏅" value={state.currencies.bronze} color="#92400e" />
+        <CurrencyDisplay icon="🥈" value={state.currencies.silver} color="#94a3b8" />
+        <CurrencyDisplay icon="🥇" value={state.currencies.gold} color="#fbbf24" />
+        <CurrencyDisplay icon="💎" value={state.currencies.diamond} color="#3b82f6" />
+        <CurrencyDisplay icon="⚜️" value={state.currencies.mithril} color="#22d3ee" />
       </ScrollView>
+
+      <MenuModal visible={menuVisible} onClose={() => setMenuVisible(false)} />
     </View>
   );
 }
+
+const menuStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(2, 2, 4, 0.8)",
+    justifyContent: "flex-start",
+    alignItems: "flex-end",
+    paddingTop: 110,
+    paddingRight: 16,
+  },
+  container: {
+    backgroundColor: "#12121a",
+    borderRadius: 16,
+    padding: 8,
+    minWidth: 180,
+    borderWidth: 1,
+    borderColor: "rgba(124, 58, 237, 0.2)",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.5,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  header: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(124, 58, 237, 0.1)",
+    marginBottom: 4,
+  },
+  title: {
+    color: "#64748b",
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 2,
+  },
+  menuItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    borderRadius: 10,
+  },
+  menuIcon: {
+    fontSize: 18,
+    marginRight: 12,
+  },
+  menuText: {
+    color: "#e2e8f0",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  divider: {
+    height: 1,
+    backgroundColor: "rgba(124, 58, 237, 0.1)",
+    marginVertical: 4,
+  },
+  logoutItem: {
+    backgroundColor: "rgba(239, 68, 68, 0.08)",
+  },
+  logoutText: {
+    color: "#ef4444",
+  },
+});
 
 export default function GameLayout() {
   return (

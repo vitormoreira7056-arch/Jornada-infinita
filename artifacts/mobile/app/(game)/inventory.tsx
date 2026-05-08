@@ -1,24 +1,7 @@
 import { useState } from "react";
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert } from "react-native";
 import { useGame, Item, EquipmentSlot } from "@/context/GameContext";
-
-const RARITY_COLORS = {
-  common: "#9ca3af",
-  uncommon: "#22c55e",
-  rare: "#3b82f6",
-  epic: "#a855f7",
-  legendary: "#f59e0b",
-  mythic: "#ef4444",
-};
-
-const RARITY_NAMES = {
-  common: "Comum",
-  uncommon: "Incomum",
-  rare: "Raro",
-  epic: "Épico",
-  legendary: "Lendário",
-  mythic: "Mítico",
-};
+import { TIERS, QUALITIES, TierId, QualityId } from "@/constants/tiers";
 
 const SLOT_CONFIG: { slot: EquipmentSlot; name: string; icon: string }[] = [
   { slot: "helmet", name: "Elmo", icon: "⛑️" },
@@ -54,20 +37,24 @@ function ItemCard({
   onSell?: () => void;
   showDetails?: boolean;
 }) {
+  const tier = TIERS[item.tier];
+  const quality = QUALITIES[item.quality];
+  
   const hasStats = item.atkF > 0 || item.atkM > 0 || item.def > 0 || item.hp > 0 || 
                    item.armor > 0 || item.magicRes > 0 || item.critRate > 0 || item.dodge > 0;
 
   return (
     <TouchableOpacity style={styles.itemCard} onPress={onPress} activeOpacity={0.8}>
-      <View style={[styles.itemIconBox, { borderColor: RARITY_COLORS[item.rarity] }]}>
+      <View style={[styles.itemIconBox, { borderColor: tier.color }]}>
         <Text style={styles.itemIcon}>{item.icon}</Text>
-        <View style={[styles.rarityDot, { backgroundColor: RARITY_COLORS[item.rarity] }]} />
+        <View style={[styles.tierDot, { backgroundColor: tier.color }]} />
       </View>
       <View style={styles.itemInfo}>
         <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
-        <Text style={[styles.itemRarity, { color: RARITY_COLORS[item.rarity] }]}>
-          {RARITY_NAMES[item.rarity]}
-        </Text>
+        <View style={styles.tierQualityRow}>
+          <Text style={[styles.qualityText, { color: quality.color }]}>{quality.name}</Text>
+          <Text style={[styles.tierText, { color: tier.color }]}>{tier.name}</Text>
+        </View>
         {showDetails && hasStats && (
           <View style={styles.itemStats}>
             {item.atkF > 0 && <Text style={styles.miniStat}>⚔️{item.atkF}</Text>}
@@ -107,16 +94,21 @@ function EquipmentSlotCard({
     <TouchableOpacity style={styles.slotCard} onPress={onPress} activeOpacity={0.8}>
       <View style={[
         styles.slotIconBox,
-        item && { borderColor: RARITY_COLORS[item.rarity] }
+        item && { borderColor: TIERS[item.tier].color }
       ]}>
         <Text style={styles.slotIcon}>{item ? item.icon : icon}</Text>
-        {item && <View style={[styles.equippedDot, { backgroundColor: RARITY_COLORS[item.rarity] }]} />}
+        {item && <View style={[styles.equippedDot, { backgroundColor: TIERS[item.tier].color }]} />}
       </View>
       <Text style={styles.slotName}>{name}</Text>
       {item ? (
-        <Text style={[styles.slotItemName, { color: RARITY_COLORS[item.rarity] }]} numberOfLines={1}>
-          {item.name}
-        </Text>
+        <View style={styles.slotItemInfo}>
+          <Text style={[styles.slotTierText, { color: TIERS[item.tier].color }]} numberOfLines={1}>
+            {TIERS[item.tier].name}
+          </Text>
+          <Text style={[styles.slotQualityText, { color: QUALITIES[item.quality].color }]} numberOfLines={1}>
+            {QUALITIES[item.quality].name}
+          </Text>
+        </View>
       ) : (
         <Text style={styles.slotEmpty}>Vazio</Text>
       )}
@@ -127,7 +119,7 @@ function EquipmentSlotCard({
 export default function Inventory() {
   const [activeTab, setActiveTab] = useState<Tab>("items");
   const [selectedSlot, setSelectedSlot] = useState<EquipmentSlot | null>(null);
-  const { state, equipItem, unequipItem, sellItem } = useGame();
+  const { state, equipItem, unequipItem, sellItem, generateItem } = useGame();
 
   const handleEquip = (item: Item) => {
     if (selectedSlot) {
@@ -331,7 +323,7 @@ const styles = StyleSheet.create({
   itemIcon: {
     fontSize: 24,
   },
-  rarityDot: {
+  tierDot: {
     position: "absolute",
     top: 4,
     right: 4,
@@ -348,10 +340,18 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginBottom: 2,
   },
-  itemRarity: {
-    fontSize: 11,
-    fontWeight: "700",
+  tierQualityRow: {
+    flexDirection: "row",
+    gap: 8,
     marginBottom: 4,
+  },
+  qualityText: {
+    fontSize: 10,
+    fontWeight: "700",
+  },
+  tierText: {
+    fontSize: 10,
+    fontWeight: "700",
   },
   itemStats: {
     flexDirection: "row",
@@ -419,11 +419,19 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     textAlign: "center",
   },
-  slotItemName: {
+  slotItemInfo: {
+    alignItems: "center",
+  },
+  slotTierText: {
     fontSize: 8,
     fontWeight: "600",
     textAlign: "center",
     marginTop: 2,
+  },
+  slotQualityText: {
+    fontSize: 7,
+    fontWeight: "600",
+    textAlign: "center",
   },
   slotEmpty: {
     color: "#334155",

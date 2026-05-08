@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { RaceId, getRaceById, RaceAbility } from "@/constants/races";
 import { ElementId } from "@/constants/elements";
+import { TierId, QualityId, rollTier, rollQuality, getTotalMultiplier, TIERS, QUALITIES } from "@/constants/tiers";
 
 const USERS_KEY = "rpg_idle_users_v5";
 const CURRENT_USER_KEY = "rpg_idle_current_user_v5";
@@ -19,7 +20,8 @@ export interface Item {
   id: string;
   name: string;
   slot: EquipmentSlot;
-  rarity: "common" | "uncommon" | "rare" | "epic" | "legendary" | "mythic";
+  tier: TierId;
+  quality: QualityId;
   // Stats
   hp: number;
   atkF: number;
@@ -196,6 +198,8 @@ interface GameContextType {
   sellItem: (itemId: string) => void;
   useSkill: (skillIndex: number) => void;
   addCurrency: (type: keyof Currencies, amount: number) => void;
+  generateItem: (slot: EquipmentSlot) => Item;
+  getItemColor: (item: Item) => string;
   getTotalStats: () => {
     hp: number;
     atkF: number;
@@ -594,6 +598,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         sellItem,
         useSkill,
         addCurrency,
+        generateItem,
+        getItemColor,
         getTotalStats,
         getAllRaceStats,
       }}
@@ -607,4 +613,67 @@ export function useGame() {
   const ctx = useContext(GameContext);
   if (!ctx) throw new Error("useGame must be used within GameProvider");
   return ctx;
+}
+
+// Função para gerar um item aleatório
+function generateItem(slot: EquipmentSlot): Item {
+  const tier = rollTier();
+  const quality = rollQuality();
+  const multiplier = getTotalMultiplier(tier, quality);
+  
+  // Base stats escalados pelo multiplicador
+  const baseValue = 10;
+  
+  return {
+    id: Date.now().toString(),
+    name: `${TIERS[tier].name} ${slot}`,
+    slot,
+    tier,
+    quality,
+    hp: Math.floor(baseValue * multiplier * (Math.random() * 0.5 + 0.75)),
+    atkF: slot === "mainHand" ? Math.floor(baseValue * multiplier * (Math.random() * 0.5 + 0.75)) : 0,
+    atkM: slot === "mainHand" ? Math.floor(baseValue * 0.7 * multiplier * (Math.random() * 0.5 + 0.75)) : 0,
+    def: 0,
+    armor: ["helmet", "chest", "legs", "boots", "shoulders"].includes(slot) ? Math.floor(baseValue * 0.5 * multiplier) : 0,
+    magicRes: ["helmet", "chest", "legs", "boots", "cape"].includes(slot) ? Math.floor(baseValue * 0.3 * multiplier) : 0,
+    critRate: slot === "ring1" || slot === "ring2" ? 0.01 * multiplier : 0,
+    critDmg: 0,
+    atkSpeed: 0,
+    luck: 0,
+    dodge: slot === "boots" ? 0.01 * multiplier : 0,
+    lifeSteal: 0,
+    armorPen: 0,
+    hpRegen: 0,
+    resFire: 0,
+    resWater: 0,
+    resEarth: 0,
+    resThunder: 0,
+    resIce: 0,
+    resWind: 0,
+    resDark: 0,
+    resLight: 0,
+    resArcane: 0,
+    resPoison: 0,
+    resMetal: 0,
+    resNature: 0,
+    resBlood: 0,
+    resVoid: 0,
+    resChaos: 0,
+    resHoly: 0,
+    resShadow: 0,
+    resInfernal: 0,
+    resStorm: 0,
+    resRunic: 0,
+    resDivine: 0,
+    value: Math.floor(baseValue * multiplier),
+    icon: "🗡️",
+  };
+}
+
+// Função para obter a cor do item
+function getItemColor(item: Item): string {
+  if (item.tier === "god") {
+    return "#ffffff";
+  }
+  return TIERS[item.tier].color;
 }
