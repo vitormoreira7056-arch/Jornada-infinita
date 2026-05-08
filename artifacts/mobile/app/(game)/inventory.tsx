@@ -55,10 +55,10 @@ function ItemCard({
   showDetails?: boolean;
 }) {
   const hasStats = item.atkF > 0 || item.atkM > 0 || item.def > 0 || item.hp > 0 || 
-                   item.critRate > 0 || item.dodge > 0 || item.lifeSteal > 0;
+                   item.armor > 0 || item.magicRes > 0 || item.critRate > 0 || item.dodge > 0;
 
   return (
-    <TouchableOpacity style={styles.itemCard} onPress={onPress}>
+    <TouchableOpacity style={styles.itemCard} onPress={onPress} activeOpacity={0.8}>
       <View style={[styles.itemIconBox, { borderColor: RARITY_COLORS[item.rarity] }]}>
         <Text style={styles.itemIcon}>{item.icon}</Text>
         <View style={[styles.rarityDot, { backgroundColor: RARITY_COLORS[item.rarity] }]} />
@@ -74,14 +74,15 @@ function ItemCard({
             {item.atkM > 0 && <Text style={styles.miniStat}>🔮{item.atkM}</Text>}
             {item.def > 0 && <Text style={styles.miniStat}>🛡️{item.def}</Text>}
             {item.hp > 0 && <Text style={styles.miniStat}>❤️{item.hp}</Text>}
+            {item.armor > 0 && <Text style={styles.miniStat}>🧱{item.armor}</Text>}
+            {item.magicRes > 0 && <Text style={styles.miniStat}>✨{item.magicRes}</Text>}
             {item.critRate > 0 && <Text style={styles.miniStat}>🎯{(item.critRate * 100).toFixed(0)}%</Text>}
             {item.dodge > 0 && <Text style={styles.miniStat}>💨{(item.dodge * 100).toFixed(0)}%</Text>}
-            {item.lifeSteal > 0 && <Text style={styles.miniStat}>🩸{(item.lifeSteal * 100).toFixed(0)}%</Text>}
           </View>
         )}
       </View>
       {onSell && (
-        <TouchableOpacity style={styles.sellBtn} onPress={onSell}>
+        <TouchableOpacity style={styles.sellBtn} onPress={onSell} activeOpacity={0.7}>
           <Text style={styles.sellText}>🪙{item.value}</Text>
         </TouchableOpacity>
       )}
@@ -103,7 +104,7 @@ function EquipmentSlotCard({
   onPress: () => void;
 }) {
   return (
-    <TouchableOpacity style={styles.slotCard} onPress={onPress}>
+    <TouchableOpacity style={styles.slotCard} onPress={onPress} activeOpacity={0.8}>
       <View style={[
         styles.slotIconBox,
         item && { borderColor: RARITY_COLORS[item.rarity] }
@@ -259,13 +260,13 @@ export default function Inventory() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0a0a0f",
+    backgroundColor: "#050508",
   },
   tabBar: {
     flexDirection: "row",
-    backgroundColor: "#12121a",
+    backgroundColor: "rgba(18, 18, 26, 0.8)",
     borderBottomWidth: 1,
-    borderBottomColor: "#1e1e2e",
+    borderBottomColor: "rgba(124, 58, 237, 0.1)",
   },
   tab: {
     flex: 1,
@@ -309,22 +310,22 @@ const styles = StyleSheet.create({
   itemCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#12121a",
-    borderRadius: 12,
+    backgroundColor: "rgba(18, 18, 26, 0.8)",
+    borderRadius: 14,
     padding: 12,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: "#1e1e2e",
+    borderColor: "rgba(124, 58, 237, 0.1)",
   },
   itemIconBox: {
     width: 56,
     height: 56,
-    borderRadius: 12,
-    backgroundColor: "#0a0a0f",
+    borderRadius: 14,
+    backgroundColor: "rgba(10, 10, 15, 0.8)",
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 2,
-    borderColor: "#1e1e2e",
+    borderColor: "rgba(124, 58, 237, 0.2)",
     marginRight: 12,
   },
   itemIcon: {
@@ -362,10 +363,12 @@ const styles = StyleSheet.create({
     fontSize: 11,
   },
   sellBtn: {
-    backgroundColor: "#1e1e2e",
+    backgroundColor: "rgba(124, 58, 237, 0.15)",
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(124, 58, 237, 0.2)",
   },
   sellText: {
     color: "#fbbf24",
@@ -380,23 +383,23 @@ const styles = StyleSheet.create({
   slotCard: {
     width: "23%",
     aspectRatio: 1,
-    backgroundColor: "#12121a",
-    borderRadius: 12,
+    backgroundColor: "rgba(18, 18, 26, 0.8)",
+    borderRadius: 14,
     padding: 8,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "#1e1e2e",
+    borderColor: "rgba(124, 58, 237, 0.1)",
   },
   slotIconBox: {
     width: 40,
     height: 40,
-    borderRadius: 10,
-    backgroundColor: "#0a0a0f",
+    borderRadius: 12,
+    backgroundColor: "rgba(10, 10, 15, 0.8)",
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 2,
-    borderColor: "#1e1e2e",
+    borderColor: "rgba(124, 58, 237, 0.2)",
     marginBottom: 4,
   },
   slotIcon: {

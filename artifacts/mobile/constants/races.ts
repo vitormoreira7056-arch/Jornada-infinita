@@ -11,16 +11,16 @@ export type Gender = "masculino" | "feminino";
 export interface RaceStats {
   hp: number;
   armor: number;
+  magicRes: number;
   atkF: number;
   atkM: number;
+  def: number;
   critBonus: number;
   critMultBonus: number;
   luck: number;
   lifeSteal: number;
   dodge: number;
   speed: number;
-  magicPower: number;
-  fortune: number;
   armorPen: number;
   hpRegen: number;
 }
@@ -46,10 +46,10 @@ export interface RaceDef {
 }
 
 const EMPTY_STATS: RaceStats = {
-  hp: 0, armor: 0, atkF: 0, atkM: 0,
+  hp: 0, armor: 0, magicRes: 0, atkF: 0, atkM: 0, def: 0,
   critBonus: 0, critMultBonus: 0, luck: 0,
   lifeSteal: 0, dodge: 0, speed: 0,
-  magicPower: 0, fortune: 0, armorPen: 0, hpRegen: 0,
+  armorPen: 0, hpRegen: 0,
 };
 
 export const RACES: RaceDef[] = [
@@ -61,13 +61,13 @@ export const RACES: RaceDef[] = [
     lore: "Forjados pelo ferro das montanhas, os Anões são imbatíveis em resistência. Seu corpo rígido é como a rocha que habitam — inabaláveis.",
     primaryElements: ["terra", "metal"],
     learnableElements: ["fogo", "trovao", "arcano"],
-    stats: { ...EMPTY_STATS, hp: 60, armor: 12, atkF: 8, critBonus: 0.02, luck: 0.0001, dodge: 0.001, speed: -2, hpRegen: 2 },
-    resistances: { terra: 25, metal: 20, fogo: 10, gelo: -5 },
+    stats: { ...EMPTY_STATS, hp: 40, armor: 8, magicRes: 4, atkF: 6, def: 5, critBonus: 0.01, luck: 0.0001, dodge: 0.005, speed: -1, hpRegen: 1 },
+    resistances: { terra: 20, metal: 15, fogo: 8, gelo: -5 },
     abilities: [
-      { name: "Golpe de Martelo", type: "ativa", description: "Golpe pesado que esmaga o inimigo, reduzindo 30% da defesa dele por 3 turnos.", icon: "tool" },
-      { name: "Fortaleza de Pedra", type: "ativa", description: "Entra em forma de pedra, aumentando a armadura em 100% por 2 turnos.", icon: "shield" },
-      { name: "Grito de Guerra", type: "ativa", description: "Grito que aumenta o ATK.f em 25% por 4 turnos.", icon: "volume-2" },
-      { name: "Pele de Rocha", type: "passiva", description: "Reduz todo dano físico recebido em 8% permanentemente.", icon: "layers" },
+      { name: "Golpe de Martelo", type: "ativa", description: "Golpe pesado que reduz 15% da defesa do inimigo por 2 turnos.", icon: "tool" },
+      { name: "Fortaleza de Pedra", type: "ativa", description: "Aumenta a armadura em 40% por 2 turnos.", icon: "shield" },
+      { name: "Grito de Guerra", type: "ativa", description: "Aumenta o ATK.f em 12% por 3 turnos.", icon: "volume-2" },
+      { name: "Pele de Rocha", type: "passiva", description: "Reduz dano físico recebido em 5%.", icon: "layers" },
     ],
   },
   {
@@ -78,13 +78,13 @@ export const RACES: RaceDef[] = [
     lore: "Mestres das runas ancestrais, os Anões Rúnicos gravaram a magia em seus próprios corpos. Cada runa em sua pele é um feitiço latente.",
     primaryElements: ["terra", "runico"],
     learnableElements: ["arcano", "metal", "trovao"],
-    stats: { ...EMPTY_STATS, hp: 30, armor: 6, atkM: 14, magicPower: 4, critBonus: 0.01, luck: 0.0001, dodge: 0.001 },
-    resistances: { terra: 20, runico: 20, arcano: 15 },
+    stats: { ...EMPTY_STATS, hp: 25, armor: 3, magicRes: 8, atkM: 10, def: 2, critBonus: 0.01, luck: 0.0001, dodge: 0.005 },
+    resistances: { terra: 15, runico: 15, arcano: 10 },
     abilities: [
-      { name: "Runa de Explosão", type: "ativa", description: "Detona uma runa no inimigo causando dano mágico maciço de Terra+Arcano.", icon: "zap" },
-      { name: "Escudo Rúnico", type: "ativa", description: "Ativa escudo de runas que absorve até 40% do HP máximo em dano.", icon: "shield" },
-      { name: "Âncora de Runas", type: "ativa", description: "Fixa o inimigo com runas, impedindo esquiva por 3 turnos.", icon: "anchor" },
-      { name: "Sabedoria das Runas", type: "passiva", description: "Feitiços custam 15% menos e causam 10% mais dano mágico.", icon: "book" },
+      { name: "Runa de Explosão", type: "ativa", description: "Causa dano mágico de Terra+Arcano moderado.", icon: "zap" },
+      { name: "Escudo Rúnico", type: "ativa", description: "Absorve até 20% do HP máximo em dano por 2 turnos.", icon: "shield" },
+      { name: "Âncora de Runas", type: "ativa", description: "Reduz esquiva do inimigo em 30% por 2 turnos.", icon: "anchor" },
+      { name: "Sabedoria das Runas", type: "passiva", description: "Feitiços causam 6% mais dano mágico.", icon: "book" },
     ],
   },
   {
@@ -95,13 +95,13 @@ export const RACES: RaceDef[] = [
     lore: "Nascidos nas sombras das florestas proibidas, os Elfos Negros dominam o veneno e a escuridão. Seus ataques são silenciosos como a morte.",
     primaryElements: ["escuridao", "veneno"],
     learnableElements: ["sombra", "vento", "arcano"],
-    stats: { ...EMPTY_STATS, hp: 10, atkF: 6, atkM: 12, critBonus: 0.04, dodge: 0.05, luck: 0.0002, speed: 3 },
-    resistances: { escuridao: 30, veneno: 25, luz: -15 },
+    stats: { ...EMPTY_STATS, hp: 15, armor: 2, magicRes: 6, atkF: 4, atkM: 8, def: 2, critBonus: 0.025, dodge: 0.03, luck: 0.0002, speed: 2 },
+    resistances: { escuridao: 20, veneno: 15, luz: -10 },
     abilities: [
-      { name: "Flecha Sombria", type: "ativa", description: "Flecha envenenada que causa dano de Escuridão e aplica veneno por 5 turnos.", icon: "target" },
-      { name: "Passo das Sombras", type: "ativa", description: "Dissolve-se nas sombras, garantindo esquiva no próximo ataque e contra-atacando.", icon: "wind" },
-      { name: "Névoa Venenosa", type: "ativa", description: "Cria nuvem de veneno que causa dano em área por 3 turnos.", icon: "cloud" },
-      { name: "Adaptação às Trevas", type: "passiva", description: "Nas sombras, ganha +12% de velocidade de ataque e taxa crítica.", icon: "moon" },
+      { name: "Flecha Sombria", type: "ativa", description: "Causa dano de Escuridão e aplica veneno fraco por 3 turnos.", icon: "target" },
+      { name: "Passo das Sombras", type: "ativa", description: "Aumenta esquiva em 25% por 1 turno.", icon: "wind" },
+      { name: "Névoa Venenosa", type: "ativa", description: "Causa dano de veneno em área por 2 turnos.", icon: "cloud" },
+      { name: "Adaptação às Trevas", type: "passiva", description: "Ganha +5% de velocidade de ataque em combate.", icon: "moon" },
     ],
   },
   {
@@ -112,13 +112,13 @@ export const RACES: RaceDef[] = [
     lore: "Aristocratas da magia, os Altos Elfos nasceram com afinidade inata à luz e ao arcano. São os mais poderosos usuários de magia do mundo.",
     primaryElements: ["luz", "arcano"],
     learnableElements: ["sagrado", "divino", "vento"],
-    stats: { ...EMPTY_STATS, hp: 15, atkM: 20, magicPower: 6, critBonus: 0.02, luck: 0.0001, dodge: 0.01 },
-    resistances: { luz: 35, arcano: 25, escuridao: -20 },
+    stats: { ...EMPTY_STATS, hp: 20, armor: 2, magicRes: 10, atkM: 12, def: 2, critBonus: 0.015, luck: 0.0001, dodge: 0.01 },
+    resistances: { luz: 25, arcano: 15, escuridao: -15 },
     abilities: [
-      { name: "Raio de Pureza", type: "ativa", description: "Feixe de luz pura que causa dano dobrado contra criaturas das trevas.", icon: "sun" },
-      { name: "Barreira Arcana", type: "ativa", description: "Escudo mágico que absorve 50% do HP máximo em dano mágico.", icon: "shield" },
-      { name: "Chuva de Meteoros", type: "ativa", description: "Invoca meteoros arcanos que atingem o inimigo 5 vezes.", icon: "star" },
-      { name: "Graça Élfica", type: "passiva", description: "Feitiços têm 20% de chance de causar 50% mais dano sem custo extra.", icon: "star" } as RaceAbility,
+      { name: "Raio de Pureza", type: "ativa", description: "Causa dano de Luz moderado, dobrado contra trevas.", icon: "sun" },
+      { name: "Barreira Arcana", type: "ativa", description: "Absorve 25% do HP máximo em dano mágico por 2 turnos.", icon: "shield" },
+      { name: "Chuva de Meteoros", type: "ativa", description: "Causa dano de Arcano em 3 acertos.", icon: "star" },
+      { name: "Graça Élfica", type: "passiva", description: "Feitiços têm 10% de chance de causar 25% mais dano.", icon: "star" },
     ],
   },
   {
@@ -129,13 +129,13 @@ export const RACES: RaceDef[] = [
     lore: "Guerreiros nascidos para a batalha, os Orcs canalizam a raiva tribal em força bruta incomparável. Quanto mais sangue, mais fortes ficam.",
     primaryElements: ["fogo", "terra"],
     learnableElements: ["metal", "trovao", "caos"],
-    stats: { ...EMPTY_STATS, hp: 90, armor: 10, atkF: 16, critBonus: 0.01, luck: 0.0001, dodge: 0.001, speed: 1 },
-    resistances: { fogo: 20, terra: 20, veneno: 15 },
+    stats: { ...EMPTY_STATS, hp: 55, armor: 6, magicRes: 4, atkF: 10, def: 4, critBonus: 0.01, luck: 0.0001, dodge: 0.005, speed: 1 },
+    resistances: { fogo: 15, terra: 15, veneno: 10 },
     abilities: [
-      { name: "Esmagamento", type: "ativa", description: "Golpe devastador que causa 200% ATK.f e ignora 25% da armadura inimiga.", icon: "arrow-down" },
-      { name: "Fúria Berserker", type: "ativa", description: "Entra em fúria por 4 turnos: +50% ATK.f mas não pode defender.", icon: "alert-triangle" },
-      { name: "Grito de Invasão", type: "ativa", description: "Grito que reduz defesa de todos os inimigos em 20% por 3 turnos.", icon: "volume-2" },
-      { name: "Sede de Sangue", type: "passiva", description: "Abaixo de 30% HP, ganha +30% ATK.f e 5% roubo de vida.", icon: "heart" },
+      { name: "Esmagamento", type: "ativa", description: "Causa 140% ATK.f e ignora 15% da armadura.", icon: "arrow-down" },
+      { name: "Fúria Berserker", type: "ativa", description: "+25% ATK.f por 3 turnos, mas recebe 10% a mais dano.", icon: "alert-triangle" },
+      { name: "Grito de Invasão", type: "ativa", description: "Reduz defesa do inimigo em 12% por 2 turnos.", icon: "volume-2" },
+      { name: "Sede de Sangue", type: "passiva", description: "Abaixo de 25% HP, ganha +15% ATK.f e 3% roubo de vida.", icon: "heart" },
     ],
   },
   {
@@ -146,13 +146,13 @@ export const RACES: RaceDef[] = [
     lore: "Sem dons inatos, os Humanos compensam com adaptabilidade inigualável. Sua sorte e determinação os tornam imprevisíveis em batalha.",
     primaryElements: [],
     learnableElements: ["fogo", "agua", "terra", "trovao", "gelo", "vento", "escuridao", "luz"],
-    stats: { ...EMPTY_STATS, hp: 25, atkF: 5, atkM: 5, critBonus: 0.01, luck: 0.0003, fortune: 2, dodge: 0.01 },
+    stats: { ...EMPTY_STATS, hp: 30, armor: 3, magicRes: 3, atkF: 4, atkM: 4, def: 3, critBonus: 0.01, luck: 0.0003, dodge: 0.015 },
     resistances: { fogo: 5, agua: 5, terra: 5, trovao: 5, gelo: 5, vento: 5 },
     abilities: [
-      { name: "Determinação", type: "ativa", description: "Vontade de aço: ignora o próximo ataque e contra-ataca com 150% ATK.", icon: "shield" },
-      { name: "Adaptação", type: "ativa", description: "Adapta-se à batalha, ganhando um buff aleatório poderoso por 3 turnos.", icon: "refresh-cw" },
-      { name: "Golpe Certeiro", type: "ativa", description: "Ataque preciso que ignora completamente a armadura inimiga.", icon: "crosshair" },
-      { name: "Potencial Humano", type: "passiva", description: "Ganha 15% mais EXP e ouro de batalhas. Sorte cresce 25% mais rápido.", icon: "trending-up" },
+      { name: "Determinação", type: "ativa", description: "Reduz dano do próximo ataque em 30% e contra-ataca com 110% ATK.", icon: "shield" },
+      { name: "Adaptação", type: "ativa", description: "Ganha buff aleatório (+10% em um atributo) por 3 turnos.", icon: "refresh-cw" },
+      { name: "Golpe Certeiro", type: "ativa", description: "Ignora 50% da armadura do inimigo.", icon: "crosshair" },
+      { name: "Potencial Humano", type: "passiva", description: "Ganha 10% mais EXP e ouro. Sorte acumula mais rápido.", icon: "trending-up" },
     ],
   },
   {

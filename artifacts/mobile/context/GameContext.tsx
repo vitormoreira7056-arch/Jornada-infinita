@@ -1,9 +1,10 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { RaceId, getRaceById, RaceAbility } from "@/constants/races";
+import { ElementId } from "@/constants/elements";
 
-const USERS_KEY = "rpg_idle_users_v3";
-const CURRENT_USER_KEY = "rpg_idle_current_user_v3";
+const USERS_KEY = "rpg_idle_users_v4";
+const CURRENT_USER_KEY = "rpg_idle_current_user_v4";
 
 // 21 slots de equipamento
 export type EquipmentSlot =
@@ -24,19 +25,38 @@ export interface Item {
   atkF: number;
   atkM: number;
   def: number;
+  armor: number;
+  magicRes: number;
   critRate: number;
   critDmg: number;
   atkSpeed: number;
-  moveSpeed: number;
   luck: number;
   dodge: number;
   lifeSteal: number;
   armorPen: number;
   hpRegen: number;
-  // Elemental
-  fireDmg: number;
-  iceDmg: number;
-  lightningDmg: number;
+  // Elemental Resistances
+  resFire: number;
+  resWater: number;
+  resEarth: number;
+  resThunder: number;
+  resIce: number;
+  resWind: number;
+  resDark: number;
+  resLight: number;
+  resArcane: number;
+  resPoison: number;
+  resMetal: number;
+  resNature: number;
+  resBlood: number;
+  resVoid: number;
+  resChaos: number;
+  resHoly: number;
+  resShadow: number;
+  resInfernal: number;
+  resStorm: number;
+  resRunic: number;
+  resDivine: number;
   // Value
   value: number;
   // Visual
@@ -48,6 +68,7 @@ export interface ActiveSkill {
   cooldown: number;
   maxCooldown: number;
   unlocked: boolean;
+  levelRequired: number;
 }
 
 export interface GameState {
@@ -69,15 +90,19 @@ export interface GameState {
   baseAtkF: number;
   baseAtkM: number;
   baseDef: number;
+  baseArmor: number;
+  baseMagicRes: number;
   baseCritRate: number;
   baseCritDmg: number;
   baseAtkSpeed: number;
-  baseMoveSpeed: number;
   baseLuck: number;
   baseDodge: number;
   baseLifeSteal: number;
   baseArmorPen: number;
   baseHpRegen: number;
+  
+  // Elemental Resistances base
+  baseRes: Record<ElementId, number>;
   
   // Skills
   activeSkills: ActiveSkill[];
@@ -95,6 +120,12 @@ export interface GameState {
   completedZones: number[];
 }
 
+const DEFAULT_RES: Record<ElementId, number> = {
+  fogo: 0, agua: 0, terra: 0, trovao: 0, gelo: 0, vento: 0, escuridao: 0, luz: 0,
+  arcano: 0, veneno: 0, metal: 0, natureza: 0, sangue: 0, void: 0, caos: 0,
+  sagrado: 0, sombra: 0, infernal: 0, tempestade: 0, runico: 0, divino: 0,
+};
+
 const DEFAULT_STATE: GameState = {
   username: "",
   isLoggedIn: false,
@@ -109,15 +140,17 @@ const DEFAULT_STATE: GameState = {
   baseAtkF: 10,
   baseAtkM: 10,
   baseDef: 5,
+  baseArmor: 0,
+  baseMagicRes: 0,
   baseCritRate: 0.05,
   baseCritDmg: 1.5,
   baseAtkSpeed: 1,
-  baseMoveSpeed: 1,
   baseLuck: 0.001,
   baseDodge: 0.01,
   baseLifeSteal: 0,
   baseArmorPen: 0,
   baseHpRegen: 0,
+  baseRes: { ...DEFAULT_RES },
   activeSkills: [],
   passiveSkillUnlocked: false,
   equipment: {
@@ -149,30 +182,34 @@ interface GameContextType {
     atkF: number;
     atkM: number;
     def: number;
+    armor: number;
+    magicRes: number;
     critRate: number;
     critDmg: number;
     atkSpeed: number;
-    moveSpeed: number;
     luck: number;
     dodge: number;
     lifeSteal: number;
     armorPen: number;
     hpRegen: number;
+    res: Record<ElementId, number>;
   };
   getAllRaceStats: (raceId: RaceId) => {
     hp: number;
     atkF: number;
     atkM: number;
     def: number;
+    armor: number;
+    magicRes: number;
     critRate: number;
     critDmg: number;
     atkSpeed: number;
-    moveSpeed: number;
     luck: number;
     dodge: number;
     lifeSteal: number;
     armorPen: number;
     hpRegen: number;
+    res: Record<ElementId, number>;
   } | null;
   addGold: (amount: number) => void;
 }
@@ -211,6 +248,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
             ...DEFAULT_STATE,
             ...parsed,
             equipment: { ...DEFAULT_STATE.equipment, ...(parsed.equipment || {}) },
+            baseRes: { ...DEFAULT_RES, ...(parsed.baseRes || {}) },
             username: currentUser,
             isLoggedIn: true,
           });
@@ -248,6 +286,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
             ...DEFAULT_STATE,
             ...parsed,
             equipment: { ...DEFAULT_STATE.equipment, ...(parsed.equipment || {}) },
+            baseRes: { ...DEFAULT_RES, ...(parsed.baseRes || {}) },
             username,
             isLoggedIn: true,
           });
@@ -307,14 +346,23 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     const race = getRaceById(raceId);
     if (!race) return;
 
-    // Initialize skills from race abilities
+    // Initialize skills from race abilities with level requirements
     const activeAbilities = race.abilities.filter(a => a.type === "ativa");
     const activeSkills: ActiveSkill[] = activeAbilities.map((ability, index) => ({
       ability,
       cooldown: 0,
-      maxCooldown: 3 + index, // Skill 1: 3 turns, Skill 2: 4 turns, Skill 3: 5 turns
-      unlocked: index === 0, // First skill unlocked, others at higher levels
+      maxCooldown: 5 + index * 2, // Skill 1: 5 turns, Skill 2: 7 turns, Skill 3: 9 turns
+      unlocked: index === 0, // First skill unlocked at start
+      levelRequired: 1 + index * 5, // Skill 1: lv1, Skill 2: lv6, Skill 3: lv11
     }));
+
+    // Build resistance map from race resistances
+    const res: Record<ElementId, number> = { ...DEFAULT_RES };
+    Object.entries(race.resistances).forEach(([element, value]) => {
+      if (element in res) {
+        res[element as ElementId] = value;
+      }
+    });
 
     setState((prev) => ({
       ...prev,
@@ -323,16 +371,18 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       baseHp: 100 + (race.stats.hp || 0),
       baseAtkF: 10 + (race.stats.atkF || 0),
       baseAtkM: 10 + (race.stats.atkM || 0),
-      baseDef: 5 + (race.stats.armor || 0),
-      baseCritRate: 0.05 + (race.stats.critBonus || 0),
-      baseCritDmg: 1.5 + (race.stats.critMultBonus || 0),
-      baseAtkSpeed: 1 + (race.stats.speed || 0) * 0.1,
-      baseMoveSpeed: 1,
+      baseDef: 5 + (race.stats.def || 0),
+      baseArmor: race.stats.armor || 0,
+      baseMagicRes: race.stats.magicRes || 0,
+      baseCritRate: 0.03 + (race.stats.critBonus || 0), // Base 3% + race bonus
+      baseCritDmg: 1.3 + (race.stats.critMultBonus || 0), // Base 130% + race bonus
+      baseAtkSpeed: 1 + (race.stats.speed || 0) * 0.05,
       baseLuck: 0.001 + (race.stats.luck || 0),
       baseDodge: 0.01 + (race.stats.dodge || 0),
-      baseLifeSteal: race.stats.lifeSteal || 0,
+      baseLifeSteal: Math.min(race.stats.lifeSteal || 0, 0.03), // Cap at 3% early game
       baseArmorPen: race.stats.armorPen || 0,
       baseHpRegen: race.stats.hpRegen || 0,
+      baseRes: res,
       activeSkills,
       passiveSkillUnlocked: true,
     }));
@@ -392,7 +442,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const useSkill = (skillIndex: number) => {
     setState((prev) => {
       const skills = [...prev.activeSkills];
-      if (skills[skillIndex] && skills[skillIndex].cooldown === 0) {
+      if (skills[skillIndex] && skills[skillIndex].cooldown === 0 && skills[skillIndex].unlocked) {
         skills[skillIndex] = {
           ...skills[skillIndex],
           cooldown: skills[skillIndex].maxCooldown,
@@ -407,15 +457,18 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     let atkF = state.baseAtkF;
     let atkM = state.baseAtkM;
     let def = state.baseDef;
+    let armor = state.baseArmor;
+    let magicRes = state.baseMagicRes;
     let critRate = state.baseCritRate;
     let critDmg = state.baseCritDmg;
     let atkSpeed = state.baseAtkSpeed;
-    let moveSpeed = state.baseMoveSpeed;
     let luck = state.baseLuck;
     let dodge = state.baseDodge;
     let lifeSteal = state.baseLifeSteal;
     let armorPen = state.baseArmorPen;
     let hpRegen = state.baseHpRegen;
+    
+    const res = { ...state.baseRes };
 
     // Add equipment stats
     Object.values(state.equipment).forEach((item) => {
@@ -424,39 +477,77 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         atkF += item.atkF;
         atkM += item.atkM;
         def += item.def;
+        armor += item.armor;
+        magicRes += item.magicRes;
         critRate += item.critRate;
         critDmg += item.critDmg;
         atkSpeed += item.atkSpeed;
-        moveSpeed += item.moveSpeed;
         luck += item.luck;
         dodge += item.dodge;
         lifeSteal += item.lifeSteal;
         armorPen += item.armorPen;
         hpRegen += item.hpRegen;
+        
+        // Elemental resistances
+        res.fogo += item.resFire;
+        res.agua += item.resWater;
+        res.terra += item.resEarth;
+        res.trovao += item.resThunder;
+        res.gelo += item.resIce;
+        res.vento += item.resWind;
+        res.escuridao += item.resDark;
+        res.luz += item.resLight;
+        res.arcano += item.resArcane;
+        res.veneno += item.resPoison;
+        res.metal += item.resMetal;
+        res.natureza += item.resNature;
+        res.sangue += item.resBlood;
+        res.void += item.resVoid;
+        res.caos += item.resChaos;
+        res.sagrado += item.resHoly;
+        res.sombra += item.resShadow;
+        res.infernal += item.resInfernal;
+        res.tempestade += item.resStorm;
+        res.runico += item.resRunic;
+        res.divino += item.resDivine;
       }
     });
 
-    return { hp, atkF, atkM, def, critRate, critDmg, atkSpeed, moveSpeed, luck, dodge, lifeSteal, armorPen, hpRegen };
+    // Cap some stats
+    critRate = Math.min(critRate, 0.8); // Max 80% crit rate
+    dodge = Math.min(dodge, 0.6); // Max 60% dodge
+    lifeSteal = Math.min(lifeSteal, 0.25); // Max 25% life steal
+
+    return { hp, atkF, atkM, def, armor, magicRes, critRate, critDmg, atkSpeed, luck, dodge, lifeSteal, armorPen, hpRegen, res };
   };
 
   const getAllRaceStats = (raceId: RaceId) => {
     const race = getRaceById(raceId);
     if (!race) return null;
 
+    const res: Record<ElementId, number> = { ...DEFAULT_RES };
+    Object.entries(race.resistances).forEach(([element, value]) => {
+      if (element in res) {
+        res[element as ElementId] = value;
+      }
+    });
+
     return {
       hp: race.stats.hp,
       atkF: race.stats.atkF,
       atkM: race.stats.atkM,
-      def: race.stats.armor,
+      def: race.stats.def,
+      armor: race.stats.armor,
+      magicRes: race.stats.magicRes,
       critRate: race.stats.critBonus,
       critDmg: race.stats.critMultBonus,
       atkSpeed: race.stats.speed,
-      moveSpeed: 0,
       luck: race.stats.luck,
       dodge: race.stats.dodge,
       lifeSteal: race.stats.lifeSteal,
       armorPen: race.stats.armorPen,
       hpRegen: race.stats.hpRegen,
+      res,
     };
   };
 

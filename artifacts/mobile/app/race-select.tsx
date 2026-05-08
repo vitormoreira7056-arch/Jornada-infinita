@@ -1,24 +1,28 @@
 import { useState } from "react";
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Modal, Alert } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Modal, Dimensions, Animated } from "react-native";
 import { router } from "expo-router";
 import { useGame } from "@/context/GameContext";
 import { RACES, RaceId, RaceAbility } from "@/constants/races";
-import { ELEMENTS } from "@/constants/elements";
+import { ELEMENTS, ElementId } from "@/constants/elements";
+
+const { width, height } = Dimensions.get("window");
 
 interface RaceStats {
   hp: number;
   atkF: number;
   atkM: number;
   def: number;
+  armor: number;
+  magicRes: number;
   critRate: number;
   critDmg: number;
   atkSpeed: number;
-  moveSpeed: number;
   luck: number;
   dodge: number;
   lifeSteal: number;
   armorPen: number;
   hpRegen: number;
+  res: Record<ElementId, number>;
 }
 
 function StatsModal({
@@ -45,43 +49,74 @@ function StatsModal({
   const formatPercent = (val: number) => `${(val * 100).toFixed(1)}%`;
   const formatNumber = (val: number) => val > 0 ? `+${val}` : val;
 
+  // Get resistances that are not zero
+  const activeResistances = Object.entries(stats.res)
+    .filter(([_, value]) => value !== 0)
+    .slice(0, 6); // Show max 6
+
   return (
     <Modal
-      animationType="slide"
+      animationType="fade"
       transparent={true}
       visible={visible}
       onRequestClose={onClose}
     >
       <View style={modalStyles.overlay}>
         <View style={modalStyles.container}>
-          <View style={modalStyles.header}>
-            <View style={[modalStyles.emojiCircle, { backgroundColor: `${race.color}30` }]}>
+          {/* Header */}
+          <View style={[modalStyles.header, { backgroundColor: `${race.color}15` }]}>
+            <View style={[modalStyles.emojiCircle, { backgroundColor: `${race.color}30`, borderColor: race.color }]}>
               <Text style={modalStyles.emoji}>{race.emoji}</Text>
             </View>
             <View>
               <Text style={modalStyles.name}>{race.name}</Text>
-              <Text style={modalStyles.subtitle}>Atributos Base</Text>
+              <Text style={modalStyles.subtitle}>Atributos & Habilidades</Text>
             </View>
+            <TouchableOpacity style={modalStyles.closeBtnTop} onPress={onClose}>
+              <Text style={modalStyles.closeBtnText}>✕</Text>
+            </TouchableOpacity>
           </View>
 
           <ScrollView style={modalStyles.content} showsVerticalScrollIndicator={false}>
-            {/* Stats Grid */}
-            <Text style={modalStyles.sectionTitle}>ATRIBUTOS</Text>
+            {/* Primary Stats */}
+            <Text style={modalStyles.sectionTitle}>ATRIBUTOS PRIMÁRIOS</Text>
             <View style={modalStyles.statsGrid}>
-              <StatBox label="HP" value={formatNumber(stats.hp)} icon="❤️" />
-              <StatBox label="ATK.F" value={formatNumber(stats.atkF)} icon="⚔️" />
-              <StatBox label="ATK.M" value={formatNumber(stats.atkM)} icon="🔮" />
-              <StatBox label="DEF" value={formatNumber(stats.def)} icon="🛡️" />
-              <StatBox label="Taxa Crit" value={formatPercent(stats.critRate)} icon="🎯" />
-              <StatBox label="Dano Crit" value={formatPercent(stats.critDmg)} icon="💥" />
-              <StatBox label="Vel. Atq" value={formatNumber(stats.atkSpeed)} icon="⚡" />
-              <StatBox label="Vel. Mov" value={formatNumber(stats.moveSpeed)} icon="👟" />
-              <StatBox label="Sorte" value={formatPercent(stats.luck)} icon="🍀" />
-              <StatBox label="Esquiva" value={formatPercent(stats.dodge)} icon="💨" />
-              <StatBox label="Roubo Vida" value={formatPercent(stats.lifeSteal)} icon="🩸" />
-              <StatBox label="Pen. Arm" value={formatNumber(stats.armorPen)} icon="🔪" />
-              <StatBox label="Regen HP" value={formatNumber(stats.hpRegen)} icon="💚" />
+              <StatBox label="HP" value={formatNumber(stats.hp)} icon="❤️" color="#ef4444" />
+              <StatBox label="ATK.F" value={formatNumber(stats.atkF)} icon="⚔️" color="#f59e0b" />
+              <StatBox label="ATK.M" value={formatNumber(stats.atkM)} icon="🔮" color="#8b5cf6" />
+              <StatBox label="DEF" value={formatNumber(stats.def)} icon="🛡️" color="#3b82f6" />
+              <StatBox label="ARMADURA" value={formatNumber(stats.armor)} icon="🧱" color="#64748b" />
+              <StatBox label="RES. MÁGICA" value={formatNumber(stats.magicRes)} icon="✨" color="#ec4899" />
             </View>
+
+            {/* Secondary Stats */}
+            <Text style={modalStyles.sectionTitle}>ATRIBUTOS SECUNDÁRIOS</Text>
+            <View style={modalStyles.statsGrid}>
+              <StatBox label="Taxa Crit" value={formatPercent(stats.critRate)} icon="🎯" color="#fbbf24" />
+              <StatBox label="Dano Crit" value={formatPercent(stats.critDmg)} icon="💥" color="#f97316" />
+              <StatBox label="Vel. Atq" value={formatNumber(stats.atkSpeed)} icon="⚡" color="#06b6d4" />
+              <StatBox label="Sorte" value={formatPercent(stats.luck)} icon="🍀" color="#22c55e" />
+              <StatBox label="Esquiva" value={formatPercent(stats.dodge)} icon="💨" color="#14b8a6" />
+              <StatBox label="Roubo Vida" value={formatPercent(stats.lifeSteal)} icon="🩸" color="#dc2626" />
+              <StatBox label="Pen. Arm" value={formatNumber(stats.armorPen)} icon="🔪" color="#71717a" />
+              <StatBox label="Regen HP" value={formatNumber(stats.hpRegen)} icon="💚" color="#10b981" />
+            </View>
+
+            {/* Elemental Resistances */}
+            {activeResistances.length > 0 && (
+              <>
+                <Text style={modalStyles.sectionTitle}>RESISTÊNCIAS ELEMENTAIS</Text>
+                <View style={modalStyles.resGrid}>
+                  {activeResistances.map(([element, value]) => (
+                    <ResBox 
+                      key={element} 
+                      element={element as ElementId} 
+                      value={value} 
+                    />
+                  ))}
+                </View>
+              </>
+            )}
 
             {/* Active Skills */}
             <Text style={modalStyles.sectionTitle}>HABILIDADES ATIVAS</Text>
@@ -111,23 +146,38 @@ function StatsModal({
                 </View>
               ))}
             </View>
-          </ScrollView>
 
-          <TouchableOpacity style={modalStyles.closeBtn} onPress={onClose}>
-            <Text style={modalStyles.closeText}>FECHAR</Text>
-          </TouchableOpacity>
+            <View style={{ height: 20 }} />
+          </ScrollView>
         </View>
       </View>
     </Modal>
   );
 }
 
-function StatBox({ label, value, icon }: { label: string; value: string; icon: string }) {
+function StatBox({ label, value, icon, color }: { label: string; value: string; icon: string; color: string }) {
   return (
     <View style={modalStyles.statBox}>
-      <Text style={modalStyles.statIcon}>{icon}</Text>
-      <Text style={modalStyles.statValue}>{value}</Text>
+      <View style={[modalStyles.statIconBox, { backgroundColor: `${color}20` }]}>
+        <Text style={modalStyles.statIcon}>{icon}</Text>
+      </View>
+      <Text style={[modalStyles.statValue, { color }]}>{value}</Text>
       <Text style={modalStyles.statLabel}>{label}</Text>
+    </View>
+  );
+}
+
+function ResBox({ element, value }: { element: ElementId; value: number }) {
+  const elemData = ELEMENTS[element];
+  const isPositive = value > 0;
+  
+  return (
+    <View style={modalStyles.resBox}>
+      <Text style={modalStyles.resEmoji}>{elemData?.emoji}</Text>
+      <Text style={modalStyles.resName}>{elemData?.name}</Text>
+      <Text style={[modalStyles.resValue, { color: isPositive ? "#22c55e" : "#ef4444" }]}>
+        {isPositive ? "+" : ""}{value}%
+      </Text>
     </View>
   );
 }
@@ -136,9 +186,11 @@ function AbilityCard({ ability, index, isPassive }: { ability: RaceAbility; inde
   return (
     <View style={[modalStyles.abilityCard, isPassive && modalStyles.passiveCard]}>
       <View style={modalStyles.abilityHeader}>
-        <Text style={modalStyles.abilityType}>
-          {isPassive ? "PASSIVA" : `ATIVA ${(index || 0) + 1}`}
-        </Text>
+        <View style={[modalStyles.abilityTypeBadge, isPassive && modalStyles.passiveBadge]}>
+          <Text style={modalStyles.abilityTypeText}>
+            {isPassive ? "👑 PASSIVA" : `⚡ ATIVA ${(index || 0) + 1}`}
+          </Text>
+        </View>
       </View>
       <Text style={modalStyles.abilityName}>{ability.name}</Text>
       <Text style={modalStyles.abilityDesc}>{ability.description}</Text>
@@ -160,27 +212,18 @@ export default function RaceSelect() {
   };
 
   const handleLogout = async () => {
-    Alert.alert(
-      "Sair",
-      "Deseja sair da conta?",
-      [
-        { text: "Cancelar", style: "cancel" },
-        { 
-          text: "Sair", 
-          style: "destructive",
-          onPress: async () => {
-            await logout();
-            router.replace("/login");
-          }
-        },
-      ]
-    );
+    await logout();
+    router.replace("/login");
   };
 
   const race = selectedRace ? RACES.find((r) => r.id === selectedRace) : null;
 
   return (
     <View style={styles.container}>
+      {/* Background */}
+      <View style={styles.bgCircle1} />
+      <View style={styles.bgCircle2} />
+
       <View style={styles.header}>
         <TouchableOpacity onPress={handleLogout} style={styles.backBtn}>
           <Text style={styles.backText}>← SAIR</Text>
@@ -189,7 +232,7 @@ export default function RaceSelect() {
         <View style={{ width: 50 }} />
       </View>
       
-      <Text style={styles.welcome}>Bem-vindo, {state.playerName}!</Text>
+      <Text style={styles.welcome}>Bem-vindo, <Text style={styles.welcomeHighlight}>{state.playerName}</Text></Text>
 
       <ScrollView style={styles.raceList} showsVerticalScrollIndicator={false}>
         {RACES.map((r) => (
@@ -197,8 +240,9 @@ export default function RaceSelect() {
             key={r.id}
             style={[styles.raceCard, selectedRace === r.id && styles.raceCardSelected]}
             onPress={() => setSelectedRace(r.id)}
+            activeOpacity={0.8}
           >
-            <View style={[styles.emojiCircle, { backgroundColor: `${r.color}20` }]}>
+            <View style={[styles.emojiCircle, { backgroundColor: `${r.color}20`, borderColor: r.color }]}>
               <Text style={styles.raceEmoji}>{r.emoji}</Text>
             </View>
             <View style={styles.raceInfo}>
@@ -225,7 +269,7 @@ export default function RaceSelect() {
       {race && (
         <View style={styles.detailsPanel}>
           <View style={styles.detailsHeader}>
-            <View style={[styles.emojiCircleLarge, { backgroundColor: `${race.color}30` }]}>
+            <View style={[styles.emojiCircleLarge, { backgroundColor: `${race.color}30`, borderColor: race.color }]}>
               <Text style={styles.emojiLarge}>{race.emoji}</Text>
             </View>
             <View style={styles.detailsInfo}>
@@ -257,34 +301,37 @@ export default function RaceSelect() {
 
           {/* View Stats Button */}
           <TouchableOpacity 
-            style={styles.viewStatsBtn}
+            style={[styles.viewStatsBtn, { borderColor: race.color }]}
             onPress={() => setStatsModalVisible(true)}
           >
-            <Text style={styles.viewStatsText}>📊 VER ATRIBUTOS COMPLETOS</Text>
+            <Text style={[styles.viewStatsText, { color: race.color }]}>📊 VER ATRIBUTOS COMPLETOS</Text>
           </TouchableOpacity>
 
           <View style={styles.genderRow}>
             <TouchableOpacity
-              style={[styles.genderBtn, gender === "male" && styles.genderBtnActive]}
+              style={[styles.genderBtn, gender === "male" && [styles.genderBtnActive, { borderColor: race.color }]]}
               onPress={() => setGender("male")}
             >
               <Text style={styles.genderEmoji}>♂️</Text>
-              <Text style={[styles.genderText, gender === "male" && styles.genderTextActive]}>
+              <Text style={[styles.genderText, gender === "male" && { color: race.color }]}>
                 MASCULINO
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.genderBtn, gender === "female" && styles.genderBtnActive]}
+              style={[styles.genderBtn, gender === "female" && [styles.genderBtnActive, { borderColor: race.color }]]}
               onPress={() => setGender("female")}
             >
               <Text style={styles.genderEmoji}>♀️</Text>
-              <Text style={[styles.genderText, gender === "female" && styles.genderTextActive]}>
+              <Text style={[styles.genderText, gender === "female" && { color: race.color }]}>
                 FEMININO
               </Text>
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity style={styles.confirmBtn} onPress={handleConfirm}>
+          <TouchableOpacity 
+            style={[styles.confirmBtn, { backgroundColor: race.color }]}
+            onPress={handleConfirm}
+          >
             <Text style={styles.confirmText}>FIRMAR CONTRATO</Text>
             <Text style={styles.confirmArrow}>→</Text>
           </TouchableOpacity>
@@ -303,7 +350,27 @@ export default function RaceSelect() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0a0a0f",
+    backgroundColor: "#050508",
+  },
+  bgCircle1: {
+    position: "absolute",
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+    backgroundColor: "#7c3aed",
+    opacity: 0.05,
+    top: -50,
+    right: -50,
+  },
+  bgCircle2: {
+    position: "absolute",
+    width: 250,
+    height: 250,
+    borderRadius: 125,
+    backgroundColor: "#3b82f6",
+    opacity: 0.04,
+    bottom: 100,
+    left: -50,
   },
   header: {
     flexDirection: "row",
@@ -312,7 +379,7 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingTop: 60,
     borderBottomWidth: 1,
-    borderBottomColor: "#1e1e2e",
+    borderBottomColor: "rgba(124, 58, 237, 0.1)",
   },
   backBtn: {
     padding: 8,
@@ -324,9 +391,9 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   headerTitle: {
-    color: "#f8fafc",
+    color: "#ffffff",
     fontSize: 14,
-    fontWeight: "700",
+    fontWeight: "800",
     letterSpacing: 2,
   },
   welcome: {
@@ -335,6 +402,10 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 8,
   },
+  welcomeHighlight: {
+    color: "#7c3aed",
+    fontWeight: "700",
+  },
   raceList: {
     flex: 1,
     padding: 16,
@@ -342,16 +413,16 @@ const styles = StyleSheet.create({
   raceCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#12121a",
-    borderRadius: 16,
+    backgroundColor: "rgba(18, 18, 26, 0.8)",
+    borderRadius: 20,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: "#1e1e2e",
+    borderColor: "rgba(124, 58, 237, 0.1)",
   },
   raceCardSelected: {
     borderColor: "#7c3aed",
-    backgroundColor: "#1a1625",
+    backgroundColor: "rgba(124, 58, 237, 0.1)",
   },
   emojiCircle: {
     width: 56,
@@ -360,6 +431,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginRight: 16,
+    borderWidth: 2,
   },
   raceEmoji: {
     fontSize: 28,
@@ -368,7 +440,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   raceName: {
-    color: "#f8fafc",
+    color: "#ffffff",
     fontSize: 16,
     fontWeight: "700",
     marginBottom: 8,
@@ -396,9 +468,9 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   detailsPanel: {
-    backgroundColor: "#12121a",
+    backgroundColor: "rgba(18, 18, 26, 0.95)",
     borderTopWidth: 1,
-    borderTopColor: "#1e1e2e",
+    borderTopColor: "rgba(124, 58, 237, 0.2)",
     padding: 20,
     paddingBottom: 40,
   },
@@ -414,6 +486,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginRight: 16,
+    borderWidth: 2,
   },
   emojiLarge: {
     fontSize: 36,
@@ -422,7 +495,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   detailsName: {
-    color: "#f8fafc",
+    color: "#ffffff",
     fontSize: 20,
     fontWeight: "700",
     marginBottom: 8,
@@ -448,25 +521,25 @@ const styles = StyleSheet.create({
   quickStats: {
     flexDirection: "row",
     justifyContent: "space-around",
-    backgroundColor: "#0a0a0f",
+    backgroundColor: "rgba(10, 10, 15, 0.8)",
     borderRadius: 12,
     padding: 12,
     marginBottom: 12,
   },
   quickStat: {
-    color: "#f8fafc",
+    color: "#ffffff",
     fontSize: 13,
     fontWeight: "600",
   },
   viewStatsBtn: {
-    backgroundColor: "#1e1e2e",
+    backgroundColor: "rgba(10, 10, 15, 0.8)",
     borderRadius: 10,
     padding: 12,
     alignItems: "center",
     marginBottom: 16,
+    borderWidth: 1,
   },
   viewStatsText: {
-    color: "#7c3aed",
     fontSize: 12,
     fontWeight: "700",
     letterSpacing: 1,
@@ -481,16 +554,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#0a0a0f",
+    backgroundColor: "rgba(10, 10, 15, 0.8)",
     borderRadius: 12,
     padding: 14,
     borderWidth: 1,
-    borderColor: "#1e1e2e",
+    borderColor: "rgba(124, 58, 237, 0.2)",
     gap: 8,
   },
   genderBtnActive: {
-    borderColor: "#7c3aed",
-    backgroundColor: "#1a1625",
+    backgroundColor: "rgba(124, 58, 237, 0.15)",
   },
   genderEmoji: {
     fontSize: 16,
@@ -500,21 +572,22 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
   },
-  genderTextActive: {
-    color: "#7c3aed",
-  },
   confirmBtn: {
-    backgroundColor: "#7c3aed",
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 18,
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 8,
   },
   confirmText: {
     color: "#fff",
     fontSize: 15,
-    fontWeight: "700",
+    fontWeight: "800",
     letterSpacing: 2,
   },
   confirmArrow: {
@@ -527,25 +600,26 @@ const styles = StyleSheet.create({
 const modalStyles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.8)",
+    backgroundColor: "rgba(5, 5, 8, 0.95)",
     justifyContent: "center",
     alignItems: "center",
-    padding: 20,
+    padding: 16,
   },
   container: {
     backgroundColor: "#12121a",
-    borderRadius: 20,
+    borderRadius: 24,
     width: "100%",
-    maxHeight: "90%",
+    maxHeight: "85%",
     borderWidth: 1,
-    borderColor: "#1e1e2e",
+    borderColor: "rgba(124, 58, 237, 0.2)",
+    overflow: "hidden",
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: "#1e1e2e",
+    borderBottomColor: "rgba(124, 58, 237, 0.1)",
   },
   emojiCircle: {
     width: 56,
@@ -554,12 +628,13 @@ const modalStyles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginRight: 16,
+    borderWidth: 2,
   },
   emoji: {
     fontSize: 28,
   },
   name: {
-    color: "#f8fafc",
+    color: "#ffffff",
     fontSize: 20,
     fontWeight: "700",
   },
@@ -568,14 +643,27 @@ const modalStyles = StyleSheet.create({
     fontSize: 12,
     marginTop: 2,
   },
+  closeBtnTop: {
+    marginLeft: "auto",
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(124, 58, 237, 0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  closeBtnText: {
+    color: "#ffffff",
+    fontSize: 16,
+    fontWeight: "700",
+  },
   content: {
     padding: 20,
-    maxHeight: 400,
   },
   sectionTitle: {
     color: "#64748b",
     fontSize: 11,
-    fontWeight: "700",
+    fontWeight: "800",
     letterSpacing: 2,
     marginBottom: 12,
     marginTop: 8,
@@ -586,54 +674,99 @@ const modalStyles = StyleSheet.create({
     gap: 8,
   },
   statBox: {
-    width: "23%",
-    backgroundColor: "#0a0a0f",
-    borderRadius: 12,
+    width: "31%",
+    backgroundColor: "rgba(10, 10, 15, 0.8)",
+    borderRadius: 14,
     padding: 12,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#1e1e2e",
+    borderColor: "rgba(124, 58, 237, 0.1)",
+  },
+  statIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 6,
   },
   statIcon: {
-    fontSize: 20,
-    marginBottom: 4,
+    fontSize: 18,
   },
   statValue: {
-    color: "#f8fafc",
     fontSize: 14,
     fontWeight: "700",
+    marginBottom: 2,
   },
   statLabel: {
     color: "#64748b",
     fontSize: 9,
-    fontWeight: "600",
-    marginTop: 2,
+    fontWeight: "700",
+  },
+  resGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  resBox: {
+    width: "30%",
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(10, 10, 15, 0.8)",
+    borderRadius: 10,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: "rgba(124, 58, 237, 0.1)",
+  },
+  resEmoji: {
+    fontSize: 16,
+    marginRight: 8,
+  },
+  resName: {
+    color: "#94a3b8",
+    fontSize: 10,
+    flex: 1,
+  },
+  resValue: {
+    fontSize: 12,
+    fontWeight: "700",
   },
   abilityCard: {
-    backgroundColor: "#0a0a0f",
-    borderRadius: 12,
+    backgroundColor: "rgba(10, 10, 15, 0.8)",
+    borderRadius: 14,
     padding: 14,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: "#1e1e2e",
+    borderColor: "rgba(124, 58, 237, 0.15)",
   },
   passiveCard: {
-    borderColor: "#f59e0b",
+    borderColor: "rgba(245, 158, 11, 0.3)",
+    backgroundColor: "rgba(245, 158, 11, 0.05)",
   },
   abilityHeader: {
-    marginBottom: 6,
+    marginBottom: 8,
   },
-  abilityType: {
+  abilityTypeBadge: {
+    backgroundColor: "rgba(124, 58, 237, 0.2)",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+    alignSelf: "flex-start",
+  },
+  passiveBadge: {
+    backgroundColor: "rgba(245, 158, 11, 0.2)",
+  },
+  abilityTypeText: {
     color: "#7c3aed",
-    fontSize: 10,
-    fontWeight: "700",
+    fontSize: 9,
+    fontWeight: "800",
     letterSpacing: 1,
   },
   abilityName: {
-    color: "#f8fafc",
-    fontSize: 14,
+    color: "#ffffff",
+    fontSize: 15,
     fontWeight: "700",
-    marginBottom: 4,
+    marginBottom: 6,
   },
   abilityDesc: {
     color: "#94a3b8",
@@ -645,23 +778,14 @@ const modalStyles = StyleSheet.create({
     flexWrap: "wrap",
     gap: 8,
   },
+  elementPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 10,
+  },
   elementText: {
     color: "#fff",
     fontSize: 11,
     fontWeight: "700",
-  },
-  closeBtn: {
-    backgroundColor: "#1e1e2e",
-    margin: 20,
-    marginTop: 0,
-    padding: 16,
-    borderRadius: 12,
-    alignItems: "center",
-  },
-  closeText: {
-    color: "#f8fafc",
-    fontSize: 14,
-    fontWeight: "700",
-    letterSpacing: 2,
   },
 });

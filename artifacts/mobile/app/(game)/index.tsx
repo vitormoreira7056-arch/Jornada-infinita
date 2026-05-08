@@ -2,6 +2,7 @@ import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from "react-nati
 import { useGame } from "@/context/GameContext";
 import { getRaceById } from "@/constants/races";
 import { router } from "expo-router";
+import { ElementId } from "@/constants/elements";
 
 export default function Home() {
   const { state, getTotalStats } = useGame();
@@ -11,6 +12,11 @@ export default function Home() {
   // Calculate progress to next level
   const expNeeded = state.level * 100;
   const expProgress = (state.exp / expNeeded) * 100;
+
+  // Get active resistances
+  const activeResistances = Object.entries(stats.res)
+    .filter(([_, value]) => value !== 0)
+    .slice(0, 6);
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
@@ -22,7 +28,7 @@ export default function Home() {
           </View>
           <View style={styles.characterInfo}>
             <Text style={styles.characterName}>{state.playerName}</Text>
-            <Text style={styles.characterRace}>{race?.name}</Text>
+            <Text style={[styles.characterRace, { color: race?.color || "#7c3aed" }]}>{race?.name}</Text>
             <View style={styles.genderBadge}>
               <Text style={styles.genderText}>
                 {state.gender === "male" ? "♂️ Masculino" : "♀️ Feminino"}
@@ -47,128 +53,103 @@ export default function Home() {
       <Text style={styles.sectionTitle}>ATRIBUTOS PRIMÁRIOS</Text>
       <View style={styles.statsGrid}>
         <View style={styles.statCard}>
-          <Text style={styles.statIcon}>⚔️</Text>
-          <Text style={styles.statValue}>{stats.atkF}</Text>
+          <View style={[styles.statIconBox, { backgroundColor: "rgba(245, 158, 11, 0.15)" }]}>
+            <Text style={styles.statIcon}>⚔️</Text>
+          </View>
+          <Text style={[styles.statValue, { color: "#f59e0b" }]}>{stats.atkF}</Text>
           <Text style={styles.statLabel}>ATK.F</Text>
         </View>
         <View style={styles.statCard}>
-          <Text style={styles.statIcon}>🔮</Text>
-          <Text style={styles.statValue}>{stats.atkM}</Text>
+          <View style={[styles.statIconBox, { backgroundColor: "rgba(139, 92, 246, 0.15)" }]}>
+            <Text style={styles.statIcon}>🔮</Text>
+          </View>
+          <Text style={[styles.statValue, { color: "#8b5cf6" }]}>{stats.atkM}</Text>
           <Text style={styles.statLabel}>ATK.M</Text>
         </View>
         <View style={styles.statCard}>
-          <Text style={styles.statIcon}>🛡️</Text>
-          <Text style={styles.statValue}>{stats.def}</Text>
+          <View style={[styles.statIconBox, { backgroundColor: "rgba(59, 130, 246, 0.15)" }]}>
+            <Text style={styles.statIcon}>🛡️</Text>
+          </View>
+          <Text style={[styles.statValue, { color: "#3b82f6" }]}>{stats.def}</Text>
           <Text style={styles.statLabel}>DEFESA</Text>
         </View>
         <View style={styles.statCard}>
-          <Text style={styles.statIcon}>❤️</Text>
-          <Text style={styles.statValue}>{stats.hp}</Text>
+          <View style={[styles.statIconBox, { backgroundColor: "rgba(239, 68, 68, 0.15)" }]}>
+            <Text style={styles.statIcon}>❤️</Text>
+          </View>
+          <Text style={[styles.statValue, { color: "#ef4444" }]}>{stats.hp}</Text>
           <Text style={styles.statLabel}>VIDA</Text>
+        </View>
+      </View>
+
+      {/* Defense Stats */}
+      <Text style={styles.sectionTitle}>DEFESA</Text>
+      <View style={styles.defenseGrid}>
+        <View style={styles.defenseCard}>
+          <Text style={styles.defenseIcon}>🧱</Text>
+          <Text style={styles.defenseValue}>{stats.armor}</Text>
+          <Text style={styles.defenseLabel}>ARMADURA</Text>
+        </View>
+        <View style={styles.defenseCard}>
+          <Text style={styles.defenseIcon}>✨</Text>
+          <Text style={styles.defenseValue}>{stats.magicRes}</Text>
+          <Text style={styles.defenseLabel}>RES. MÁGICA</Text>
         </View>
       </View>
 
       {/* Secondary Stats */}
       <Text style={styles.sectionTitle}>ATRIBUTOS SECUNDÁRIOS</Text>
       <View style={styles.secondaryStatsGrid}>
-        <View style={styles.secondaryStat}>
-          <Text style={styles.secondaryIcon}>🎯</Text>
-          <View>
-            <Text style={styles.secondaryValue}>{(stats.critRate * 100).toFixed(1)}%</Text>
-            <Text style={styles.secondaryLabel}>Taxa Crítica</Text>
-          </View>
-        </View>
-        <View style={styles.secondaryStat}>
-          <Text style={styles.secondaryIcon}>💥</Text>
-          <View>
-            <Text style={styles.secondaryValue}>{(stats.critDmg * 100).toFixed(0)}%</Text>
-            <Text style={styles.secondaryLabel}>Dano Crítico</Text>
-          </View>
-        </View>
-        <View style={styles.secondaryStat}>
-          <Text style={styles.secondaryIcon}>⚡</Text>
-          <View>
-            <Text style={styles.secondaryValue}>{stats.atkSpeed.toFixed(2)}</Text>
-            <Text style={styles.secondaryLabel}>Vel. Ataque</Text>
-          </View>
-        </View>
-        <View style={styles.secondaryStat}>
-          <Text style={styles.secondaryIcon}>👟</Text>
-          <View>
-            <Text style={styles.secondaryValue}>{stats.moveSpeed.toFixed(2)}</Text>
-            <Text style={styles.secondaryLabel}>Vel. Movimento</Text>
-          </View>
-        </View>
-        <View style={styles.secondaryStat}>
-          <Text style={styles.secondaryIcon}>🍀</Text>
-          <View>
-            <Text style={styles.secondaryValue}>{(stats.luck * 100).toFixed(2)}%</Text>
-            <Text style={styles.secondaryLabel}>Sorte</Text>
-          </View>
-        </View>
-        <View style={styles.secondaryStat}>
-          <Text style={styles.secondaryIcon}>💨</Text>
-          <View>
-            <Text style={styles.secondaryValue}>{(stats.dodge * 100).toFixed(1)}%</Text>
-            <Text style={styles.secondaryLabel}>Esquiva</Text>
-          </View>
-        </View>
-        <View style={styles.secondaryStat}>
-          <Text style={styles.secondaryIcon}>🩸</Text>
-          <View>
-            <Text style={styles.secondaryValue}>{(stats.lifeSteal * 100).toFixed(1)}%</Text>
-            <Text style={styles.secondaryLabel}>Roubo de Vida</Text>
-          </View>
-        </View>
-        <View style={styles.secondaryStat}>
-          <Text style={styles.secondaryIcon}>🔪</Text>
-          <View>
-            <Text style={styles.secondaryValue}>{stats.armorPen}</Text>
-            <Text style={styles.secondaryLabel}>Pen. Armadura</Text>
-          </View>
-        </View>
-        <View style={styles.secondaryStat}>
-          <Text style={styles.secondaryIcon}>💚</Text>
-          <View>
-            <Text style={styles.secondaryValue}>{stats.hpRegen}</Text>
-            <Text style={styles.secondaryLabel}>Regen. HP</Text>
-          </View>
-        </View>
+        <SecondaryStat icon="🎯" label="Taxa Crit" value={`${(stats.critRate * 100).toFixed(1)}%`} color="#fbbf24" />
+        <SecondaryStat icon="💥" label="Dano Crit" value={`${(stats.critDmg * 100).toFixed(0)}%`} color="#f97316" />
+        <SecondaryStat icon="⚡" label="Vel. Atq" value={stats.atkSpeed.toFixed(2)} color="#06b6d4" />
+        <SecondaryStat icon="🍀" label="Sorte" value={`${(stats.luck * 100).toFixed(2)}%`} color="#22c55e" />
+        <SecondaryStat icon="💨" label="Esquiva" value={`${(stats.dodge * 100).toFixed(1)}%`} color="#14b8a6" />
+        <SecondaryStat icon="🩸" label="Roubo Vida" value={`${(stats.lifeSteal * 100).toFixed(1)}%`} color="#dc2626" />
+        <SecondaryStat icon="🔪" label="Pen. Arm" value={stats.armorPen.toString()} color="#71717a" />
+        <SecondaryStat icon="💚" label="Regen HP" value={stats.hpRegen.toString()} color="#10b981" />
       </View>
+
+      {/* Elemental Resistances */}
+      {activeResistances.length > 0 && (
+        <>
+          <Text style={styles.sectionTitle}>RESISTÊNCIAS ELEMENTAIS</Text>
+          <View style={styles.resGrid}>
+            {activeResistances.map(([element, value]) => (
+              <ResCard key={element} element={element as ElementId} value={value} />
+            ))}
+          </View>
+        </>
+      )}
 
       {/* Quick Actions */}
       <Text style={styles.sectionTitle}>AÇÕES RÁPIDAS</Text>
       <View style={styles.actionsGrid}>
-        <TouchableOpacity 
-          style={styles.actionCard}
+        <ActionCard 
+          icon="🗺️" 
+          title="AVENTURA" 
+          desc="Explore e batalhe"
           onPress={() => router.push("/(game)/adventure")}
-        >
-          <Text style={styles.actionIcon}>🗺️</Text>
-          <Text style={styles.actionTitle}>AVENTURA</Text>
-          <Text style={styles.actionDesc}>Explore e batalhe</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={styles.actionCard}
+          color="#f59e0b"
+        />
+        <ActionCard 
+          icon="🎒" 
+          title="MOCHILA" 
+          desc="Gerencie itens"
           onPress={() => router.push("/(game)/inventory")}
-        >
-          <Text style={styles.actionIcon}>🎒</Text>
-          <Text style={styles.actionTitle}>MOCHILA</Text>
-          <Text style={styles.actionDesc}>Gerencie itens</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={styles.actionCard}
+          color="#7c3aed"
+        />
+        <ActionCard 
+          icon="✨" 
+          title="SKILLS" 
+          desc="Habilidades"
           onPress={() => router.push("/(game)/skills")}
-        >
-          <Text style={styles.actionIcon}>✨</Text>
-          <Text style={styles.actionTitle}>SKILLS</Text>
-          <Text style={styles.actionDesc}>Habilidades</Text>
-        </TouchableOpacity>
+          color="#ec4899"
+        />
       </View>
 
       {/* Race Info */}
-      <Text style={styles.sectionTitle}>RAÇA</Text>
+      <Text style={styles.sectionTitle}>SOBRE SUA RAÇA</Text>
       <View style={styles.raceCard}>
         <Text style={styles.raceLore}>{race?.lore}</Text>
         <View style={styles.elementsRow}>
@@ -183,19 +164,55 @@ export default function Home() {
   );
 }
 
+function SecondaryStat({ icon, label, value, color }: { icon: string; label: string; value: string; color: string }) {
+  return (
+    <View style={styles.secondaryStat}>
+      <Text style={styles.secondaryIcon}>{icon}</Text>
+      <View>
+        <Text style={[styles.secondaryValue, { color }]}>{value}</Text>
+        <Text style={styles.secondaryLabel}>{label}</Text>
+      </View>
+    </View>
+  );
+}
+
+function ResCard({ element, value }: { element: ElementId; value: number }) {
+  const isPositive = value > 0;
+  return (
+    <View style={styles.resCard}>
+      <Text style={styles.resName}>{element}</Text>
+      <Text style={[styles.resValue, { color: isPositive ? "#22c55e" : "#ef4444" }]}>
+        {isPositive ? "+" : ""}{value}%
+      </Text>
+    </View>
+  );
+}
+
+function ActionCard({ icon, title, desc, onPress, color }: { icon: string; title: string; desc: string; onPress: () => void; color: string }) {
+  return (
+    <TouchableOpacity style={styles.actionCard} onPress={onPress} activeOpacity={0.8}>
+      <View style={[styles.actionIconBox, { backgroundColor: `${color}15` }]}>
+        <Text style={styles.actionIcon}>{icon}</Text>
+      </View>
+      <Text style={styles.actionTitle}>{title}</Text>
+      <Text style={styles.actionDesc}>{desc}</Text>
+    </TouchableOpacity>
+  );
+}
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0a0a0f",
+    backgroundColor: "#050508",
     padding: 16,
   },
   characterCard: {
-    backgroundColor: "#12121a",
-    borderRadius: 20,
+    backgroundColor: "rgba(18, 18, 26, 0.8)",
+    borderRadius: 24,
     padding: 20,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: "#1e1e2e",
+    borderColor: "rgba(124, 58, 237, 0.15)",
   },
   characterHeader: {
     flexDirection: "row",
@@ -205,8 +222,8 @@ const styles = StyleSheet.create({
   avatarCircle: {
     width: 80,
     height: 80,
-    borderRadius: 40,
-    backgroundColor: "#0a0a0f",
+    borderRadius: 24,
+    backgroundColor: "rgba(10, 10, 15, 0.8)",
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 3,
@@ -219,23 +236,24 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   characterName: {
-    color: "#f8fafc",
+    color: "#ffffff",
     fontSize: 22,
     fontWeight: "700",
     marginBottom: 4,
   },
   characterRace: {
-    color: "#7c3aed",
     fontSize: 14,
     fontWeight: "600",
     marginBottom: 8,
   },
   genderBadge: {
-    backgroundColor: "#1e1e2e",
+    backgroundColor: "rgba(124, 58, 237, 0.15)",
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
     alignSelf: "flex-start",
+    borderWidth: 1,
+    borderColor: "rgba(124, 58, 237, 0.2)",
   },
   genderText: {
     color: "#94a3b8",
@@ -251,7 +269,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   levelText: {
-    color: "#f8fafc",
+    color: "#ffffff",
     fontSize: 14,
     fontWeight: "700",
   },
@@ -261,7 +279,7 @@ const styles = StyleSheet.create({
   },
   expBar: {
     height: 8,
-    backgroundColor: "#0a0a0f",
+    backgroundColor: "rgba(10, 10, 15, 0.8)",
     borderRadius: 4,
     overflow: "hidden",
   },
@@ -272,8 +290,8 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     color: "#64748b",
-    fontSize: 12,
-    fontWeight: "700",
+    fontSize: 11,
+    fontWeight: "800",
     letterSpacing: 2,
     marginBottom: 12,
     marginTop: 8,
@@ -286,28 +304,63 @@ const styles = StyleSheet.create({
   },
   statCard: {
     width: "23%",
-    backgroundColor: "#12121a",
+    backgroundColor: "rgba(18, 18, 26, 0.8)",
     borderRadius: 16,
-    padding: 16,
+    padding: 14,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#1e1e2e",
+    borderColor: "rgba(124, 58, 237, 0.1)",
   },
-  statIcon: {
-    fontSize: 24,
+  statIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 8,
   },
-  statValue: {
-    color: "#f8fafc",
+  statIcon: {
     fontSize: 20,
+  },
+  statValue: {
+    fontSize: 18,
     fontWeight: "700",
-    marginBottom: 4,
+    marginBottom: 2,
   },
   statLabel: {
     color: "#64748b",
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: "700",
     letterSpacing: 1,
+  },
+  defenseGrid: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 20,
+  },
+  defenseCard: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(18, 18, 26, 0.8)",
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: "rgba(124, 58, 237, 0.1)",
+  },
+  defenseIcon: {
+    fontSize: 24,
+    marginRight: 12,
+  },
+  defenseValue: {
+    color: "#ffffff",
+    fontSize: 18,
+    fontWeight: "700",
+  },
+  defenseLabel: {
+    color: "#64748b",
+    fontSize: 9,
+    fontWeight: "700",
   },
   secondaryStatsGrid: {
     flexDirection: "row",
@@ -316,28 +369,53 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   secondaryStat: {
-    width: "31%",
+    width: "23%",
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#12121a",
+    backgroundColor: "rgba(18, 18, 26, 0.8)",
     borderRadius: 12,
-    padding: 12,
+    padding: 10,
     borderWidth: 1,
-    borderColor: "#1e1e2e",
+    borderColor: "rgba(124, 58, 237, 0.1)",
   },
   secondaryIcon: {
-    fontSize: 20,
-    marginRight: 8,
+    fontSize: 16,
+    marginRight: 6,
   },
   secondaryValue: {
-    color: "#f8fafc",
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "700",
   },
   secondaryLabel: {
     color: "#64748b",
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: "600",
+  },
+  resGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 20,
+  },
+  resCard: {
+    width: "30%",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "rgba(18, 18, 26, 0.8)",
+    borderRadius: 10,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: "rgba(124, 58, 237, 0.1)",
+  },
+  resName: {
+    color: "#94a3b8",
+    fontSize: 10,
+    textTransform: "capitalize",
+  },
+  resValue: {
+    fontSize: 12,
+    fontWeight: "700",
   },
   actionsGrid: {
     flexDirection: "row",
@@ -346,34 +424,42 @@ const styles = StyleSheet.create({
   },
   actionCard: {
     flex: 1,
-    backgroundColor: "#12121a",
+    backgroundColor: "rgba(18, 18, 26, 0.8)",
     borderRadius: 16,
     padding: 16,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#1e1e2e",
+    borderColor: "rgba(124, 58, 237, 0.1)",
+  },
+  actionIconBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 10,
   },
   actionIcon: {
-    fontSize: 28,
-    marginBottom: 8,
+    fontSize: 24,
   },
   actionTitle: {
-    color: "#f8fafc",
-    fontSize: 12,
+    color: "#ffffff",
+    fontSize: 11,
     fontWeight: "700",
-    marginBottom: 4,
+    marginBottom: 3,
+    letterSpacing: 0.5,
   },
   actionDesc: {
     color: "#64748b",
-    fontSize: 10,
+    fontSize: 9,
     textAlign: "center",
   },
   raceCard: {
-    backgroundColor: "#12121a",
+    backgroundColor: "rgba(18, 18, 26, 0.8)",
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: "#1e1e2e",
+    borderColor: "rgba(124, 58, 237, 0.1)",
     marginBottom: 20,
   },
   raceLore: {
@@ -388,10 +474,12 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   elementTag: {
-    backgroundColor: "#1e1e2e",
+    backgroundColor: "rgba(124, 58, 237, 0.15)",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "rgba(124, 58, 237, 0.2)",
   },
   elementText: {
     color: "#7c3aed",
