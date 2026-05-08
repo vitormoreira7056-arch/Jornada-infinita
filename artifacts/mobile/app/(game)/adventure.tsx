@@ -198,7 +198,7 @@ export default function Adventure() {
           <BiomeCard
             key={biomeId}
             biomeId={biomeId}
-            onPress={() => {/* TODO: Navigate to biome exploration */}}
+            onPress={() => router.push(`/biome/${biomeId}`)}
             locked={state.level < BIOMES[biomeId].minLevel}
           />
         ))}

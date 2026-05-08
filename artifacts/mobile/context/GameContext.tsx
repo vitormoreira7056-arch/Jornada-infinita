@@ -3,7 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { RaceId, getRaceById, RaceAbility } from "@/constants/races";
 import { ElementId } from "@/constants/elements";
 import { TierId, QualityId, rollTier, rollQuality, getTotalMultiplier, TIERS, QUALITIES } from "@/constants/tiers";
-import { BiomeId, DungeonDef, BIOMES, tryDiscoverDungeon, calculateExpNeeded, TOWER_FLOORS_DATA, TowerFloor } from "@/constants/adventure";
+import { BiomeId, DungeonDef, DiscoveredDungeon, BIOMES, tryDiscoverDungeon, calculateExpNeeded, TOWER_FLOORS_DATA, TowerFloor, getDiscoveredDungeonsForBiome, getBiomeDiscoveryProgress } from "@/constants/adventure";
 
 const USERS_KEY = "rpg_idle_users_v5";
 const CURRENT_USER_KEY = "rpg_idle_current_user_v5";
@@ -100,10 +100,12 @@ export interface GameState {
   currencies: Currencies;
   
   // Adventure
-  discoveredDungeons: string[];
+  discoveredDungeons: DiscoveredDungeon[];
   currentBiome: BiomeId | null;
   towerProgress: number; // Último andar completado
   unlockedFloors: number[]; // Andares desbloqueados na Torre
+  totalDungeonRuns: number;
+  successfulDungeonRuns: number;
   
   // Stats base
   baseHp: number;
@@ -141,9 +143,10 @@ export interface GameState {
 }
 
 const DEFAULT_RES: Record<ElementId, number> = {
-  fogo: 0, agua: 0, terra: 0, trovao: 0, gelo: 0, vento: 0, escuridao: 0, luz: 0,
-  arcano: 0, veneno: 0, metal: 0, natureza: 0, sangue: 0, void: 0, caos: 0,
-  sagrado: 0, sombra: 0, infernal: 0, tempestade: 0, runico: 0, divino: 0,
+  fogo: 0, agua: 0, terra: 0, ar: 0, luz: 0, escuridao: 0,
+  gelo: 0, trovao: 0, natureza: 0, metal: 0, veneno: 0, sangue: 0,
+  arcano: 0, caos: 0, void: 0, infernal: 0, divino: 0, sombra: 0,
+  tempestade: 0, runico: 0, astral: 0,
 };
 
 const DEFAULT_CURRENCIES: Currencies = {
@@ -169,6 +172,8 @@ const DEFAULT_STATE: GameState = {
   currentBiome: null,
   towerProgress: 0,
   unlockedFloors: [1],
+  totalDungeonRuns: 0,
+  successfulDungeonRuns: 0,
   baseHp: 100,
   baseAtkF: 10,
   baseAtkM: 10,
@@ -213,7 +218,11 @@ interface GameContextType {
   addCurrency: (type: keyof Currencies, amount: number) => void;
   generateItem: (slot: EquipmentSlot) => Item;
   getItemColor: (item: Item) => string;
-  exploreBiome: (biomeId: BiomeId) => { found: boolean; dungeon?: DungeonDef; expGained: number };
+  exploreBiome: (biomeId: BiomeId) => { found: boolean; dungeon?: DungeonDef; expGained: number; isNew: boolean };
+  getDiscoveredDungeons: (biomeId: BiomeId) => DungeonDef[];
+  getBiomeProgress: (biomeId: BiomeId) => { discovered: number; total: number; percentage: number };
+  enterDungeon: (dungeonId: string) => boolean;
+  completeDungeon: (dungeonId: string, success: boolean, timeSeconds: number) => void;
   getExpNeeded: () => number;
   getExpProgress: () => number;
   climbTower: (floor: number) => boolean;
@@ -544,7 +553,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         res.terra += item.resEarth;
         res.trovao += item.resThunder;
         res.gelo += item.resIce;
-        res.vento += item.resWind;
+        res.ar += item.resWind;
         res.escuridao += item.resDark;
         res.luz += item.resLight;
         res.arcano += item.resArcane;
@@ -618,6 +627,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         generateItem,
         getItemColor,
         exploreBiome,
+        getDiscoveredDungeons,
+        getBiomeProgress,
+        enterDungeon,
+        completeDungeon,
         getExpNeeded,
         getExpProgress,
         climbTower,
@@ -637,27 +650,102 @@ export function useGame() {
 }
 
 // Função para explorar um bioma
-function exploreBiome(biomeId: BiomeId): { found: boolean; dungeon?: DungeonDef; expGained: number } {
-  const state = useGame().state;
+function exploreBiome(biomeId: BiomeId): { found: boolean; dungeon?: DungeonDef; expGained: number; isNew: boolean } {
+  const { state, setState } = useGame();
   
   // Verificar se pode explorar
   const biome = BIOMES[biomeId];
   if (state.level < biome.minLevel) {
-    return { found: false, expGained: 0 };
+    return { found: false, expGained: 0, isNew: false };
   }
   
   // Tentar encontrar dungeon
-  const dungeon = tryDiscoverDungeon(biomeId, state.discoveredDungeons);
+  const result = tryDiscoverDungeon(biomeId, state.discoveredDungeons, state.level);
+  
+  let isNew = false;
+  if (result) {
+    // Verificar se é uma dungeon nova ou já descoberta
+    const alreadyDiscovered = state.discoveredDungeons.find(d => d.dungeonId === result.dungeon.id);
+    isNew = !alreadyDiscovered;
+    
+    if (isNew) {
+      // Adicionar às dungeons descobertas
+      const newDiscovered: DiscoveredDungeon = {
+        dungeonId: result.dungeon.id,
+        discoveredAt: Date.now(),
+        timesCompleted: 0,
+        totalRuns: 0,
+        successfulRuns: 0,
+      };
+      
+      setState(prev => ({
+        ...prev,
+        discoveredDungeons: [...prev.discoveredDungeons, newDiscovered],
+        currentBiome: biomeId,
+      }));
+    }
+  }
   
   // Calcular XP ganho baseado no nível do bioma
   const baseExp = 50 * biome.minLevel;
   const expGained = Math.floor(baseExp * (0.8 + Math.random() * 0.4));
   
   return {
-    found: !!dungeon,
-    dungeon: dungeon || undefined,
+    found: !!result,
+    dungeon: result?.dungeon,
     expGained,
+    isNew,
   };
+}
+
+// Obter dungeons descobertas de um bioma
+function getDiscoveredDungeons(biomeId: BiomeId): DungeonDef[] {
+  const { state } = useGame();
+  return getDiscoveredDungeonsForBiome(biomeId, state.discoveredDungeons);
+}
+
+// Obter progresso de descoberta de um bioma
+function getBiomeProgress(biomeId: BiomeId) {
+  const { state } = useGame();
+  return getBiomeDiscoveryProgress(biomeId, state.discoveredDungeons);
+}
+
+// Entrar em uma dungeon
+function enterDungeon(dungeonId: string): boolean {
+  const { state } = useGame();
+  const discovered = state.discoveredDungeons.find(d => d.dungeonId === dungeonId);
+  return !!discovered;
+}
+
+// Completar uma dungeon
+function completeDungeon(dungeonId: string, success: boolean, timeSeconds: number) {
+  const { state, setState } = useGame();
+  
+  setState(prev => {
+    const discovered = prev.discoveredDungeons.find(d => d.dungeonId === dungeonId);
+    if (!discovered) return prev;
+    
+    const updatedDiscovered = prev.discoveredDungeons.map(d => {
+      if (d.dungeonId === dungeonId) {
+        return {
+          ...d,
+          timesCompleted: success ? d.timesCompleted + 1 : d.timesCompleted,
+          lastCompletedAt: Date.now(),
+          bestTime: d.bestTime ? Math.min(d.bestTime, timeSeconds) : timeSeconds,
+          totalRuns: d.totalRuns + 1,
+          successfulRuns: success ? d.successfulRuns + 1 : d.successfulRuns,
+        };
+      }
+      return d;
+    });
+    
+    return {
+      ...prev,
+      discoveredDungeons: updatedDiscovered,
+      totalDungeonRuns: prev.totalDungeonRuns + 1,
+      successfulDungeonRuns: success ? prev.successfulDungeonRuns + 1 : prev.successfulDungeonRuns,
+    };
+  });
 }
 
 // Função para obter XP necessário para o próximo nível
@@ -730,6 +818,19 @@ function generateItem(slot: EquipmentSlot): Item {
     resWind: 0,
     resDark: 0,
     resLight: 0,
+    resArcane: 0,
+    resPoison: 0,
+    resMetal: 0,
+    resNature: 0,
+    resBlood: 0,
+    resVoid: 0,
+    resChaos: 0,
+    resHoly: 0,
+    resShadow: 0,
+    resInfernal: 0,
+    resStorm: 0,
+    resRunic: 0,
+    resDivine: 0,
     resArcane: 0,
     resPoison: 0,
     resMetal: 0,
