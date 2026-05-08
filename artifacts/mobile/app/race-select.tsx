@@ -2,7 +2,7 @@ import { useState } from "react";
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert } from "react-native";
 import { router } from "expo-router";
 import { useGame } from "@/context/GameContext";
-import { RACES, RaceId, RaceDef } from "@/constants/races";
+import { RACES, RaceId } from "@/constants/races";
 import { ELEMENTS } from "@/constants/elements";
 
 export default function RaceSelect() {
@@ -13,26 +13,13 @@ export default function RaceSelect() {
   const handleConfirm = () => {
     if (selectedRace) {
       selectRace(selectedRace, gender);
-      router.replace("/(game)/battle");
+      router.replace("/(game)");
     }
   };
 
   const handleLogout = async () => {
-    Alert.alert(
-      "Sair",
-      "Deseja sair da conta?",
-      [
-        { text: "Cancelar", style: "cancel" },
-        { 
-          text: "Sair", 
-          style: "destructive",
-          onPress: async () => {
-            await logout();
-            router.replace("/login");
-          }
-        },
-      ]
-    );
+    await logout();
+    router.replace("/login");
   };
 
   const race = selectedRace ? RACES.find((r) => r.id === selectedRace) : null;
@@ -40,13 +27,12 @@ export default function RaceSelect() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Escolha sua Raça</Text>
-        <TouchableOpacity onPress={handleLogout}>
-          <Text style={styles.logout}>🚪 Sair</Text>
+        <TouchableOpacity onPress={handleLogout} style={styles.backBtn}>
+          <Text style={styles.backText}>← SAIR</Text>
         </TouchableOpacity>
+        <Text style={styles.headerTitle}>ESCOLHA SUA RAÇA</Text>
+        <View style={{ width: 50 }} />
       </View>
-      
-      <Text style={styles.welcome}>Bem-vindo, {state.playerName}!</Text>
 
       <ScrollView style={styles.raceList} showsVerticalScrollIndicator={false}>
         {RACES.map((r) => (
@@ -55,29 +41,72 @@ export default function RaceSelect() {
             style={[styles.raceCard, selectedRace === r.id && styles.raceCardSelected]}
             onPress={() => setSelectedRace(r.id)}
           >
-            <Text style={styles.raceEmoji}>{r.emoji}</Text>
+            <View style={[styles.emojiCircle, { backgroundColor: `${r.color}20` }]}>
+              <Text style={styles.raceEmoji}>{r.emoji}</Text>
+            </View>
             <View style={styles.raceInfo}>
               <Text style={styles.raceName}>{r.name}</Text>
               <View style={styles.elements}>
                 {r.primaryElements.slice(0, 3).map((e) => (
-                  <Text key={e} style={[styles.element, { color: ELEMENTS[e]?.color || "#fff" }]}>
-                    {ELEMENTS[e]?.emoji}
-                  </Text>
+                  <View
+                    key={e}
+                    style={[styles.elementBadge, { backgroundColor: `${ELEMENTS[e]?.color}20` }]}
+                  >
+                    <Text style={styles.elementEmoji}>{ELEMENTS[e]?.emoji}</Text>
+                  </View>
                 ))}
               </View>
+            </View>
+            <View style={styles.statsPreview}>
+              <Text style={styles.statText}>❤️ {r.stats.hp}</Text>
+              <Text style={styles.statText}>⚔️ {r.stats.atkF}</Text>
             </View>
           </TouchableOpacity>
         ))}
       </ScrollView>
 
       {race && (
-        <View style={styles.details}>
+        <View style={styles.detailsPanel}>
+          <View style={styles.detailsHeader}>
+            <View style={[styles.emojiCircleLarge, { backgroundColor: `${race.color}30` }]}>
+              <Text style={styles.emojiLarge}>{race.emoji}</Text>
+            </View>
+            <View>
+              <Text style={styles.detailsName}>{race.name}</Text>
+              <View style={styles.elementsRow}>
+                {race.primaryElements.map((e) => (
+                  <View
+                    key={e}
+                    style={[styles.elementPill, { backgroundColor: ELEMENTS[e]?.color }]}
+                  >
+                    <Text style={styles.elementPillText}>
+                      {ELEMENTS[e]?.emoji} {ELEMENTS[e]?.name}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          </View>
+
           <Text style={styles.lore}>{race.lore}</Text>
-          
-          <View style={styles.stats}>
-            <Text style={styles.stat}>❤️ HP: {race.stats.hp}</Text>
-            <Text style={styles.stat}>⚔️ ATK: {race.stats.atkF}</Text>
-            <Text style={styles.stat}>🛡️ DEF: {race.stats.armor}</Text>
+
+          <View style={styles.statsGrid}>
+            <View style={styles.statBox}>
+              <Text style={styles.statLabel}>HP</Text>
+              <Text style={styles.statValue}>❤️ {race.stats.hp}</Text>
+            </View>
+            <View style={styles.statBox}>
+              <Text style={styles.statLabel}>ATK</Text>
+              <Text style={styles.statValue}>⚔️ {race.stats.atkF}</Text>
+            </View>
+            <View style={styles.statBox}>
+              <Text style={styles.statLabel}>DEF</Text>
+              <Text style={styles.statValue}>🛡️ {race.stats.armor}</Text>
+            </View>
+            <View style={styles.statBox}>
+              <Text style={styles.statLabel}>CRIT</Text>
+              <Text style={styles.statValue}>💥 {race.stats.critBonus}%</Text>
+            </View>
           </View>
 
           <View style={styles.genderRow}>
@@ -85,18 +114,25 @@ export default function RaceSelect() {
               style={[styles.genderBtn, gender === "male" && styles.genderBtnActive]}
               onPress={() => setGender("male")}
             >
-              <Text style={styles.genderText}>♂️ Masculino</Text>
+              <Text style={styles.genderEmoji}>♂️</Text>
+              <Text style={[styles.genderText, gender === "male" && styles.genderTextActive]}>
+                MASCULINO
+              </Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.genderBtn, gender === "female" && styles.genderBtnActive]}
               onPress={() => setGender("female")}
             >
-              <Text style={styles.genderText}>♀️ Feminino</Text>
+              <Text style={styles.genderEmoji}>♀️</Text>
+              <Text style={[styles.genderText, gender === "female" && styles.genderTextActive]}>
+                FEMININO
+              </Text>
             </TouchableOpacity>
           </View>
 
           <TouchableOpacity style={styles.confirmBtn} onPress={handleConfirm}>
-            <Text style={styles.confirmText}>Firmar Contrato</Text>
+            <Text style={styles.confirmText}>FIRMAR CONTRATO</Text>
+            <Text style={styles.confirmArrow}>→</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -107,86 +143,166 @@ export default function RaceSelect() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0f0f0f",
-    padding: 16,
+    backgroundColor: "#0a0a0f",
   },
   header: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 8,
+    justifyContent: "space-between",
+    padding: 20,
+    paddingTop: 60,
+    borderBottomWidth: 1,
+    borderBottomColor: "#1e1e2e",
   },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#f0f0f0",
+  backBtn: {
+    padding: 8,
   },
-  logout: {
-    color: "#f44336",
+  backText: {
+    color: "#64748b",
+    fontSize: 13,
+    fontWeight: "700",
+    letterSpacing: 1,
+  },
+  headerTitle: {
+    color: "#f8fafc",
     fontSize: 14,
-  },
-  welcome: {
-    color: "#888",
-    fontSize: 14,
-    marginBottom: 16,
+    fontWeight: "700",
+    letterSpacing: 2,
   },
   raceList: {
     flex: 1,
+    padding: 16,
   },
   raceCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#1a1a1a",
-    borderRadius: 12,
+    backgroundColor: "#12121a",
+    borderRadius: 16,
     padding: 16,
     marginBottom: 12,
-    borderWidth: 2,
-    borderColor: "#333",
+    borderWidth: 1,
+    borderColor: "#1e1e2e",
   },
   raceCardSelected: {
-    borderColor: "#4CAF50",
-    backgroundColor: "#1a2f1a",
+    borderColor: "#7c3aed",
+    backgroundColor: "#1a1625",
+  },
+  emojiCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 16,
   },
   raceEmoji: {
-    fontSize: 32,
-    marginRight: 16,
+    fontSize: 28,
   },
   raceInfo: {
     flex: 1,
   },
   raceName: {
-    color: "#f0f0f0",
+    color: "#f8fafc",
     fontSize: 16,
-    fontWeight: "bold",
+    fontWeight: "700",
+    marginBottom: 8,
   },
   elements: {
     flexDirection: "row",
-    marginTop: 4,
+    gap: 6,
   },
-  element: {
-    fontSize: 16,
-    marginRight: 4,
+  elementBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    justifyContent: "center",
+    alignItems: "center",
   },
-  details: {
-    backgroundColor: "#1a1a1a",
-    borderRadius: 16,
+  elementEmoji: {
+    fontSize: 14,
+  },
+  statsPreview: {
+    alignItems: "flex-end",
+  },
+  statText: {
+    color: "#64748b",
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  detailsPanel: {
+    backgroundColor: "#12121a",
+    borderTopWidth: 1,
+    borderTopColor: "#1e1e2e",
     padding: 20,
-    marginTop: 16,
+    paddingBottom: 40,
+  },
+  detailsHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  emojiCircleLarge: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 16,
+  },
+  emojiLarge: {
+    fontSize: 36,
+  },
+  detailsName: {
+    color: "#f8fafc",
+    fontSize: 20,
+    fontWeight: "700",
+    marginBottom: 8,
+  },
+  elementsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  elementPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  elementPillText: {
+    color: "#fff",
+    fontSize: 10,
+    fontWeight: "700",
   },
   lore: {
-    color: "#aaa",
-    fontSize: 14,
+    color: "#94a3b8",
+    fontSize: 13,
     lineHeight: 20,
     marginBottom: 16,
   },
-  stats: {
+  statsGrid: {
     flexDirection: "row",
-    justifyContent: "space-around",
+    gap: 8,
     marginBottom: 16,
   },
-  stat: {
-    color: "#f0f0f0",
-    fontSize: 14,
+  statBox: {
+    flex: 1,
+    backgroundColor: "#0a0a0f",
+    borderRadius: 12,
+    padding: 12,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#1e1e2e",
+  },
+  statLabel: {
+    color: "#64748b",
+    fontSize: 10,
+    fontWeight: "700",
+    marginBottom: 4,
+  },
+  statValue: {
+    color: "#f8fafc",
+    fontSize: 13,
+    fontWeight: "600",
   },
   genderRow: {
     flexDirection: "row",
@@ -195,27 +311,48 @@ const styles = StyleSheet.create({
   },
   genderBtn: {
     flex: 1,
-    backgroundColor: "#333",
-    padding: 12,
-    borderRadius: 8,
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#0a0a0f",
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: "#1e1e2e",
+    gap: 8,
   },
   genderBtnActive: {
-    backgroundColor: "#4CAF50",
+    borderColor: "#7c3aed",
+    backgroundColor: "#1a1625",
+  },
+  genderEmoji: {
+    fontSize: 16,
   },
   genderText: {
-    color: "#f0f0f0",
-    fontSize: 14,
+    color: "#64748b",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  genderTextActive: {
+    color: "#7c3aed",
   },
   confirmBtn: {
-    backgroundColor: "#4CAF50",
-    padding: 16,
-    borderRadius: 8,
+    backgroundColor: "#7c3aed",
+    borderRadius: 12,
+    padding: 18,
+    flexDirection: "row",
+    justifyContent: "center",
     alignItems: "center",
   },
   confirmText: {
     color: "#fff",
-    fontSize: 16,
-    fontWeight: "bold",
+    fontSize: 15,
+    fontWeight: "700",
+    letterSpacing: 2,
+  },
+  confirmArrow: {
+    color: "#fff",
+    fontSize: 18,
+    marginLeft: 8,
   },
 });

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Animated } from "react-native";
 import { router } from "expo-router";
 import { useGame } from "@/context/GameContext";
 
@@ -45,7 +45,6 @@ export default function Login() {
       } else {
         success = await register(username.trim(), password);
         if (success) {
-          Alert.alert("Sucesso", "Conta criada! Agora escolha seu nome de aventureiro.");
           router.replace("/");
         } else {
           Alert.alert("Erro", "Este nome de usuário já existe");
@@ -66,50 +65,74 @@ export default function Login() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>⚔️ Jornada Infinita</Text>
-      <Text style={styles.subtitle}>RPG Idle</Text>
+      {/* Background gradient effect */}
+      <View style={styles.bgGradient} />
+      
+      {/* Logo Area */}
+      <View style={styles.logoArea}>
+        <View style={styles.iconCircle}>
+          <Text style={styles.iconText}>⚔️</Text>
+        </View>
+        <Text style={styles.title}>JORNADA INFINITA</Text>
+        <Text style={styles.subtitle}>RPG IDLE</Text>
+        <View style={styles.divider} />
+      </View>
 
+      {/* Form Card */}
       <View style={styles.card}>
         <Text style={styles.modeTitle}>
-          {mode === "login" ? "Entrar" : "Criar Conta"}
+          {mode === "login" ? "BEM-VINDO DE VOLTA" : "CRIAR CONTA"}
         </Text>
 
-        <Text style={styles.label}>Usuário</Text>
-        <TextInput
-          style={styles.input}
-          value={username}
-          onChangeText={setUsername}
-          placeholder="Digite seu usuário"
-          placeholderTextColor="#666"
-          autoCapitalize="none"
-          maxLength={20}
-          autoFocus
-        />
-
-        <Text style={styles.label}>Senha</Text>
-        <TextInput
-          style={styles.input}
-          value={password}
-          onChangeText={setPassword}
-          placeholder="Digite sua senha"
-          placeholderTextColor="#666"
-          secureTextEntry
-          maxLength={20}
-        />
-
-        {mode === "register" && (
-          <>
-            <Text style={styles.label}>Confirmar Senha</Text>
+        <View style={styles.inputContainer}>
+          <Text style={styles.inputLabel}>USUÁRIO</Text>
+          <View style={styles.inputWrapper}>
+            <Text style={styles.inputIcon}>👤</Text>
             <TextInput
               style={styles.input}
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              placeholder="Confirme sua senha"
+              value={username}
+              onChangeText={setUsername}
+              placeholder="Digite seu usuário"
+              placeholderTextColor="#666"
+              autoCapitalize="none"
+              maxLength={20}
+              autoFocus
+            />
+          </View>
+        </View>
+
+        <View style={styles.inputContainer}>
+          <Text style={styles.inputLabel}>SENHA</Text>
+          <View style={styles.inputWrapper}>
+            <Text style={styles.inputIcon}>🔒</Text>
+            <TextInput
+              style={styles.input}
+              value={password}
+              onChangeText={setPassword}
+              placeholder="Digite sua senha"
               placeholderTextColor="#666"
               secureTextEntry
               maxLength={20}
             />
-          </>
+          </View>
+        </View>
+
+        {mode === "register" && (
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>CONFIRMAR SENHA</Text>
+            <View style={styles.inputWrapper}>
+              <Text style={styles.inputIcon}>🔐</Text>
+              <TextInput
+                style={styles.input}
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                placeholder="Confirme sua senha"
+                placeholderTextColor="#666"
+                secureTextEntry
+                maxLength={20}
+              />
+            </View>
+          </View>
         )}
 
         <TouchableOpacity
@@ -118,20 +141,24 @@ export default function Login() {
           disabled={loading}
         >
           <Text style={styles.buttonText}>
-            {loading ? "Aguarde..." : mode === "login" ? "Entrar" : "Criar Conta"}
+            {loading ? "AGUARDE..." : mode === "login" ? "ENTRAR" : "CRIAR CONTA"}
           </Text>
+          <Text style={styles.buttonArrow}>→</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.toggleBtn} onPress={toggleMode}>
           <Text style={styles.toggleText}>
             {mode === "login"
-              ? "Não tem conta? Cadastre-se"
-              : "Já tem conta? Entre"}
+              ? "Não tem conta? "
+              : "Já tem conta? "}
+            <Text style={styles.toggleHighlight}>
+              {mode === "login" ? "Cadastre-se" : "Entre"}
+            </Text>
           </Text>
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.footer}>Versão 6.0 - Offline</Text>
+      <Text style={styles.footer}>v2.0 • Offline RPG</Text>
     </View>
   );
 }
@@ -139,80 +166,148 @@ export default function Login() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0f0f0f",
+    backgroundColor: "#0a0a0f",
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
   },
+  bgGradient: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "#0a0a0f",
+    opacity: 0.9,
+  },
+  logoArea: {
+    alignItems: "center",
+    marginBottom: 30,
+  },
+  iconCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "#1a1a2e",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: "#7c3aed",
+    marginBottom: 16,
+  },
+  iconText: {
+    fontSize: 36,
+  },
   title: {
-    fontSize: 32,
-    fontWeight: "bold",
-    color: "#f0f0f0",
-    marginBottom: 8,
+    fontSize: 28,
+    fontWeight: "900",
+    color: "#f8fafc",
+    letterSpacing: 3,
+    textShadowColor: "#7c3aed",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 10,
   },
   subtitle: {
-    fontSize: 18,
-    color: "#888",
-    marginBottom: 40,
+    fontSize: 14,
+    color: "#7c3aed",
+    letterSpacing: 8,
+    marginTop: 4,
+    fontWeight: "600",
+  },
+  divider: {
+    width: 60,
+    height: 3,
+    backgroundColor: "#7c3aed",
+    marginTop: 16,
+    borderRadius: 2,
   },
   card: {
-    backgroundColor: "#1a1a1a",
-    borderRadius: 16,
-    padding: 24,
+    backgroundColor: "#12121a",
+    borderRadius: 20,
+    padding: 28,
     width: "100%",
     maxWidth: 400,
     borderWidth: 1,
-    borderColor: "#333",
+    borderColor: "#1e1e2e",
   },
   modeTitle: {
-    color: "#f0f0f0",
-    fontSize: 20,
-    fontWeight: "bold",
+    color: "#f8fafc",
+    fontSize: 18,
+    fontWeight: "700",
     textAlign: "center",
-    marginBottom: 20,
+    marginBottom: 24,
+    letterSpacing: 2,
   },
-  label: {
-    color: "#888",
-    fontSize: 12,
-    marginBottom: 8,
-    textTransform: "uppercase",
-  },
-  input: {
-    backgroundColor: "#0f0f0f",
-    borderRadius: 8,
-    padding: 16,
-    color: "#f0f0f0",
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: "#333",
+  inputContainer: {
     marginBottom: 16,
   },
+  inputLabel: {
+    color: "#64748b",
+    fontSize: 11,
+    fontWeight: "700",
+    marginBottom: 8,
+    letterSpacing: 1,
+  },
+  inputWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#0a0a0f",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#1e1e2e",
+    paddingHorizontal: 16,
+  },
+  inputIcon: {
+    fontSize: 16,
+    marginRight: 12,
+    opacity: 0.7,
+  },
+  input: {
+    flex: 1,
+    paddingVertical: 14,
+    color: "#f8fafc",
+    fontSize: 15,
+  },
   button: {
-    backgroundColor: "#4CAF50",
-    borderRadius: 8,
+    backgroundColor: "#7c3aed",
+    borderRadius: 12,
     padding: 16,
     alignItems: "center",
     marginTop: 8,
+    flexDirection: "row",
+    justifyContent: "center",
   },
   buttonDisabled: {
-    backgroundColor: "#2d5a2f",
+    backgroundColor: "#4c1d95",
+    opacity: 0.7,
   },
   buttonText: {
     color: "#fff",
-    fontSize: 16,
-    fontWeight: "bold",
+    fontSize: 15,
+    fontWeight: "700",
+    letterSpacing: 1,
+  },
+  buttonArrow: {
+    color: "#fff",
+    fontSize: 18,
+    marginLeft: 8,
   },
   toggleBtn: {
-    marginTop: 16,
+    marginTop: 20,
     alignItems: "center",
   },
   toggleText: {
-    color: "#4CAF50",
-    fontSize: 14,
+    color: "#64748b",
+    fontSize: 13,
+  },
+  toggleHighlight: {
+    color: "#7c3aed",
+    fontWeight: "700",
   },
   footer: {
-    color: "#555",
-    marginTop: 40,
-    fontSize: 12,
+    color: "#334155",
+    marginTop: 30,
+    fontSize: 11,
+    letterSpacing: 1,
   },
 });

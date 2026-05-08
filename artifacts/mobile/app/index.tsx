@@ -7,8 +7,8 @@ export default function Index() {
 
   if (isLoading) {
     return (
-      <View style={{ flex: 1, backgroundColor: "#0f0f0f", justifyContent: "center", alignItems: "center" }}>
-        <ActivityIndicator size="large" color="#f0f0f0" />
+      <View style={{ flex: 1, backgroundColor: "#0a0a0f", justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" color="#7c3aed" />
       </View>
     );
   }
@@ -18,7 +18,7 @@ export default function Index() {
     return <Redirect href="/login" />;
   }
 
-  // No player name -> set player name
+  // No player name -> player setup
   if (!state.playerName) {
     return <Redirect href="/player-setup" />;
   }
@@ -28,6 +28,6 @@ export default function Index() {
     return <Redirect href="/race-select" />;
   }
 
-  // Has everything -> game
-  return <Redirect href="/(game)/battle" />;
+  // Has everything -> game home
+  return <Redirect href="/(game)" />;
 }
