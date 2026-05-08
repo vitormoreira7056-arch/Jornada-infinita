@@ -95,13 +95,13 @@ const DEFAULT_CURRENCIES: Currencies = {
 
 const DEFAULT_STATE: GameState = {
   username: "", isLoggedIn: false, playerName: "", raceId: null, gender: null,
-  level: 1, exp: 0, maxLevel: 300, currencies: { ...DEFAULT_CURRENCIES },
+  level: 1, exp: 0, maxLevel: 300, currencies: DEFAULT_CURRENCIES,
   discoveredDungeons: [], currentBiome: null, towerProgress: 0, unlockedFloors: [1],
   totalDungeonRuns: 0, successfulDungeonRuns: 0,
   baseHp: 100, baseMp: 50, baseAtkF: 10, baseAtkM: 10, baseDef: 5,
   baseArmor: 0, baseMagicRes: 0, baseCritRate: 0.05, baseCritDmg: 1.5,
   baseAtkSpeed: 1, baseLuck: 0.001, baseDodge: 0.01, baseLifeSteal: 0,
-  baseArmorPen: 0, baseHpRegen: 1, baseMpRegen: 0.5, baseRes: { ...DEFAULT_RES },
+  baseArmorPen: 0, baseHpRegen: 1, baseMpRegen: 0.5, baseRes: DEFAULT_RES,
   activeSkills: [], passiveSkillUnlocked: false,
   equipment: {
     helmet: null, chest: null, legs: null, boots: null, mainHand: null, offHand: null,
@@ -478,7 +478,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     const newHp = Math.max(0, state.currentHp - damage);
     setState(prev => ({
       ...prev, currentHp: newHp,
-      currentEnemy: { ...prev.currentEnemy!, skillCooldowns: prev.currentEnemy!.skillCooldowns.map(c => Math.max(0, c - 1)) },
+      currentEnemy: prev.currentEnemy ? { ...prev.currentEnemy, skillCooldowns: prev.currentEnemy.skillCooldowns.map(c => Math.max(0, c - 1)) } : null,
       combatLog: [...prev.combatLog, `🗡️ ${enemy.mob.name} causou ${damage} de dano${skillUsed ? ` (${skillUsed})` : ""}!`],
     }));
     if (newHp <= 0) setTimeout(() => endCombat(false), 500);

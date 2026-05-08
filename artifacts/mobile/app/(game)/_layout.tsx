@@ -321,13 +321,7 @@ export default function GameLayout() {
         <Tabs.Screen
           name="combat"
           options={{
-            href: null, // Não mostrar na navegação
-          }}
-        />
-        <Tabs.Screen
-          name="biome"
-          options={{
-            href: null, // Não mostrar na navegação
+            href: null,
           }}
         />
       </Tabs>

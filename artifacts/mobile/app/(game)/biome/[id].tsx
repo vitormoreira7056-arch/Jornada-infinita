@@ -273,35 +273,59 @@ export default function BiomeScreen() {
           <Text style={styles.progressText}>{progress.discovered} / {progress.total} dungeons encontradas</Text>
         </View>
         
-        {/* Explore Button - Find Dungeons */}
+        {/* Aventurar-se Button - Unified */}
         <TouchableOpacity 
-          style={[styles.exploreBtn, isExploring && styles.exploreBtnDisabled]}
-          onPress={handleExplore}
+          style={[styles.adventureBtn, isExploring && styles.adventureBtnDisabled]}
+          onPress={async () => {
+            if (isExploring) return;
+            setIsExploring(true);
+            
+            // Simular tempo de exploração
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            
+            // Primeiro tenta encontrar mob
+            const encounterResult = findEncounter(id);
+            
+            if (encounterResult.type === "mob" && encounterResult.mob) {
+              // Encontrou mob - inicia combate
+              startCombat(encounterResult.mob);
+              setIsExploring(false);
+              router.push("/(game)/combat");
+              return;
+            }
+            
+            // Se não encontrou mob, tenta encontrar dungeon
+            const dungeonResult = exploreBiome(id);
+            
+            if (dungeonResult.found && dungeonResult.dungeon) {
+              setFoundDungeon(dungeonResult.dungeon);
+              setDiscoveryModal(true);
+              const dungeons = getDiscoveredDungeons(id);
+              setDiscoveredDungeons(dungeons);
+              const prog = getBiomeProgress(id);
+              setProgress(prog);
+            } else if (encounterResult.type === "dungeon") {
+              Alert.alert("Exploração", "Você sente uma presença misteriosa... (dungeon próxima)");
+            } else if (encounterResult.type === "resource") {
+              Alert.alert("Exploração", "Você encontrou alguns recursos! (em desenvolvimento)");
+            } else {
+              // Nada encontrado - ganha XP
+              Alert.alert(
+                "Exploração Completa",
+                `Você explorou ${biome.name} mas não encontrou nada de interessante.\n\nXP Ganhado: ${dungeonResult.expGained}`,
+                [{ text: "Continuar" }]
+              );
+            }
+            
+            setIsExploring(false);
+          }}
           disabled={isExploring}
         >
-          <Text style={styles.exploreEmoji}>{isExploring ? "🔍" : "🗺️"}</Text>
-          <Text style={styles.exploreBtnText}>
-            {isExploring ? "EXPLORANDO..." : "EXPLORAR BIOMA"}
+          <Text style={styles.adventureEmoji}>{isExploring ? "🔍" : "⚔️"}</Text>
+          <Text style={styles.adventureBtnText}>
+            {isExploring ? "EXPLORANDO..." : "AVENTURAR-SE"}
           </Text>
-          <Text style={styles.exploreHint}>Chance de encontrar dungeons secretas</Text>
-        </TouchableOpacity>
-        
-        {/* Adventure Button - Find Mobs */}
-        <TouchableOpacity 
-          style={styles.adventureBtn}
-          onPress={() => {
-            const result = findEncounter(id);
-            if (result.type === "mob" && result.mob) {
-              startCombat(result.mob);
-              router.push("/(game)/combat");
-            } else {
-              Alert.alert("Exploração", result.message);
-            }
-          }}
-        >
-          <Text style={styles.adventureEmoji}>⚔️</Text>
-          <Text style={styles.adventureBtnText}>AVENTURAR-SE</Text>
-          <Text style={styles.adventureHint}>Encontre mobs, recursos e dungeons!</Text>
+          <Text style={styles.adventureHint}>Encontre mobs, dungeons, recursos ou ganhe XP!</Text>
         </TouchableOpacity>
         
         {/* Discovered Dungeons */}
@@ -478,6 +502,9 @@ const styles = StyleSheet.create({
   exploreHint: {
     color: "rgba(255,255,255,0.6)",
     fontSize: 12,
+  },
+  adventureBtnDisabled: {
+    opacity: 0.6,
   },
   adventureBtn: {
     backgroundColor: "rgba(239, 68, 68, 0.8)",
