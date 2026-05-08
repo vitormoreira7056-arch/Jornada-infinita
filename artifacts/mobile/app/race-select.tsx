@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert } from "react-native";
 import { router } from "expo-router";
 import { useGame } from "@/context/GameContext";
 import { RACES, RaceId, RaceDef } from "@/constants/races";
@@ -8,7 +8,7 @@ import { ELEMENTS } from "@/constants/elements";
 export default function RaceSelect() {
   const [selectedRace, setSelectedRace] = useState<RaceId | null>(null);
   const [gender, setGender] = useState<"male" | "female">("male");
-  const { selectRace } = useGame();
+  const { selectRace, logout, state } = useGame();
 
   const handleConfirm = () => {
     if (selectedRace) {
@@ -17,11 +17,36 @@ export default function RaceSelect() {
     }
   };
 
+  const handleLogout = () => {
+    Alert.alert(
+      "Sair",
+      "Deseja sair da conta?",
+      [
+        { text: "Cancelar", style: "cancel" },
+        { 
+          text: "Sair", 
+          style: "destructive",
+          onPress: () => {
+            logout();
+            router.replace("/login");
+          }
+        },
+      ]
+    );
+  };
+
   const race = selectedRace ? RACES.find((r) => r.id === selectedRace) : null;
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Escolha sua Raça</Text>
+      <View style={styles.header}>
+        <Text style={styles.title}>Escolha sua Raça</Text>
+        <TouchableOpacity onPress={handleLogout}>
+          <Text style={styles.logout}>🚪 Sair</Text>
+        </TouchableOpacity>
+      </View>
+      
+      <Text style={styles.welcome}>Bem-vindo, {state.playerName}!</Text>
 
       <ScrollView style={styles.raceList} showsVerticalScrollIndicator={false}>
         {RACES.map((r) => (
@@ -85,12 +110,25 @@ const styles = StyleSheet.create({
     backgroundColor: "#0f0f0f",
     padding: 16,
   },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
   title: {
     fontSize: 24,
     fontWeight: "bold",
     color: "#f0f0f0",
-    textAlign: "center",
-    marginVertical: 16,
+  },
+  logout: {
+    color: "#f44336",
+    fontSize: 14,
+  },
+  welcome: {
+    color: "#888",
+    fontSize: 14,
+    marginBottom: 16,
   },
   raceList: {
     flex: 1,

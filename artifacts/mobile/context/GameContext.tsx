@@ -1,9 +1,10 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { RACES, RaceId, getRaceById } from "@/constants/races";
+import { RaceId, getRaceById } from "@/constants/races";
 import { ZONES } from "@/constants/game";
 
-const STORAGE_KEY = "rpg_idle_v5";
+const STORAGE_KEY = "rpg_idle_v6";
+const USERS_KEY = "rpg_idle_users";
 
 export interface Item {
   id: string;
@@ -18,6 +19,10 @@ export interface Item {
 }
 
 export interface GameState {
+  // Account
+  username: string;
+  isLoggedIn: boolean;
+  
   // Player
   playerName: string;
   raceId: RaceId | null;
@@ -53,6 +58,8 @@ export interface GameState {
 }
 
 const DEFAULT_STATE: GameState = {
+  username: "",
+  isLoggedIn: false,
   playerName: "",
   raceId: null,
   gender: null,
@@ -81,6 +88,9 @@ const DEFAULT_STATE: GameState = {
 interface GameContextType {
   state: GameState;
   isLoading: boolean;
+  login: (username: string, password: string) => Promise<boolean>;
+  register: (username: string, password: string) => Promise<boolean>;
+  logout: () => void;
   setPlayerName: (name: string) => void;
   selectRace: (raceId: RaceId, gender: "male" | "female") => void;
   startBattle: () => void;
@@ -93,31 +103,104 @@ interface GameContextType {
 
 const GameContext = createContext<GameContextType | null>(null);
 
+// Simple hash function for passwords
+function hashPassword(password: string): string {
+  let hash = 0;
+  for (let i = 0; i < password.length; i++) {
+    const char = password.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash;
+  }
+  return hash.toString(16);
+}
+
 export function GameProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<GameState>(DEFAULT_STATE);
   const [isLoading, setIsLoading] = useState(true);
 
   // Load saved data
   useEffect(() => {
-    AsyncStorage.getItem(STORAGE_KEY).then((saved) => {
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          setState({ ...DEFAULT_STATE, ...parsed });
-        } catch (e) {
-          console.error("Failed to load save:", e);
-        }
-      }
-      setIsLoading(false);
-    });
+    loadUserData();
   }, []);
+
+  async function loadUserData() {
+    try {
+      const saved = await AsyncStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        setState({ ...DEFAULT_STATE, ...parsed });
+      }
+    } catch (e) {
+      console.error("Failed to load save:", e);
+    }
+    setIsLoading(false);
+  }
 
   // Save data on changes
   useEffect(() => {
-    if (!isLoading) {
+    if (!isLoading && state.isLoggedIn) {
       AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     }
   }, [state, isLoading]);
+
+  async function login(username: string, password: string): Promise<boolean> {
+    try {
+      const usersJson = await AsyncStorage.getItem(USERS_KEY);
+      const users: Record<string, string> = usersJson ? JSON.parse(usersJson) : {};
+      
+      const hashedPassword = hashPassword(password);
+      
+      if (users[username] && users[username] === hashedPassword) {
+        // Load user save data
+        const userSaveKey = `${STORAGE_KEY}_${username}`;
+        const saved = await AsyncStorage.getItem(userSaveKey);
+        
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          setState({ ...DEFAULT_STATE, ...parsed, username, isLoggedIn: true });
+        } else {
+          setState({ ...DEFAULT_STATE, username, isLoggedIn: true });
+        }
+        return true;
+      }
+      return false;
+    } catch (e) {
+      console.error("Login error:", e);
+      return false;
+    }
+  }
+
+  async function register(username: string, password: string): Promise<boolean> {
+    try {
+      const usersJson = await AsyncStorage.getItem(USERS_KEY);
+      const users: Record<string, string> = usersJson ? JSON.parse(usersJson) : {};
+      
+      if (users[username]) {
+        return false; // Username already exists
+      }
+      
+      users[username] = hashPassword(password);
+      await AsyncStorage.setItem(USERS_KEY, JSON.stringify(users));
+      
+      // Create new user save
+      const newState = { ...DEFAULT_STATE, username, isLoggedIn: true };
+      setState(newState);
+      await AsyncStorage.setItem(`${STORAGE_KEY}_${username}`, JSON.stringify(newState));
+      
+      return true;
+    } catch (e) {
+      console.error("Register error:", e);
+      return false;
+    }
+  }
+
+  async function logout() {
+    // Save current state before logout
+    if (state.username) {
+      await AsyncStorage.setItem(`${STORAGE_KEY}_${state.username}`, JSON.stringify(state));
+    }
+    setState(DEFAULT_STATE);
+  }
 
   // Battle loop
   useEffect(() => {
@@ -351,6 +434,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       value={{
         state,
         isLoading,
+        login,
+        register,
+        logout,
         setPlayerName,
         selectRace,
         startBattle,

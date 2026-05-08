@@ -1,7 +1,8 @@
 import { Tabs } from "expo-router";
-import { Text, View } from "react-native";
+import { Text, View, TouchableOpacity, Alert } from "react-native";
 import { useGame } from "@/context/GameContext";
 import { getRaceById } from "@/constants/races";
+import { router } from "expo-router";
 
 function TabIcon({ emoji, focused }: { emoji: string; focused: boolean }) {
   return (
@@ -12,8 +13,26 @@ function TabIcon({ emoji, focused }: { emoji: string; focused: boolean }) {
 }
 
 function Header() {
-  const { state } = useGame();
+  const { state, logout } = useGame();
   const race = state.raceId ? getRaceById(state.raceId) : null;
+
+  const handleLogout = () => {
+    Alert.alert(
+      "Sair",
+      "Deseja sair da conta?",
+      [
+        { text: "Cancelar", style: "cancel" },
+        { 
+          text: "Sair", 
+          style: "destructive",
+          onPress: () => {
+            logout();
+            router.replace("/login");
+          }
+        },
+      ]
+    );
+  };
 
   return (
     <View
@@ -42,9 +61,12 @@ function Header() {
 
       <View style={{ flexDirection: "row", alignItems: "center" }}>
         <Text style={{ color: "#FFD700", fontSize: 16, marginRight: 4 }}>🪙</Text>
-        <Text style={{ color: "#f0f0f0", fontWeight: "bold" }}>
+        <Text style={{ color: "#f0f0f0", fontWeight: "bold", marginRight: 12 }}>
           {state.gold.toLocaleString()}
         </Text>
+        <TouchableOpacity onPress={handleLogout}>
+          <Text style={{ fontSize: 20 }}>🚪</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );

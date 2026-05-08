@@ -13,9 +13,14 @@ export default function Index() {
     );
   }
 
-  // No player name -> login
-  if (!state.playerName) {
+  // Not logged in -> login
+  if (!state.isLoggedIn) {
     return <Redirect href="/login" />;
+  }
+
+  // No player name -> set player name
+  if (!state.playerName) {
+    return <Redirect href="/player-setup" />;
   }
 
   // No race selected -> race select
