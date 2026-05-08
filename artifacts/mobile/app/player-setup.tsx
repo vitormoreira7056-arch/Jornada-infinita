@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from "react-native";
 import { router } from "expo-router";
 import { useGame } from "@/context/GameContext";
 
@@ -14,9 +14,22 @@ export default function PlayerSetup() {
     }
   };
 
-  const handleLogout = () => {
-    logout();
-    router.replace("/login");
+  const handleLogout = async () => {
+    Alert.alert(
+      "Sair",
+      "Deseja sair da conta?",
+      [
+        { text: "Cancelar", style: "cancel" },
+        { 
+          text: "Sair", 
+          style: "destructive",
+          onPress: async () => {
+            await logout();
+            router.replace("/login");
+          }
+        },
+      ]
+    );
   };
 
   return (

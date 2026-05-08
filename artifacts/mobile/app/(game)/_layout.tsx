@@ -16,7 +16,7 @@ function Header() {
   const { state, logout } = useGame();
   const race = state.raceId ? getRaceById(state.raceId) : null;
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     Alert.alert(
       "Sair",
       "Deseja sair da conta?",
@@ -25,8 +25,8 @@ function Header() {
         { 
           text: "Sair", 
           style: "destructive",
-          onPress: () => {
-            logout();
+          onPress: async () => {
+            await logout();
             router.replace("/login");
           }
         },

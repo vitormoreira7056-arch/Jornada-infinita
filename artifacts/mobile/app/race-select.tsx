@@ -17,7 +17,7 @@ export default function RaceSelect() {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     Alert.alert(
       "Sair",
       "Deseja sair da conta?",
@@ -26,8 +26,8 @@ export default function RaceSelect() {
         { 
           text: "Sair", 
           style: "destructive",
-          onPress: () => {
-            logout();
+          onPress: async () => {
+            await logout();
             router.replace("/login");
           }
         },

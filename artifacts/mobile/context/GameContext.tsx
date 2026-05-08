@@ -5,6 +5,7 @@ import { ZONES } from "@/constants/game";
 
 const STORAGE_KEY = "rpg_idle_v6";
 const USERS_KEY = "rpg_idle_users";
+const CURRENT_USER_KEY = "rpg_idle_current_user";
 
 export interface Item {
   id: string;
@@ -90,7 +91,7 @@ interface GameContextType {
   isLoading: boolean;
   login: (username: string, password: string) => Promise<boolean>;
   register: (username: string, password: string) => Promise<boolean>;
-  logout: () => void;
+  logout: () => Promise<void>;
   setPlayerName: (name: string) => void;
   selectRace: (raceId: RaceId, gender: "male" | "female") => void;
   startBattle: () => void;
@@ -118,17 +119,27 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<GameState>(DEFAULT_STATE);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load saved data
+  // Load saved data on mount
   useEffect(() => {
     loadUserData();
   }, []);
 
   async function loadUserData() {
     try {
-      const saved = await AsyncStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        setState({ ...DEFAULT_STATE, ...parsed });
+      // Check if there's a current user
+      const currentUser = await AsyncStorage.getItem(CURRENT_USER_KEY);
+      
+      if (currentUser) {
+        // Load user-specific save
+        const userSaveKey = `${STORAGE_KEY}_${currentUser}`;
+        const saved = await AsyncStorage.getItem(userSaveKey);
+        
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          setState({ ...DEFAULT_STATE, ...parsed, username: currentUser, isLoggedIn: true });
+        } else {
+          setState({ ...DEFAULT_STATE, username: currentUser, isLoggedIn: true });
+        }
       }
     } catch (e) {
       console.error("Failed to load save:", e);
@@ -138,8 +149,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   // Save data on changes
   useEffect(() => {
-    if (!isLoading && state.isLoggedIn) {
-      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    if (!isLoading && state.isLoggedIn && state.username) {
+      const userSaveKey = `${STORAGE_KEY}_${state.username}`;
+      AsyncStorage.setItem(userSaveKey, JSON.stringify(state));
     }
   }, [state, isLoading]);
 
@@ -151,6 +163,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       const hashedPassword = hashPassword(password);
       
       if (users[username] && users[username] === hashedPassword) {
+        // Set current user
+        await AsyncStorage.setItem(CURRENT_USER_KEY, username);
+        
         // Load user save data
         const userSaveKey = `${STORAGE_KEY}_${username}`;
         const saved = await AsyncStorage.getItem(userSaveKey);
@@ -182,6 +197,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       users[username] = hashPassword(password);
       await AsyncStorage.setItem(USERS_KEY, JSON.stringify(users));
       
+      // Set current user
+      await AsyncStorage.setItem(CURRENT_USER_KEY, username);
+      
       // Create new user save
       const newState = { ...DEFAULT_STATE, username, isLoggedIn: true };
       setState(newState);
@@ -195,11 +213,21 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function logout() {
-    // Save current state before logout
-    if (state.username) {
-      await AsyncStorage.setItem(`${STORAGE_KEY}_${state.username}`, JSON.stringify(state));
+    try {
+      // Save current state before logout
+      if (state.username) {
+        const userSaveKey = `${STORAGE_KEY}_${state.username}`;
+        await AsyncStorage.setItem(userSaveKey, JSON.stringify(state));
+      }
+      
+      // Clear current user
+      await AsyncStorage.removeItem(CURRENT_USER_KEY);
+      
+      // Reset state
+      setState(DEFAULT_STATE);
+    } catch (e) {
+      console.error("Logout error:", e);
     }
-    setState(DEFAULT_STATE);
   }
 
   // Battle loop
