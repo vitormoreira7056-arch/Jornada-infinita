@@ -43,13 +43,18 @@ export default function Home() {
         </View>
       </View>
 
-      {/* Stats Grid */}
-      <Text style={styles.sectionTitle}>ATRIBUTOS</Text>
+      {/* Primary Stats */}
+      <Text style={styles.sectionTitle}>ATRIBUTOS PRIMÁRIOS</Text>
       <View style={styles.statsGrid}>
         <View style={styles.statCard}>
           <Text style={styles.statIcon}>⚔️</Text>
-          <Text style={styles.statValue}>{stats.atk}</Text>
-          <Text style={styles.statLabel}>ATAQUE</Text>
+          <Text style={styles.statValue}>{stats.atkF}</Text>
+          <Text style={styles.statLabel}>ATK.F</Text>
+        </View>
+        <View style={styles.statCard}>
+          <Text style={styles.statIcon}>🔮</Text>
+          <Text style={styles.statValue}>{stats.atkM}</Text>
+          <Text style={styles.statLabel}>ATK.M</Text>
         </View>
         <View style={styles.statCard}>
           <Text style={styles.statIcon}>🛡️</Text>
@@ -61,20 +66,73 @@ export default function Home() {
           <Text style={styles.statValue}>{stats.hp}</Text>
           <Text style={styles.statLabel}>VIDA</Text>
         </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statIcon}>💥</Text>
-          <Text style={styles.statValue}>{Math.round(stats.critRate * 100)}%</Text>
-          <Text style={styles.statLabel}>CRÍTICO</Text>
+      </View>
+
+      {/* Secondary Stats */}
+      <Text style={styles.sectionTitle}>ATRIBUTOS SECUNDÁRIOS</Text>
+      <View style={styles.secondaryStatsGrid}>
+        <View style={styles.secondaryStat}>
+          <Text style={styles.secondaryIcon}>🎯</Text>
+          <View>
+            <Text style={styles.secondaryValue}>{(stats.critRate * 100).toFixed(1)}%</Text>
+            <Text style={styles.secondaryLabel}>Taxa Crítica</Text>
+          </View>
         </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statIcon}>⚡</Text>
-          <Text style={styles.statValue}>{stats.atkSpeed.toFixed(1)}</Text>
-          <Text style={styles.statLabel}>VELOCIDADE</Text>
+        <View style={styles.secondaryStat}>
+          <Text style={styles.secondaryIcon}>💥</Text>
+          <View>
+            <Text style={styles.secondaryValue}>{(stats.critDmg * 100).toFixed(0)}%</Text>
+            <Text style={styles.secondaryLabel}>Dano Crítico</Text>
+          </View>
         </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statIcon}>👟</Text>
-          <Text style={styles.statValue}>{stats.moveSpeed.toFixed(1)}</Text>
-          <Text style={styles.statLabel}>MOVIMENTO</Text>
+        <View style={styles.secondaryStat}>
+          <Text style={styles.secondaryIcon}>⚡</Text>
+          <View>
+            <Text style={styles.secondaryValue}>{stats.atkSpeed.toFixed(2)}</Text>
+            <Text style={styles.secondaryLabel}>Vel. Ataque</Text>
+          </View>
+        </View>
+        <View style={styles.secondaryStat}>
+          <Text style={styles.secondaryIcon}>👟</Text>
+          <View>
+            <Text style={styles.secondaryValue}>{stats.moveSpeed.toFixed(2)}</Text>
+            <Text style={styles.secondaryLabel}>Vel. Movimento</Text>
+          </View>
+        </View>
+        <View style={styles.secondaryStat}>
+          <Text style={styles.secondaryIcon}>🍀</Text>
+          <View>
+            <Text style={styles.secondaryValue}>{(stats.luck * 100).toFixed(2)}%</Text>
+            <Text style={styles.secondaryLabel}>Sorte</Text>
+          </View>
+        </View>
+        <View style={styles.secondaryStat}>
+          <Text style={styles.secondaryIcon}>💨</Text>
+          <View>
+            <Text style={styles.secondaryValue}>{(stats.dodge * 100).toFixed(1)}%</Text>
+            <Text style={styles.secondaryLabel}>Esquiva</Text>
+          </View>
+        </View>
+        <View style={styles.secondaryStat}>
+          <Text style={styles.secondaryIcon}>🩸</Text>
+          <View>
+            <Text style={styles.secondaryValue}>{(stats.lifeSteal * 100).toFixed(1)}%</Text>
+            <Text style={styles.secondaryLabel}>Roubo de Vida</Text>
+          </View>
+        </View>
+        <View style={styles.secondaryStat}>
+          <Text style={styles.secondaryIcon}>🔪</Text>
+          <View>
+            <Text style={styles.secondaryValue}>{stats.armorPen}</Text>
+            <Text style={styles.secondaryLabel}>Pen. Armadura</Text>
+          </View>
+        </View>
+        <View style={styles.secondaryStat}>
+          <Text style={styles.secondaryIcon}>💚</Text>
+          <View>
+            <Text style={styles.secondaryValue}>{stats.hpRegen}</Text>
+            <Text style={styles.secondaryLabel}>Regen. HP</Text>
+          </View>
         </View>
       </View>
 
@@ -227,7 +285,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   statCard: {
-    width: "31%",
+    width: "23%",
     backgroundColor: "#12121a",
     borderRadius: 16,
     padding: 16,
@@ -250,6 +308,36 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "700",
     letterSpacing: 1,
+  },
+  secondaryStatsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 20,
+  },
+  secondaryStat: {
+    width: "31%",
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#12121a",
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "#1e1e2e",
+  },
+  secondaryIcon: {
+    fontSize: 20,
+    marginRight: 8,
+  },
+  secondaryValue: {
+    color: "#f8fafc",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  secondaryLabel: {
+    color: "#64748b",
+    fontSize: 9,
+    fontWeight: "600",
   },
   actionsGrid: {
     flexDirection: "row",

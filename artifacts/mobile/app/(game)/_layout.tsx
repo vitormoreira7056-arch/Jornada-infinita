@@ -107,7 +107,7 @@ function Header() {
         </TouchableOpacity>
       </View>
 
-      {/* Stats Row */}
+      {/* Primary Stats Row */}
       <View style={{
         flexDirection: "row",
         backgroundColor: "#0a0a0f",
@@ -117,23 +117,48 @@ function Header() {
         borderColor: "#1e1e2e",
       }}>
         <View style={{ flex: 1, alignItems: "center" }}>
-          <Text style={{ color: "#64748b", fontSize: 10, fontWeight: "700", marginBottom: 4 }}>ATK</Text>
-          <Text style={{ color: "#f8fafc", fontSize: 14, fontWeight: "700" }}>{stats.atk}</Text>
+          <Text style={{ color: "#64748b", fontSize: 9, fontWeight: "700", marginBottom: 4 }}>ATK.F</Text>
+          <Text style={{ color: "#f8fafc", fontSize: 14, fontWeight: "700" }}>{stats.atkF}</Text>
         </View>
         <View style={{ width: 1, backgroundColor: "#1e1e2e" }} />
         <View style={{ flex: 1, alignItems: "center" }}>
-          <Text style={{ color: "#64748b", fontSize: 10, fontWeight: "700", marginBottom: 4 }}>DEF</Text>
+          <Text style={{ color: "#64748b", fontSize: 9, fontWeight: "700", marginBottom: 4 }}>ATK.M</Text>
+          <Text style={{ color: "#f8fafc", fontSize: 14, fontWeight: "700" }}>{stats.atkM}</Text>
+        </View>
+        <View style={{ width: 1, backgroundColor: "#1e1e2e" }} />
+        <View style={{ flex: 1, alignItems: "center" }}>
+          <Text style={{ color: "#64748b", fontSize: 9, fontWeight: "700", marginBottom: 4 }}>DEF</Text>
           <Text style={{ color: "#f8fafc", fontSize: 14, fontWeight: "700" }}>{stats.def}</Text>
         </View>
         <View style={{ width: 1, backgroundColor: "#1e1e2e" }} />
         <View style={{ flex: 1, alignItems: "center" }}>
-          <Text style={{ color: "#64748b", fontSize: 10, fontWeight: "700", marginBottom: 4 }}>HP</Text>
+          <Text style={{ color: "#64748b", fontSize: 9, fontWeight: "700", marginBottom: 4 }}>HP</Text>
           <Text style={{ color: "#f8fafc", fontSize: 14, fontWeight: "700" }}>{stats.hp}</Text>
         </View>
-        <View style={{ width: 1, backgroundColor: "#1e1e2e" }} />
-        <View style={{ flex: 1, alignItems: "center" }}>
-          <Text style={{ color: "#64748b", fontSize: 10, fontWeight: "700", marginBottom: 4 }}>CRIT</Text>
-          <Text style={{ color: "#f8fafc", fontSize: 14, fontWeight: "700" }}>{Math.round(stats.critRate * 100)}%</Text>
+      </View>
+
+      {/* Secondary Stats Row */}
+      <View style={{
+        flexDirection: "row",
+        justifyContent: "space-around",
+        marginTop: 10,
+        paddingHorizontal: 8,
+      }}>
+        <View style={{ alignItems: "center" }}>
+          <Text style={{ color: "#64748b", fontSize: 8, fontWeight: "600" }}>CRIT</Text>
+          <Text style={{ color: "#fbbf24", fontSize: 11, fontWeight: "700" }}>{(stats.critRate * 100).toFixed(0)}%</Text>
+        </View>
+        <View style={{ alignItems: "center" }}>
+          <Text style={{ color: "#64748b", fontSize: 8, fontWeight: "600" }}>ESQ</Text>
+          <Text style={{ color: "#3b82f6", fontSize: 11, fontWeight: "700" }}>{(stats.dodge * 100).toFixed(0)}%</Text>
+        </View>
+        <View style={{ alignItems: "center" }}>
+          <Text style={{ color: "#64748b", fontSize: 8, fontWeight: "600" }}>SORTE</Text>
+          <Text style={{ color: "#22c55e", fontSize: 11, fontWeight: "700" }}>{(stats.luck * 100).toFixed(1)}%</Text>
+        </View>
+        <View style={{ alignItems: "center" }}>
+          <Text style={{ color: "#64748b", fontSize: 8, fontWeight: "600" }}>VEL</Text>
+          <Text style={{ color: "#a855f7", fontSize: 11, fontWeight: "700" }}>{stats.atkSpeed.toFixed(1)}</Text>
         </View>
       </View>
 

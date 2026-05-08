@@ -47,11 +47,16 @@ function ItemCard({
   item,
   onPress,
   onSell,
+  showDetails,
 }: {
   item: Item;
   onPress?: () => void;
   onSell?: () => void;
+  showDetails?: boolean;
 }) {
+  const hasStats = item.atkF > 0 || item.atkM > 0 || item.def > 0 || item.hp > 0 || 
+                   item.critRate > 0 || item.dodge > 0 || item.lifeSteal > 0;
+
   return (
     <TouchableOpacity style={styles.itemCard} onPress={onPress}>
       <View style={[styles.itemIconBox, { borderColor: RARITY_COLORS[item.rarity] }]}>
@@ -63,11 +68,17 @@ function ItemCard({
         <Text style={[styles.itemRarity, { color: RARITY_COLORS[item.rarity] }]}>
           {RARITY_NAMES[item.rarity]}
         </Text>
-        <View style={styles.itemStats}>
-          {item.atk > 0 && <Text style={styles.miniStat}>⚔️{item.atk}</Text>}
-          {item.def > 0 && <Text style={styles.miniStat}>🛡️{item.def}</Text>}
-          {item.hp > 0 && <Text style={styles.miniStat}>❤️{item.hp}</Text>}
-        </View>
+        {showDetails && hasStats && (
+          <View style={styles.itemStats}>
+            {item.atkF > 0 && <Text style={styles.miniStat}>⚔️{item.atkF}</Text>}
+            {item.atkM > 0 && <Text style={styles.miniStat}>🔮{item.atkM}</Text>}
+            {item.def > 0 && <Text style={styles.miniStat}>🛡️{item.def}</Text>}
+            {item.hp > 0 && <Text style={styles.miniStat}>❤️{item.hp}</Text>}
+            {item.critRate > 0 && <Text style={styles.miniStat}>🎯{(item.critRate * 100).toFixed(0)}%</Text>}
+            {item.dodge > 0 && <Text style={styles.miniStat}>💨{(item.dodge * 100).toFixed(0)}%</Text>}
+            {item.lifeSteal > 0 && <Text style={styles.miniStat}>🩸{(item.lifeSteal * 100).toFixed(0)}%</Text>}
+          </View>
+        )}
       </View>
       {onSell && (
         <TouchableOpacity style={styles.sellBtn} onPress={onSell}>
@@ -177,6 +188,7 @@ export default function Inventory() {
                 item={item}
                 onPress={() => {}}
                 onSell={() => sellItem(item.id)}
+                showDetails
               />
             ))
           )}
@@ -203,11 +215,12 @@ export default function Inventory() {
                   <ItemCard
                     item={state.equipment[selectedSlot]!}
                     onPress={() => handleUnequip(selectedSlot)}
+                    showDetails
                   />
                 </View>
               )}
 
-              <Text style={styles.sectionTitle}>ITENS DISPÍVEIS</Text>
+              <Text style={styles.sectionTitle}>ITENS DISPONÍVEIS</Text>
               
               {filteredItems.length === 0 ? (
                 <Text style={styles.noItemsText}>Nenhum item para este slot</Text>
@@ -217,6 +230,7 @@ export default function Inventory() {
                     key={item.id}
                     item={item}
                     onPress={() => handleEquip(item)}
+                    showDetails
                   />
                 ))
               )}
@@ -340,6 +354,7 @@ const styles = StyleSheet.create({
   },
   itemStats: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
   },
   miniStat: {

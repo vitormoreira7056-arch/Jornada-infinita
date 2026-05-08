@@ -1,30 +1,18 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { RaceId, getRaceById } from "@/constants/races";
+import { RaceId, getRaceById, RaceAbility } from "@/constants/races";
 
-const USERS_KEY = "rpg_idle_users_v2";
-const CURRENT_USER_KEY = "rpg_idle_current_user_v2";
+const USERS_KEY = "rpg_idle_users_v3";
+const CURRENT_USER_KEY = "rpg_idle_current_user_v3";
 
 // 21 slots de equipamento
 export type EquipmentSlot =
-  | "helmet"      // Cabeça
-  | "chest"       // Peito
-  | "legs"        // Pernas
-  | "boots"       // Pés
-  | "mainHand"    // Mão primária
-  | "offHand"     // Mão secundária
-  | "cape"        // Capa
-  | "necklace"    // Colar
-  | "earrings"    // Brincos
-  | "ring1"       // Anel 1
-  | "ring2"       // Anel 2
-  | "ring3"       // Anel 3
-  | "ring4"       // Anel 4
-  | "bracelet"    // Pulseira
-  | "face"        // Rosto
-  | "shoulders"   // Ombros
-  | "pet"         // Mascote
-  | "spirit";     // Espírito
+  | "helmet" | "chest" | "legs" | "boots"
+  | "mainHand" | "offHand"
+  | "cape" | "necklace" | "earrings"
+  | "ring1" | "ring2" | "ring3" | "ring4"
+  | "bracelet" | "face" | "shoulders"
+  | "pet" | "spirit";
 
 export interface Item {
   id: string;
@@ -33,12 +21,18 @@ export interface Item {
   rarity: "common" | "uncommon" | "rare" | "epic" | "legendary" | "mythic";
   // Stats
   hp: number;
-  atk: number;
+  atkF: number;
+  atkM: number;
   def: number;
   critRate: number;
   critDmg: number;
   atkSpeed: number;
   moveSpeed: number;
+  luck: number;
+  dodge: number;
+  lifeSteal: number;
+  armorPen: number;
+  hpRegen: number;
   // Elemental
   fireDmg: number;
   iceDmg: number;
@@ -47,7 +41,13 @@ export interface Item {
   value: number;
   // Visual
   icon: string;
-  color: string;
+}
+
+export interface ActiveSkill {
+  ability: RaceAbility;
+  cooldown: number;
+  maxCooldown: number;
+  unlocked: boolean;
 }
 
 export interface GameState {
@@ -66,8 +66,22 @@ export interface GameState {
   
   // Stats base
   baseHp: number;
-  baseAtk: number;
+  baseAtkF: number;
+  baseAtkM: number;
   baseDef: number;
+  baseCritRate: number;
+  baseCritDmg: number;
+  baseAtkSpeed: number;
+  baseMoveSpeed: number;
+  baseLuck: number;
+  baseDodge: number;
+  baseLifeSteal: number;
+  baseArmorPen: number;
+  baseHpRegen: number;
+  
+  // Skills
+  activeSkills: ActiveSkill[];
+  passiveSkillUnlocked: boolean;
   
   // Equipment (21 slots)
   equipment: Record<EquipmentSlot, Item | null>;
@@ -92,27 +106,25 @@ const DEFAULT_STATE: GameState = {
   gold: 0,
   diamonds: 0,
   baseHp: 100,
-  baseAtk: 10,
+  baseAtkF: 10,
+  baseAtkM: 10,
   baseDef: 5,
+  baseCritRate: 0.05,
+  baseCritDmg: 1.5,
+  baseAtkSpeed: 1,
+  baseMoveSpeed: 1,
+  baseLuck: 0.001,
+  baseDodge: 0.01,
+  baseLifeSteal: 0,
+  baseArmorPen: 0,
+  baseHpRegen: 0,
+  activeSkills: [],
+  passiveSkillUnlocked: false,
   equipment: {
-    helmet: null,
-    chest: null,
-    legs: null,
-    boots: null,
-    mainHand: null,
-    offHand: null,
-    cape: null,
-    necklace: null,
-    earrings: null,
-    ring1: null,
-    ring2: null,
-    ring3: null,
-    ring4: null,
-    bracelet: null,
-    face: null,
-    shoulders: null,
-    pet: null,
-    spirit: null,
+    helmet: null, chest: null, legs: null, boots: null,
+    mainHand: null, offHand: null, cape: null, necklace: null,
+    earrings: null, ring1: null, ring2: null, ring3: null, ring4: null,
+    bracelet: null, face: null, shoulders: null, pet: null, spirit: null,
   },
   inventory: [],
   inventorySize: 50,
@@ -131,15 +143,37 @@ interface GameContextType {
   equipItem: (item: Item, slot: EquipmentSlot) => void;
   unequipItem: (slot: EquipmentSlot) => void;
   sellItem: (itemId: string) => void;
+  useSkill: (skillIndex: number) => void;
   getTotalStats: () => {
     hp: number;
-    atk: number;
+    atkF: number;
+    atkM: number;
     def: number;
     critRate: number;
     critDmg: number;
     atkSpeed: number;
     moveSpeed: number;
+    luck: number;
+    dodge: number;
+    lifeSteal: number;
+    armorPen: number;
+    hpRegen: number;
   };
+  getAllRaceStats: (raceId: RaceId) => {
+    hp: number;
+    atkF: number;
+    atkM: number;
+    def: number;
+    critRate: number;
+    critDmg: number;
+    atkSpeed: number;
+    moveSpeed: number;
+    luck: number;
+    dodge: number;
+    lifeSteal: number;
+    armorPen: number;
+    hpRegen: number;
+  } | null;
   addGold: (amount: number) => void;
 }
 
@@ -173,15 +207,13 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         
         if (saved) {
           const parsed = JSON.parse(saved);
-          // Merge with default to ensure all slots exist
-          const merged = {
+          setState({
             ...DEFAULT_STATE,
             ...parsed,
             equipment: { ...DEFAULT_STATE.equipment, ...(parsed.equipment || {}) },
             username: currentUser,
             isLoggedIn: true,
-          };
-          setState(merged);
+          });
         } else {
           setState({ ...DEFAULT_STATE, username: currentUser, isLoggedIn: true });
         }
@@ -273,13 +305,36 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   const selectRace = (raceId: RaceId, gender: "male" | "female") => {
     const race = getRaceById(raceId);
+    if (!race) return;
+
+    // Initialize skills from race abilities
+    const activeAbilities = race.abilities.filter(a => a.type === "ativa");
+    const activeSkills: ActiveSkill[] = activeAbilities.map((ability, index) => ({
+      ability,
+      cooldown: 0,
+      maxCooldown: 3 + index, // Skill 1: 3 turns, Skill 2: 4 turns, Skill 3: 5 turns
+      unlocked: index === 0, // First skill unlocked, others at higher levels
+    }));
+
     setState((prev) => ({
       ...prev,
       raceId,
       gender,
-      baseHp: 100 + (race?.stats.hp || 0),
-      baseAtk: 10 + (race?.stats.atkF || 0),
-      baseDef: 5 + (race?.stats.armor || 0),
+      baseHp: 100 + (race.stats.hp || 0),
+      baseAtkF: 10 + (race.stats.atkF || 0),
+      baseAtkM: 10 + (race.stats.atkM || 0),
+      baseDef: 5 + (race.stats.armor || 0),
+      baseCritRate: 0.05 + (race.stats.critBonus || 0),
+      baseCritDmg: 1.5 + (race.stats.critMultBonus || 0),
+      baseAtkSpeed: 1 + (race.stats.speed || 0) * 0.1,
+      baseMoveSpeed: 1,
+      baseLuck: 0.001 + (race.stats.luck || 0),
+      baseDodge: 0.01 + (race.stats.dodge || 0),
+      baseLifeSteal: race.stats.lifeSteal || 0,
+      baseArmorPen: race.stats.armorPen || 0,
+      baseHpRegen: race.stats.hpRegen || 0,
+      activeSkills,
+      passiveSkillUnlocked: true,
     }));
   };
 
@@ -288,13 +343,11 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       const currentEquipped = prev.equipment[slot];
       const newInventory = [...prev.inventory];
       
-      // Remove item from inventory
       const itemIndex = newInventory.findIndex((i) => i.id === item.id);
       if (itemIndex > -1) {
         newInventory.splice(itemIndex, 1);
       }
       
-      // Return currently equipped item to inventory if exists
       if (currentEquipped) {
         newInventory.push(currentEquipped);
       }
@@ -313,7 +366,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       if (!item) return prev;
       
       if (prev.inventory.length >= prev.inventorySize) {
-        return prev; // Inventory full
+        return prev;
       }
       
       return {
@@ -336,35 +389,79 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
-  const addGold = (amount: number) => {
-    setState((prev) => ({ ...prev, gold: prev.gold + amount }));
+  const useSkill = (skillIndex: number) => {
+    setState((prev) => {
+      const skills = [...prev.activeSkills];
+      if (skills[skillIndex] && skills[skillIndex].cooldown === 0) {
+        skills[skillIndex] = {
+          ...skills[skillIndex],
+          cooldown: skills[skillIndex].maxCooldown,
+        };
+      }
+      return { ...prev, activeSkills: skills };
+    });
   };
 
   const getTotalStats = () => {
-    const race = state.raceId ? getRaceById(state.raceId) : null;
-    
-    let hp = state.baseHp + (race?.stats.hp || 0);
-    let atk = state.baseAtk + (race?.stats.atkF || 0);
-    let def = state.baseDef + (race?.stats.armor || 0);
-    let critRate = 0.05 + (race?.stats.critBonus || 0);
-    let critDmg = 1.5;
-    let atkSpeed = 1;
-    let moveSpeed = 1;
+    let hp = state.baseHp;
+    let atkF = state.baseAtkF;
+    let atkM = state.baseAtkM;
+    let def = state.baseDef;
+    let critRate = state.baseCritRate;
+    let critDmg = state.baseCritDmg;
+    let atkSpeed = state.baseAtkSpeed;
+    let moveSpeed = state.baseMoveSpeed;
+    let luck = state.baseLuck;
+    let dodge = state.baseDodge;
+    let lifeSteal = state.baseLifeSteal;
+    let armorPen = state.baseArmorPen;
+    let hpRegen = state.baseHpRegen;
 
     // Add equipment stats
     Object.values(state.equipment).forEach((item) => {
       if (item) {
         hp += item.hp;
-        atk += item.atk;
+        atkF += item.atkF;
+        atkM += item.atkM;
         def += item.def;
         critRate += item.critRate;
         critDmg += item.critDmg;
         atkSpeed += item.atkSpeed;
         moveSpeed += item.moveSpeed;
+        luck += item.luck;
+        dodge += item.dodge;
+        lifeSteal += item.lifeSteal;
+        armorPen += item.armorPen;
+        hpRegen += item.hpRegen;
       }
     });
 
-    return { hp, atk, def, critRate, critDmg, atkSpeed, moveSpeed };
+    return { hp, atkF, atkM, def, critRate, critDmg, atkSpeed, moveSpeed, luck, dodge, lifeSteal, armorPen, hpRegen };
+  };
+
+  const getAllRaceStats = (raceId: RaceId) => {
+    const race = getRaceById(raceId);
+    if (!race) return null;
+
+    return {
+      hp: race.stats.hp,
+      atkF: race.stats.atkF,
+      atkM: race.stats.atkM,
+      def: race.stats.armor,
+      critRate: race.stats.critBonus,
+      critDmg: race.stats.critMultBonus,
+      atkSpeed: race.stats.speed,
+      moveSpeed: 0,
+      luck: race.stats.luck,
+      dodge: race.stats.dodge,
+      lifeSteal: race.stats.lifeSteal,
+      armorPen: race.stats.armorPen,
+      hpRegen: race.stats.hpRegen,
+    };
+  };
+
+  const addGold = (amount: number) => {
+    setState((prev) => ({ ...prev, gold: prev.gold + amount }));
   };
 
   return (
@@ -380,7 +477,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         equipItem,
         unequipItem,
         sellItem,
+        useSkill,
         getTotalStats,
+        getAllRaceStats,
         addGold,
       }}
     >
