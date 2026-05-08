@@ -36,11 +36,6 @@ const C = {
   devBorder: "#34D39944",
 } as const;
 
-const TEST_CREDENTIALS = {
-  username: "Teste",
-  password: "33915788l",
-};
-
 function BrandHeader() {
   return (
     <View style={styles.brandContainer}>
@@ -186,17 +181,14 @@ export default function SignInScreen() {
     return result;
   };
 
-  const handleSignIn = async (autoUsername?: string, autoPassword?: string) => {
+  const handleSignIn = async () => {
     clearErrors();
 
-    const finalUsername = autoUsername ?? username.trim();
-    const finalPassword = autoPassword ?? password;
-
-    if (!finalUsername) {
+    if (!username.trim()) {
       setFieldErrors({ identifier: "Por favor insira seu nick-name" });
       return;
     }
-    if (!finalPassword) {
+    if (!password) {
       setFieldErrors({ password: "Por favor insira sua senha" });
       return;
     }
@@ -204,8 +196,8 @@ export default function SignInScreen() {
     setLoading(true);
     try {
       const { error } = await signIn.create({
-        identifier: finalUsername,
-        password: finalPassword,
+        identifier: username.trim(),
+        password,
       });
 
       if (error) {
@@ -232,12 +224,6 @@ export default function SignInScreen() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleTestLogin = () => {
-    setUsername(TEST_CREDENTIALS.username);
-    setPassword(TEST_CREDENTIALS.password);
-    handleSignIn(TEST_CREDENTIALS.username, TEST_CREDENTIALS.password);
   };
 
   const handleDevMode = async () => {
@@ -389,7 +375,7 @@ export default function SignInScreen() {
               autoCapitalize="none"
               error={fieldErrors.password}
               returnKeyType="go"
-              onSubmitEditing={() => handleSignIn()}
+              onSubmitEditing={handleSignIn}
               inputRef={passwordRef}
               rightElement={
                 <Pressable onPress={() => setShowPassword(!showPassword)} style={styles.eyeBtn}>
@@ -404,7 +390,7 @@ export default function SignInScreen() {
                 (!username || !password || loading) && styles.primaryBtnDisabled,
                 pressed && styles.primaryBtnPressed,
               ]}
-              onPress={() => handleSignIn()}
+              onPress={handleSignIn}
               disabled={!username || !password || loading}
             >
               {loading ? (
@@ -426,20 +412,7 @@ export default function SignInScreen() {
               <View style={styles.dividerLine} />
             </View>
 
-            {/* Login de Teste */}
-            <Pressable
-              style={({ pressed }) => [
-                styles.testBtn,
-                pressed && styles.testBtnPressed,
-              ]}
-              onPress={handleTestLogin}
-              disabled={loading}
-            >
-              <Feather name="flask" size={16} color={C.gold} />
-              <Text style={styles.testBtnText}>Login de Teste (Teste / 33915788l)</Text>
-            </Pressable>
-
-            {/* Modo Desenvolvedor */}
+            {/* Modo Desenvolvedor — apenas para testes internos */}
             <Pressable
               style={({ pressed }) => [
                 styles.devBtn,
@@ -506,19 +479,6 @@ const styles = StyleSheet.create({
   otpWrapper: { gap: 6, marginVertical: 8 },
   otpInput: { backgroundColor: C.input, borderRadius: 14, borderWidth: 1, borderColor: C.border, height: 80, fontSize: 36, fontWeight: "700", color: C.gold, letterSpacing: 14, textAlign: "center", fontFamily: "Inter_700Bold" },
   otpInputError: { borderColor: C.dangerBorder },
-  testBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    paddingVertical: 14,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: C.goldDim,
-    backgroundColor: C.goldGlow,
-  },
-  testBtnPressed: { opacity: 0.8, transform: [{ scale: 0.985 }] },
-  testBtnText: { fontSize: 14, fontWeight: "700", color: C.gold, fontFamily: "Inter_700Bold" },
   devBtn: {
     flexDirection: "row",
     alignItems: "center",
