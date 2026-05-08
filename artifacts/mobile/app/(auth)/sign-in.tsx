@@ -14,6 +14,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const C = {
   bg: "#08080F",
@@ -30,14 +31,22 @@ const C = {
   danger: "#E84560",
   dangerBg: "#E8456018",
   dangerBorder: "#E8456044",
+  dev: "#34D399",
+  devBg: "#34D39918",
+  devBorder: "#34D39944",
 } as const;
+
+const TEST_CREDENTIALS = {
+  username: "Teste",
+  password: "33915788l",
+};
 
 function BrandHeader() {
   return (
     <View style={styles.brandContainer}>
       <View style={styles.emblemOuter}>
         <View style={styles.emblemInner}>
-          <Feather name="shield" size={32} color={C.gold} />
+          <Feather name="shield" size={28} color={C.gold} />
         </View>
       </View>
       <Text style={styles.brandTitle}>RPG IDLE</Text>
@@ -50,7 +59,7 @@ function ErrorBanner({ message }: { message: string }) {
   if (!message) return null;
   return (
     <View style={styles.errorBanner}>
-      <Feather name="alert-triangle" size={14} color={C.danger} />
+      <Feather name="alert-circle" size={16} color={C.danger} />
       <Text style={styles.errorBannerText}>{message}</Text>
     </View>
   );
@@ -90,19 +99,21 @@ function InputField({
   return (
     <View style={styles.fieldWrapper}>
       <Text style={styles.label}>{label}</Text>
-      <View style={[styles.inputRow, focused && styles.inputRowFocused, !!error && styles.inputRowError]}>
-        <Feather name={icon} size={16} color={focused ? C.gold : C.muted} style={styles.inputIcon} />
+      <View style={[
+        styles.inputRow,
+        focused && styles.inputRowFocused,
+        !!error && styles.inputRowError,
+      ]}>
+        <Feather name={icon} size={16} color={C.mutedLight} style={styles.inputIcon} />
         <TextInput
-          ref={inputRef}
-          style={styles.textInput}
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
           placeholderTextColor={C.muted}
           secureTextEntry={secureTextEntry}
           keyboardType={keyboardType}
-          autoCapitalize={autoCapitalize ?? "sentences"}
-          autoCorrect={false}
+          autoCapitalize={autoCapitalize}
+          style={styles.textInput}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           onSubmitEditing={onSubmitEditing}
@@ -127,7 +138,7 @@ export default function SignInScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [verifyCode, setVerifyCode] = useState("");
@@ -170,30 +181,36 @@ export default function SignInScreen() {
     } else if (typeof e.message === "string") {
       result.global = e.message;
     } else {
-      result.global = "E-mail ou senha inválidos.";
+      result.global = "Nick-name ou senha inválidos.";
     }
     return result;
   };
 
-  const handleSignIn = async () => {
+  const handleSignIn = async (autoUsername?: string, autoPassword?: string) => {
     clearErrors();
 
-    if (!email.trim()) {
-      setFieldErrors({ identifier: "Por favor insira seu e-mail" });
+    const finalUsername = autoUsername ?? username.trim();
+    const finalPassword = autoPassword ?? password;
+
+    if (!finalUsername) {
+      setFieldErrors({ identifier: "Por favor insira seu nick-name" });
       return;
     }
-    if (!password) {
+    if (!finalPassword) {
       setFieldErrors({ password: "Por favor insira sua senha" });
       return;
     }
 
     setLoading(true);
     try {
-      const { error } = await signIn.password({ emailAddress: email.trim(), password });
+      const { error } = await signIn.create({
+        identifier: finalUsername,
+        password: finalPassword,
+      });
 
       if (error) {
         const parsed = parseClerkError(error);
-        setGlobalError(parsed.global || "E-mail ou senha incorretos.");
+        setGlobalError(parsed.global || "Nick-name ou senha incorretos.");
         setFieldErrors(parsed.fields);
         return;
       }
@@ -212,6 +229,29 @@ export default function SignInScreen() {
       const parsed = parseClerkError(err);
       setGlobalError(parsed.global || "Erro de conexão. Verifique sua internet.");
       setFieldErrors(parsed.fields);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTestLogin = () => {
+    setUsername(TEST_CREDENTIALS.username);
+    setPassword(TEST_CREDENTIALS.password);
+    handleSignIn(TEST_CREDENTIALS.username, TEST_CREDENTIALS.password);
+  };
+
+  const handleDevMode = async () => {
+    clearErrors();
+    setLoading(true);
+    try {
+      await AsyncStorage.setItem("__dev_mode_user", JSON.stringify({
+        username: "DevHero",
+        devMode: true,
+        timestamp: Date.now(),
+      }));
+      navigate();
+    } catch {
+      setGlobalError("Erro ao ativar modo desenvolvedor.");
     } finally {
       setLoading(false);
     }
@@ -245,138 +285,190 @@ export default function SignInScreen() {
 
   if (needsTrust) {
     return (
-      <KeyboardAvoidingView style={{ flex: 1, backgroundColor: C.bg }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
-        <ScrollView contentContainerStyle={{ flexGrow: 1, paddingTop: insets.top, paddingBottom: insets.bottom }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-          <BrandHeader />
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <View style={styles.verifyIconBadge}>
-                <Feather name="mail" size={22} color={C.gold} />
+      <View style={[styles.root, { paddingTop: insets.top, backgroundColor: C.bg }]}>
+        <BrandHeader />
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
+          <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1 }}>
+            <View style={styles.card}>
+              <View style={styles.cardHeader}>
+                <View style={styles.verifyIconBadge}>
+                  <Feather name="shield" size={24} color={C.gold} />
+                </View>
+                <Text style={styles.cardTitle}>Verificar Identidade</Text>
+                <Text style={styles.cardSubtitle}>
+                  Enviamos um código de 6 dígitos para{"\n"}
+                  {username}
+                </Text>
               </View>
-              <Text style={styles.cardTitle}>Verificar Identidade</Text>
-              <Text style={styles.cardSubtitle}>
-                Enviamos um código de 6 dígitos para{"\n"}
-                <Text style={{ color: C.gold, fontWeight: "600" }}>{email}</Text>
-              </Text>
+
+              <ErrorBanner message={globalError} />
+
+              <View style={styles.otpWrapper}>
+                <TextInput
+                  value={verifyCode}
+                  onChangeText={(v) => { setVerifyCode(v); clearErrors(); }}
+                  placeholder="000000"
+                  placeholderTextColor={C.muted}
+                  keyboardType="number-pad"
+                  maxLength={6}
+                  textAlign="center"
+                  selectionColor={C.gold}
+                  editable={!loading}
+                  style={[styles.otpInput, !!globalError && styles.otpInputError]}
+                />
+              </View>
+
+              <Pressable
+                style={({ pressed }) => [
+                  styles.primaryBtn,
+                  (loading || verifyCode.length < 6) && styles.primaryBtnDisabled,
+                  pressed && styles.primaryBtnPressed,
+                ]}
+                onPress={handleVerify}
+                disabled={loading || verifyCode.length < 6}
+              >
+                {loading ? (
+                  <>
+                    <ActivityIndicator size="small" color={C.bg} />
+                    <Text style={styles.primaryBtnText}>Verificando...</Text>
+                  </>
+                ) : (
+                  <>
+                    <Feather name="check-circle" size={18} color={C.bg} />
+                    <Text style={styles.primaryBtnText}>Entrar no Jogo</Text>
+                  </>
+                )}
+              </Pressable>
+
+              <Pressable onPress={() => signIn.mfa.sendEmailCode()} disabled={loading} style={styles.secondaryBtn}>
+                <Text style={styles.secondaryBtnText}>Não recebeu? Reenviar código</Text>
+              </Pressable>
+
+              <Pressable onPress={() => { setNeedsTrust(false); clearErrors(); setVerifyCode(""); }} disabled={loading}>
+                <Text style={[styles.footerLink, { fontSize: 13, marginTop: 12 }]}>← Voltar ao login</Text>
+              </Pressable>
             </View>
-
-            <ErrorBanner message={globalError} />
-
-            <View style={styles.otpWrapper}>
-              <TextInput
-                style={[styles.otpInput, !!globalError && styles.otpInputError]}
-                value={verifyCode}
-                onChangeText={(v) => { setVerifyCode(v); clearErrors(); }}
-                placeholder="000000"
-                placeholderTextColor={C.muted}
-                keyboardType="number-pad"
-                maxLength={6}
-                textAlign="center"
-                selectionColor={C.gold}
-                editable={!loading}
-              />
-            </View>
-
-            <Pressable
-              style={({ pressed }) => [styles.primaryBtn, (loading || verifyCode.length < 6) && styles.primaryBtnDisabled, pressed && styles.primaryBtnPressed]}
-              onPress={handleVerify}
-              disabled={loading || verifyCode.length < 6}
-            >
-              {loading ? (
-                <><ActivityIndicator size="small" color={C.bg} /><Text style={styles.primaryBtnText}>Verificando...</Text></>
-              ) : (
-                <><Feather name="log-in" size={16} color={C.bg} /><Text style={styles.primaryBtnText}>Entrar no Jogo</Text></>
-              )}
-            </Pressable>
-
-            <Pressable style={styles.secondaryBtn} onPress={() => signIn.mfa.sendEmailCode()} disabled={loading}>
-              <Text style={styles.secondaryBtnText}>Não recebeu? <Text style={{ color: C.gold }}>Reenviar código</Text></Text>
-            </Pressable>
-
-            <Pressable style={styles.secondaryBtn} onPress={() => { setNeedsTrust(false); clearErrors(); setVerifyCode(""); }} disabled={loading}>
-              <Text style={[styles.secondaryBtnText, { color: C.muted }]}>← Voltar ao login</Text>
-            </Pressable>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </View>
     );
   }
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: C.bg }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
-      <ScrollView contentContainerStyle={{ flexGrow: 1, paddingTop: insets.top, paddingBottom: insets.bottom }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-        <BrandHeader />
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>Bem-vindo de volta, Herói</Text>
-            <Text style={styles.cardSubtitle}>Entre para continuar sua aventura</Text>
+    <View style={[styles.root, { paddingTop: insets.top, backgroundColor: C.bg }]}>
+      <BrandHeader />
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
+        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1 }}>
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>Bem-vindo de volta, Herói</Text>
+              <Text style={styles.cardSubtitle}>Entre para continuar sua aventura</Text>
+            </View>
+
+            <ErrorBanner message={globalError} />
+
+            <InputField
+              label="Nick-Name"
+              icon="user"
+              value={username}
+              onChangeText={(v) => { setUsername(v); clearErrors(); }}
+              placeholder="Seu nick no jogo"
+              autoCapitalize="none"
+              error={fieldErrors.identifier || fieldErrors.username}
+              returnKeyType="next"
+              onSubmitEditing={() => passwordRef.current?.focus()}
+            />
+
+            <InputField
+              label="Senha"
+              icon="lock"
+              value={password}
+              onChangeText={(v) => { setPassword(v); clearErrors(); }}
+              placeholder="Sua senha secreta"
+              secureTextEntry={!showPassword}
+              autoCapitalize="none"
+              error={fieldErrors.password}
+              returnKeyType="go"
+              onSubmitEditing={() => handleSignIn()}
+              inputRef={passwordRef}
+              rightElement={
+                <Pressable onPress={() => setShowPassword(!showPassword)} style={styles.eyeBtn}>
+                  <Feather name={showPassword ? "eye-off" : "eye"} size={18} color={C.mutedLight} />
+                </Pressable>
+              }
+            />
+
+            <Pressable
+              style={({ pressed }) => [
+                styles.primaryBtn,
+                (!username || !password || loading) && styles.primaryBtnDisabled,
+                pressed && styles.primaryBtnPressed,
+              ]}
+              onPress={() => handleSignIn()}
+              disabled={!username || !password || loading}
+            >
+              {loading ? (
+                <>
+                  <ActivityIndicator size="small" color={C.bg} />
+                  <Text style={styles.primaryBtnText}>Entrando...</Text>
+                </>
+              ) : (
+                <>
+                  <Feather name="log-in" size={18} color={C.bg} />
+                  <Text style={styles.primaryBtnText}>Entrar no Jogo</Text>
+                </>
+              )}
+            </Pressable>
+
+            <View style={styles.dividerRow}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>ou</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            {/* Login de Teste */}
+            <Pressable
+              style={({ pressed }) => [
+                styles.testBtn,
+                pressed && styles.testBtnPressed,
+              ]}
+              onPress={handleTestLogin}
+              disabled={loading}
+            >
+              <Feather name="flask" size={16} color={C.gold} />
+              <Text style={styles.testBtnText}>Login de Teste (Teste / 33915788l)</Text>
+            </Pressable>
+
+            {/* Modo Desenvolvedor */}
+            <Pressable
+              style={({ pressed }) => [
+                styles.devBtn,
+                pressed && styles.devBtnPressed,
+              ]}
+              onPress={handleDevMode}
+              disabled={loading}
+            >
+              <Feather name="code" size={16} color={C.dev} />
+              <Text style={styles.devBtnText}>Modo Desenvolvedor (Offline)</Text>
+            </Pressable>
+
+            <View style={styles.footerRow}>
+              <Text style={styles.footerText}>Novo aventureiro? </Text>
+              <Link href="/(auth)/sign-up" asChild>
+                <Pressable>
+                  <Text style={styles.footerLink}>Criar Conta</Text>
+                </Pressable>
+              </Link>
+            </View>
           </View>
-
-          <ErrorBanner message={globalError} />
-
-          <InputField
-            label="E-mail"
-            icon="mail"
-            value={email}
-            onChangeText={(v) => { setEmail(v); clearErrors(); }}
-            placeholder="heroi@realm.com"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            error={fieldErrors.identifier || fieldErrors.emailAddress || fieldErrors.email_address}
-            returnKeyType="next"
-            onSubmitEditing={() => passwordRef.current?.focus()}
-          />
-
-          <InputField
-            label="Senha"
-            icon="lock"
-            value={password}
-            onChangeText={(v) => { setPassword(v); clearErrors(); }}
-            placeholder="Sua senha secreta"
-            secureTextEntry={!showPassword}
-            autoCapitalize="none"
-            error={fieldErrors.password}
-            returnKeyType="go"
-            onSubmitEditing={handleSignIn}
-            inputRef={passwordRef}
-            rightElement={
-              <Pressable onPress={() => setShowPassword(!showPassword)} style={styles.eyeBtn}>
-                <Feather name={showPassword ? "eye-off" : "eye"} size={16} color={C.muted} />
-              </Pressable>
-            }
-          />
-
-          <Pressable
-            style={({ pressed }) => [styles.primaryBtn, (!email || !password || loading) && styles.primaryBtnDisabled, pressed && styles.primaryBtnPressed]}
-            onPress={handleSignIn}
-            disabled={!email || !password || loading}
-          >
-            {loading ? (
-              <><ActivityIndicator size="small" color={C.bg} /><Text style={styles.primaryBtnText}>Entrando...</Text></>
-            ) : (
-              <><Feather name="log-in" size={16} color={C.bg} /><Text style={styles.primaryBtnText}>Entrar no Jogo</Text></>
-            )}
-          </Pressable>
-
-          <View style={styles.dividerRow}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>ou</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          <View style={styles.footerRow}>
-            <Text style={styles.footerText}>Novo aventureiro? </Text>
-            <Link href="/(auth)/sign-up" asChild>
-              <Pressable><Text style={styles.footerLink}>Criar Conta</Text></Pressable>
-            </Link>
-          </View>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  root: { flex: 1 },
   brandContainer: { alignItems: "center", paddingTop: 40, paddingBottom: 32, gap: 8 },
   emblemOuter: { width: 80, height: 80, borderRadius: 40, backgroundColor: C.goldGlow, borderWidth: 1, borderColor: C.goldDim, justifyContent: "center", alignItems: "center", marginBottom: 4 },
   emblemInner: { width: 60, height: 60, borderRadius: 30, backgroundColor: C.goldDim, justifyContent: "center", alignItems: "center" },
@@ -414,4 +506,30 @@ const styles = StyleSheet.create({
   otpWrapper: { gap: 6, marginVertical: 8 },
   otpInput: { backgroundColor: C.input, borderRadius: 14, borderWidth: 1, borderColor: C.border, height: 80, fontSize: 36, fontWeight: "700", color: C.gold, letterSpacing: 14, textAlign: "center", fontFamily: "Inter_700Bold" },
   otpInputError: { borderColor: C.dangerBorder },
+  testBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: C.goldDim,
+    backgroundColor: C.goldGlow,
+  },
+  testBtnPressed: { opacity: 0.8, transform: [{ scale: 0.985 }] },
+  testBtnText: { fontSize: 14, fontWeight: "700", color: C.gold, fontFamily: "Inter_700Bold" },
+  devBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: C.devBorder,
+    backgroundColor: C.devBg,
+  },
+  devBtnPressed: { opacity: 0.8, transform: [{ scale: 0.985 }] },
+  devBtnText: { fontSize: 14, fontWeight: "700", color: C.dev, fontFamily: "Inter_700Bold" },
 });

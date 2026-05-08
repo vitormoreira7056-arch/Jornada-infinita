@@ -40,7 +40,7 @@ function BrandHeader({ compact = false }: { compact?: boolean }) {
     <View style={[styles.brandContainer, compact && styles.brandContainerCompact]}>
       <View style={[styles.emblemOuter, compact && styles.emblemOuterCompact]}>
         <View style={[styles.emblemInner, compact && styles.emblemInnerCompact]}>
-          <Feather name="shield" size={compact ? 22 : 32} color={C.gold} />
+          <Feather name="shield" size={compact ? 20 : 28} color={C.gold} />
         </View>
       </View>
       <Text style={[styles.brandTitle, compact && styles.brandTitleCompact]}>RPG IDLE</Text>
@@ -53,7 +53,7 @@ function ErrorBanner({ message }: { message: string }) {
   if (!message) return null;
   return (
     <View style={styles.errorBanner}>
-      <Feather name="alert-triangle" size={14} color={C.danger} />
+      <Feather name="alert-circle" size={16} color={C.danger} />
       <Text style={styles.errorBannerText}>{message}</Text>
     </View>
   );
@@ -95,19 +95,21 @@ function InputField({
   return (
     <View style={styles.fieldWrapper}>
       <Text style={styles.label}>{label}</Text>
-      <View style={[styles.inputRow, focused && styles.inputRowFocused, !!error && styles.inputRowError]}>
-        <Feather name={icon} size={16} color={focused ? C.gold : C.muted} style={styles.inputIcon} />
+      <View style={[
+        styles.inputRow,
+        focused && styles.inputRowFocused,
+        !!error && styles.inputRowError,
+      ]}>
+        <Feather name={icon} size={16} color={C.mutedLight} style={styles.inputIcon} />
         <TextInput
-          ref={inputRef}
-          style={styles.textInput}
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
           placeholderTextColor={C.muted}
           secureTextEntry={secureTextEntry}
           keyboardType={keyboardType}
-          autoCapitalize={autoCapitalize ?? "sentences"}
-          autoCorrect={false}
+          autoCapitalize={autoCapitalize}
+          style={styles.textInput}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           onSubmitEditing={onSubmitEditing}
@@ -124,7 +126,7 @@ function InputField({
       )}
       {!error && !!hint && (
         <View style={styles.fieldHint}>
-          <Feather name="info" size={11} color={C.muted} />
+          <Feather name="info" size={12} color={C.muted} />
           <Text style={styles.fieldHintText}>{hint}</Text>
         </View>
       )}
@@ -138,6 +140,7 @@ export default function SignUpScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -149,6 +152,7 @@ export default function SignUpScreen() {
   const [globalError, setGlobalError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
+  const emailRef = useRef<TextInput>(null);
   const passwordRef = useRef<TextInput>(null);
   const confirmRef = useRef<TextInput>(null);
 
@@ -193,6 +197,14 @@ export default function SignUpScreen() {
   const handleRegister = async () => {
     clearErrors();
 
+    if (!username.trim()) {
+      setFieldErrors({ username: "Por favor insira seu nick-name" });
+      return;
+    }
+    if (username.trim().length < 3) {
+      setFieldErrors({ username: "Nick-name deve ter pelo menos 3 caracteres" });
+      return;
+    }
     if (!email.trim()) {
       setFieldErrors({ email_address: "Por favor insira seu e-mail" });
       return;
@@ -208,7 +220,11 @@ export default function SignUpScreen() {
 
     setLoading(true);
     try {
-      const { error } = await signUp.password({ emailAddress: email.trim(), password });
+      const { error } = await signUp.create({
+        username: username.trim(),
+        emailAddress: email.trim(),
+        password,
+      });
 
       if (error) {
         const parsed = parseClerkError(error);
@@ -217,7 +233,7 @@ export default function SignUpScreen() {
         return;
       }
 
-      await signUp.verifications.sendEmailCode();
+      await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
       setStep("verify");
     } catch (err: unknown) {
       const parsed = parseClerkError(err);
@@ -234,7 +250,7 @@ export default function SignUpScreen() {
 
     setLoading(true);
     try {
-      await signUp.verifications.verifyEmailCode({ code: verifyCode });
+      await signUp.attemptEmailAddressVerification({ code: verifyCode });
 
       if (signUp.status === "complete") {
         await signUp.finalize({
@@ -257,7 +273,7 @@ export default function SignUpScreen() {
     clearErrors();
     setLoading(true);
     try {
-      await signUp.verifications.sendEmailCode();
+      await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
     } catch (err: unknown) {
       setGlobalError("Não foi possível reenviar o código.");
     } finally {
@@ -269,166 +285,229 @@ export default function SignUpScreen() {
 
   if (step === "verify") {
     return (
-      <KeyboardAvoidingView style={{ flex: 1, backgroundColor: C.bg }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
-        <ScrollView contentContainerStyle={{ flexGrow: 1, paddingTop: insets.top, paddingBottom: insets.bottom }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-          <BrandHeader compact />
+      <View style={[styles.root, { paddingTop: insets.top, backgroundColor: C.bg }]}>
+        <BrandHeader compact />
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={{ flex: 1 }}
+        >
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={{ flexGrow: 1 }}
+          >
+            <View style={styles.card}>
+              <View style={styles.cardHeader}>
+                <View style={styles.verifyIconBadge}>
+                  <Feather name="mail" size={24} color={C.gold} />
+                </View>
+                <Text style={styles.cardTitle}>Verifique seu E-mail</Text>
+                <Text style={styles.cardSubtitle}>
+                  Enviamos um código de 6 dígitos para{"\n"}
+                  {email}
+                </Text>
+              </View>
+
+              <ErrorBanner message={globalError} />
+
+              <View style={styles.otpWrapper}>
+                <TextInput
+                  value={verifyCode}
+                  onChangeText={(v) => { setVerifyCode(v); clearErrors(); }}
+                  placeholder="000000"
+                  placeholderTextColor={C.muted}
+                  keyboardType="number-pad"
+                  maxLength={6}
+                  textAlign="center"
+                  selectionColor={C.gold}
+                  editable={!loading}
+                  style={[styles.otpInput, !!globalError && styles.otpInputError]}
+                />
+              </View>
+
+              <Pressable
+                style={({ pressed }) => [
+                  styles.primaryBtn,
+                  (loading || verifyCode.length < 6) && styles.primaryBtnDisabled,
+                  pressed && styles.primaryBtnPressed,
+                ]}
+                onPress={handleVerify}
+                disabled={loading || verifyCode.length < 6}
+              >
+                {loading ? (
+                  <>
+                    <ActivityIndicator size="small" color={C.bg} />
+                    <Text style={styles.primaryBtnText}>Verificando...</Text>
+                  </>
+                ) : (
+                  <>
+                    <Feather name="check-circle" size={18} color={C.bg} />
+                    <Text style={styles.primaryBtnText}>Confirmar e Entrar no Jogo</Text>
+                  </>
+                )}
+              </Pressable>
+
+              <Pressable onPress={handleResend} disabled={loading} style={styles.secondaryBtn}>
+                <Text style={styles.secondaryBtnText}>
+                  Não recebeu? Reenviar código
+                </Text>
+              </Pressable>
+
+              <View style={styles.successBadge}>
+                <Feather name="shield" size={14} color={C.success} />
+                <Text style={styles.successText}>
+                  Sua conta está protegida com verificação de e-mail
+                </Text>
+              </View>
+
+              <Pressable
+                onPress={() => { setStep("form"); clearErrors(); setVerifyCode(""); }}
+                disabled={loading}
+                style={{ marginTop: 12 }}
+              >
+                <Text style={[styles.footerLink, { fontSize: 13 }]}>← Voltar ao cadastro</Text>
+              </Pressable>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </View>
+    );
+  }
+
+  return (
+    <View style={[styles.root, { paddingTop: insets.top, backgroundColor: C.bg }]}>
+      <BrandHeader />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={{ flex: 1 }}
+      >
+        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1 }}>
           <View style={styles.card}>
             <View style={styles.cardHeader}>
-              <View style={styles.verifyIconBadge}>
-                <Feather name="mail" size={22} color={C.gold} />
-              </View>
-              <Text style={styles.cardTitle}>Verifique seu E-mail</Text>
+              <Text style={styles.cardTitle}>Criar Conta</Text>
               <Text style={styles.cardSubtitle}>
-                Enviamos um código de 6 dígitos para{"\n"}
-                <Text style={{ color: C.gold, fontWeight: "600" }}>{email}</Text>
+                Junte-se a milhares de heróis na sua jornada
               </Text>
             </View>
 
             <ErrorBanner message={globalError} />
 
-            <View style={styles.otpWrapper}>
-              <TextInput
-                style={[styles.otpInput, !!globalError && styles.otpInputError]}
-                value={verifyCode}
-                onChangeText={(v) => { setVerifyCode(v); clearErrors(); }}
-                placeholder="000000"
-                placeholderTextColor={C.muted}
-                keyboardType="number-pad"
-                maxLength={6}
-                textAlign="center"
-                selectionColor={C.gold}
-                editable={!loading}
-              />
-            </View>
+            <InputField
+              label="Nick-Name"
+              icon="user"
+              value={username}
+              onChangeText={(v) => { setUsername(v); clearErrors(); }}
+              placeholder="Seu nick no jogo"
+              autoCapitalize="none"
+              error={fieldErrors.username}
+              returnKeyType="next"
+              onSubmitEditing={() => emailRef.current?.focus()}
+            />
+
+            <InputField
+              label="E-mail"
+              icon="mail"
+              value={email}
+              onChangeText={(v) => { setEmail(v); clearErrors(); }}
+              placeholder="heroi@realm.com"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              error={fieldErrors.email_address || fieldErrors.emailAddress}
+              returnKeyType="next"
+              onSubmitEditing={() => passwordRef.current?.focus()}
+              inputRef={emailRef}
+            />
+
+            <InputField
+              label="Senha"
+              icon="lock"
+              value={password}
+              onChangeText={(v) => { setPassword(v); clearErrors(); }}
+              placeholder="Mínimo 8 caracteres"
+              secureTextEntry={!showPassword}
+              autoCapitalize="none"
+              error={fieldErrors.password}
+              hint={password.length > 0 && password.length < 8 ? `${password.length}/8 caracteres` : "Mínimo de 8 caracteres"}
+              returnKeyType="next"
+              onSubmitEditing={() => confirmRef.current?.focus()}
+              inputRef={passwordRef}
+              rightElement={
+                <Pressable onPress={() => setShowPassword(!showPassword)} style={styles.eyeBtn}>
+                  <Feather name={showPassword ? "eye-off" : "eye"} size={18} color={C.mutedLight} />
+                </Pressable>
+              }
+            />
+
+            <InputField
+              label="Confirmar Senha"
+              icon="lock"
+              value={confirmPassword}
+              onChangeText={(v) => { setConfirmPassword(v); clearErrors(); }}
+              placeholder="Repita sua senha"
+              secureTextEntry={!showConfirm}
+              autoCapitalize="none"
+              error={fieldErrors.confirmPassword}
+              returnKeyType="go"
+              onSubmitEditing={handleRegister}
+              inputRef={confirmRef}
+              rightElement={
+                <Pressable onPress={() => setShowConfirm(!showConfirm)} style={styles.eyeBtn}>
+                  <Feather name={showConfirm ? "eye-off" : "eye"} size={18} color={C.mutedLight} />
+                </Pressable>
+              }
+            />
 
             <Pressable
-              style={({ pressed }) => [styles.primaryBtn, (loading || verifyCode.length < 6) && styles.primaryBtnDisabled, pressed && styles.primaryBtnPressed]}
-              onPress={handleVerify}
-              disabled={loading || verifyCode.length < 6}
+              style={({ pressed }) => [
+                styles.primaryBtn,
+                (!username || !email || !password || !confirmPassword || loading) && styles.primaryBtnDisabled,
+                pressed && styles.primaryBtnPressed,
+              ]}
+              onPress={handleRegister}
+              disabled={!username || !email || !password || !confirmPassword || loading}
             >
               {loading ? (
-                <><ActivityIndicator size="small" color={C.bg} /><Text style={styles.primaryBtnText}>Verificando...</Text></>
+                <>
+                  <ActivityIndicator size="small" color={C.bg} />
+                  <Text style={styles.primaryBtnText}>Criando conta...</Text>
+                </>
               ) : (
-                <><Feather name="check-circle" size={16} color={C.bg} /><Text style={styles.primaryBtnText}>Confirmar e Entrar no Jogo</Text></>
+                <>
+                  <Feather name="user-plus" size={18} color={C.bg} />
+                  <Text style={styles.primaryBtnText}>Começar Aventura</Text>
+                </>
               )}
             </Pressable>
 
-            <Pressable style={styles.secondaryBtn} onPress={handleResend} disabled={loading}>
-              <Text style={styles.secondaryBtnText}>Não recebeu? <Text style={{ color: C.gold }}>Reenviar código</Text></Text>
-            </Pressable>
+            <View style={styles.dividerRow}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>ou</Text>
+              <View style={styles.dividerLine} />
+            </View>
 
-            <View style={styles.successBadge}>
-              <Feather name="shield" size={13} color={C.success} />
-              <Text style={styles.successText}>Sua conta está protegida com verificação de e-mail</Text>
+            <View style={styles.footerRow}>
+              <Text style={styles.footerText}>Já tem uma conta? </Text>
+              <Link href="/(auth)/sign-in" asChild>
+                <Pressable>
+                  <Text style={styles.footerLink}>Entrar</Text>
+                </Pressable>
+              </Link>
+            </View>
+
+            <View style={styles.securityNote}>
+              <Feather name="shield" size={12} color={C.muted} />
+              <Text style={styles.securityText}>
+                Verificação de e-mail obrigatória · Dados protegidos
+              </Text>
             </View>
           </View>
-          <View nativeID="clerk-captcha" />
         </ScrollView>
       </KeyboardAvoidingView>
-    );
-  }
-
-  return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: C.bg }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
-      <ScrollView contentContainerStyle={{ flexGrow: 1, paddingTop: insets.top, paddingBottom: insets.bottom }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-        <BrandHeader />
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>Criar Conta</Text>
-            <Text style={styles.cardSubtitle}>Junte-se a milhares de heróis na sua jornada</Text>
-          </View>
-
-          <ErrorBanner message={globalError} />
-
-          <InputField
-            label="E-mail"
-            icon="mail"
-            value={email}
-            onChangeText={(v) => { setEmail(v); clearErrors(); }}
-            placeholder="heroi@realm.com"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            error={fieldErrors.email_address || fieldErrors.emailAddress}
-            returnKeyType="next"
-            onSubmitEditing={() => passwordRef.current?.focus()}
-          />
-
-          <InputField
-            label="Senha"
-            icon="lock"
-            value={password}
-            onChangeText={(v) => { setPassword(v); clearErrors(); }}
-            placeholder="Mínimo 8 caracteres"
-            secureTextEntry={!showPassword}
-            autoCapitalize="none"
-            error={fieldErrors.password}
-            hint={password.length > 0 && password.length < 8 ? `${password.length}/8 caracteres` : "Mínimo de 8 caracteres"}
-            returnKeyType="next"
-            onSubmitEditing={() => confirmRef.current?.focus()}
-            inputRef={passwordRef}
-            rightElement={
-              <Pressable onPress={() => setShowPassword(!showPassword)} style={styles.eyeBtn}>
-                <Feather name={showPassword ? "eye-off" : "eye"} size={16} color={C.muted} />
-              </Pressable>
-            }
-          />
-
-          <InputField
-            label="Confirmar Senha"
-            icon="lock"
-            value={confirmPassword}
-            onChangeText={(v) => { setConfirmPassword(v); clearErrors(); }}
-            placeholder="Repita sua senha"
-            secureTextEntry={!showConfirm}
-            autoCapitalize="none"
-            error={fieldErrors.confirmPassword}
-            returnKeyType="go"
-            onSubmitEditing={handleRegister}
-            inputRef={confirmRef}
-            rightElement={
-              <Pressable onPress={() => setShowConfirm(!showConfirm)} style={styles.eyeBtn}>
-                <Feather name={showConfirm ? "eye-off" : "eye"} size={16} color={C.muted} />
-              </Pressable>
-            }
-          />
-
-          <Pressable
-            style={({ pressed }) => [styles.primaryBtn, (!email || !password || !confirmPassword || loading) && styles.primaryBtnDisabled, pressed && styles.primaryBtnPressed]}
-            onPress={handleRegister}
-            disabled={!email || !password || !confirmPassword || loading}
-          >
-            {loading ? (
-              <><ActivityIndicator size="small" color={C.bg} /><Text style={styles.primaryBtnText}>Criando conta...</Text></>
-            ) : (
-              <><Feather name="user-plus" size={16} color={C.bg} /><Text style={styles.primaryBtnText}>Começar Aventura</Text></>
-            )}
-          </Pressable>
-
-          <View style={styles.dividerRow}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>ou</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          <View style={styles.footerRow}>
-            <Text style={styles.footerText}>Já tem uma conta? </Text>
-            <Link href="/(auth)/sign-in" asChild>
-              <Pressable><Text style={styles.footerLink}>Entrar</Text></Pressable>
-            </Link>
-          </View>
-
-          <View style={styles.securityNote}>
-            <Feather name="shield" size={12} color={C.muted} />
-            <Text style={styles.securityText}>Verificação de e-mail obrigatória · Dados protegidos</Text>
-          </View>
-        </View>
-        <View nativeID="clerk-captcha" />
-      </ScrollView>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  root: { flex: 1 },
   brandContainer: { alignItems: "center", paddingTop: 36, paddingBottom: 28, gap: 8 },
   brandContainerCompact: { paddingTop: 24, paddingBottom: 20, gap: 6 },
   emblemOuter: { width: 80, height: 80, borderRadius: 40, backgroundColor: C.goldGlow, borderWidth: 1, borderColor: C.goldDim, justifyContent: "center", alignItems: "center", marginBottom: 4 },

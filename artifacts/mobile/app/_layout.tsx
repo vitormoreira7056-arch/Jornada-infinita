@@ -10,10 +10,11 @@ import { tokenCache } from "@clerk/expo/token-cache";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { GameProvider } from "@/context/GameContext";
@@ -26,9 +27,10 @@ const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!;
 function RootLayoutNav() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-      <Stack.Screen name="race-select" options={{ headerShown: false, gestureEnabled: false }} />
+      <Stack.Screen name="(auth)" />
+      <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="race-select" />
+      <Stack.Screen name="+not-found" />
     </Stack>
   );
 }
@@ -41,31 +43,66 @@ export default function RootLayout() {
     Inter_700Bold,
   });
 
+  const [devMode, setDevMode] = useState(false);
+
+  useEffect(() => {
+    AsyncStorage.getItem("__dev_mode_user").then((val) => {
+      if (val) setDevMode(true);
+    });
+  }, []);
+
   useEffect(() => {
     if (fontsLoaded || fontError) {
       SplashScreen.hideAsync();
     }
   }, [fontsLoaded, fontError]);
 
+  // Safety timeout: hide splash after 8s even if Clerk/fonts hang
+  useEffect(() => {
+    const t = setTimeout(() => {
+      SplashScreen.hideAsync();
+    }, 8000);
+    return () => clearTimeout(t);
+  }, []);
+
   if (!fontsLoaded && !fontError) return null;
 
-  return (
-    <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
-      <ClerkLoaded>
-        <SafeAreaProvider>
-          <ErrorBoundary>
+  // Dev mode: bypass Clerk entirely
+  if (devMode) {
+    return (
+      <SafeAreaProvider>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+          <KeyboardProvider>
             <QueryClientProvider client={queryClient}>
-              <GestureHandlerRootView>
-                <KeyboardProvider>
+              <ErrorBoundary>
+                <GameProvider>
+                  <RootLayoutNav />
+                </GameProvider>
+              </ErrorBoundary>
+            </QueryClientProvider>
+          </KeyboardProvider>
+        </GestureHandlerRootView>
+      </SafeAreaProvider>
+    );
+  }
+
+  return (
+    <SafeAreaProvider>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <KeyboardProvider>
+          <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
+            <ClerkLoaded>
+              <QueryClientProvider client={queryClient}>
+                <ErrorBoundary>
                   <GameProvider>
                     <RootLayoutNav />
                   </GameProvider>
-                </KeyboardProvider>
-              </GestureHandlerRootView>
-            </QueryClientProvider>
-          </ErrorBoundary>
-        </SafeAreaProvider>
-      </ClerkLoaded>
-    </ClerkProvider>
+                </ErrorBoundary>
+              </QueryClientProvider>
+            </ClerkLoaded>
+          </ClerkProvider>
+        </KeyboardProvider>
+      </GestureHandlerRootView>
+    </SafeAreaProvider>
   );
 }
