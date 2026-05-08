@@ -167,7 +167,7 @@ function DiscoveryModal({
 
 export default function BiomeScreen() {
   const { id } = useLocalSearchParams<{ id: BiomeId }>();
-  const { state, exploreBiome, getDiscoveredDungeons, getBiomeProgress } = useGame();
+  const { state, exploreBiome, getDiscoveredDungeons, getBiomeProgress, startCombat, findEncounter } = useGame();
   const [isExploring, setIsExploring] = useState(false);
   const [discoveryModal, setDiscoveryModal] = useState(false);
   const [foundDungeon, setFoundDungeon] = useState<DungeonDef | null>(null);
@@ -273,7 +273,7 @@ export default function BiomeScreen() {
           <Text style={styles.progressText}>{progress.discovered} / {progress.total} dungeons encontradas</Text>
         </View>
         
-        {/* Explore Button */}
+        {/* Explore Button - Find Dungeons */}
         <TouchableOpacity 
           style={[styles.exploreBtn, isExploring && styles.exploreBtnDisabled]}
           onPress={handleExplore}
@@ -284,6 +284,24 @@ export default function BiomeScreen() {
             {isExploring ? "EXPLORANDO..." : "EXPLORAR BIOMA"}
           </Text>
           <Text style={styles.exploreHint}>Chance de encontrar dungeons secretas</Text>
+        </TouchableOpacity>
+        
+        {/* Adventure Button - Find Mobs */}
+        <TouchableOpacity 
+          style={styles.adventureBtn}
+          onPress={() => {
+            const result = findEncounter(id);
+            if (result.type === "mob" && result.mob) {
+              startCombat(result.mob);
+              router.push("/(game)/combat");
+            } else {
+              Alert.alert("Exploração", result.message);
+            }
+          }}
+        >
+          <Text style={styles.adventureEmoji}>⚔️</Text>
+          <Text style={styles.adventureBtnText}>AVENTURAR-SE</Text>
+          <Text style={styles.adventureHint}>Encontre mobs, recursos e dungeons!</Text>
         </TouchableOpacity>
         
         {/* Discovered Dungeons */}
@@ -458,6 +476,30 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   exploreHint: {
+    color: "rgba(255,255,255,0.6)",
+    fontSize: 12,
+  },
+  adventureBtn: {
+    backgroundColor: "rgba(239, 68, 68, 0.8)",
+    borderRadius: 20,
+    padding: 20,
+    alignItems: "center",
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)",
+  },
+  adventureEmoji: {
+    fontSize: 32,
+    marginBottom: 4,
+  },
+  adventureBtnText: {
+    color: "#ffffff",
+    fontSize: 16,
+    fontWeight: "800",
+    letterSpacing: 2,
+    marginBottom: 4,
+  },
+  adventureHint: {
     color: "rgba(255,255,255,0.6)",
     fontSize: 12,
   },

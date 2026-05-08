@@ -138,7 +138,7 @@ function ShopModal({ visible, onClose }: { visible: boolean; onClose: () => void
 }
 
 export default function CityScreen() {
-  const { state, startCombat, findEncounter } = useGame();
+  const { state } = useGame();
   const [selectedBuilding, setSelectedBuilding] = useState<CityBuilding | null>(null);
   const [fadeAnim] = useState(new Animated.Value(0));
   
@@ -182,26 +182,7 @@ export default function CityScreen() {
           />
         ))}
         
-        {/* Adventure Button */}
-        <TouchableOpacity 
-          style={styles.adventureBtn} 
-          activeOpacity={0.8}
-          onPress={() => {
-            const result = findEncounter("floresta");
-            if (result.type === "mob" && result.mob) {
-              startCombat(result.mob);
-              router.push("/(game)/combat");
-            } else {
-              Alert.alert("Exploração", result.message);
-            }
-          }}
-        >
-          <Text style={styles.adventureEmoji}>🗺️</Text>
-          <Text style={styles.adventureText}>AVENTURAR-SE</Text>
-          <Text style={styles.adventureHint}>Explore o mundo e encontre mobs, recursos e dungeons!</Text>
-        </TouchableOpacity>
-        
-        {/* Quick Stats */}
+        {/* Quick Stats -->
         <View style={styles.statsCard}>
           <Text style={styles.statsTitle}>📊 ESTATÍSTICAS</Text>
           <View style={styles.statsGrid}>
