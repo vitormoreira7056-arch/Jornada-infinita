@@ -3,8 +3,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { RaceId, getRaceById, RaceAbility } from "@/constants/races";
 import { ElementId } from "@/constants/elements";
 
-const USERS_KEY = "rpg_idle_users_v4";
-const CURRENT_USER_KEY = "rpg_idle_current_user_v4";
+const USERS_KEY = "rpg_idle_users_v5";
+const CURRENT_USER_KEY = "rpg_idle_current_user_v5";
 
 // 21 slots de equipamento
 export type EquipmentSlot =
@@ -71,6 +71,15 @@ export interface ActiveSkill {
   levelRequired: number;
 }
 
+export interface Currencies {
+  copper: number;    // Cobre
+  bronze: number;    // Bronze
+  silver: number;    // Prata
+  gold: number;      // Ouro
+  diamond: number;   // Diamante
+  mithril: number;   // Mithril
+}
+
 export interface GameState {
   // Account
   username: string;
@@ -82,8 +91,9 @@ export interface GameState {
   gender: "male" | "female" | null;
   level: number;
   exp: number;
-  gold: number;
-  diamonds: number;
+  
+  // Currencies
+  currencies: Currencies;
   
   // Stats base
   baseHp: number;
@@ -126,6 +136,15 @@ const DEFAULT_RES: Record<ElementId, number> = {
   sagrado: 0, sombra: 0, infernal: 0, tempestade: 0, runico: 0, divino: 0,
 };
 
+const DEFAULT_CURRENCIES: Currencies = {
+  copper: 0,
+  bronze: 0,
+  silver: 0,
+  gold: 0,
+  diamond: 0,
+  mithril: 0,
+};
+
 const DEFAULT_STATE: GameState = {
   username: "",
   isLoggedIn: false,
@@ -134,8 +153,7 @@ const DEFAULT_STATE: GameState = {
   gender: null,
   level: 1,
   exp: 0,
-  gold: 0,
-  diamonds: 0,
+  currencies: { ...DEFAULT_CURRENCIES },
   baseHp: 100,
   baseAtkF: 10,
   baseAtkM: 10,
@@ -177,6 +195,7 @@ interface GameContextType {
   unequipItem: (slot: EquipmentSlot) => void;
   sellItem: (itemId: string) => void;
   useSkill: (skillIndex: number) => void;
+  addCurrency: (type: keyof Currencies, amount: number) => void;
   getTotalStats: () => {
     hp: number;
     atkF: number;
@@ -211,7 +230,6 @@ interface GameContextType {
     hpRegen: number;
     res: Record<ElementId, number>;
   } | null;
-  addGold: (amount: number) => void;
 }
 
 const GameContext = createContext<GameContextType | null>(null);
@@ -247,6 +265,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           setState({
             ...DEFAULT_STATE,
             ...parsed,
+            currencies: { ...DEFAULT_CURRENCIES, ...(parsed.currencies || {}) },
             equipment: { ...DEFAULT_STATE.equipment, ...(parsed.equipment || {}) },
             baseRes: { ...DEFAULT_RES, ...(parsed.baseRes || {}) },
             username: currentUser,
@@ -285,6 +304,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           setState({
             ...DEFAULT_STATE,
             ...parsed,
+            currencies: { ...DEFAULT_CURRENCIES, ...(parsed.currencies || {}) },
             equipment: { ...DEFAULT_STATE.equipment, ...(parsed.equipment || {}) },
             baseRes: { ...DEFAULT_RES, ...(parsed.baseRes || {}) },
             username,
@@ -346,17 +366,15 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     const race = getRaceById(raceId);
     if (!race) return;
 
-    // Initialize skills from race abilities with level requirements
     const activeAbilities = race.abilities.filter(a => a.type === "ativa");
     const activeSkills: ActiveSkill[] = activeAbilities.map((ability, index) => ({
       ability,
       cooldown: 0,
-      maxCooldown: 5 + index * 2, // Skill 1: 5 turns, Skill 2: 7 turns, Skill 3: 9 turns
-      unlocked: index === 0, // First skill unlocked at start
-      levelRequired: 1 + index * 5, // Skill 1: lv1, Skill 2: lv6, Skill 3: lv11
+      maxCooldown: 5 + index * 2,
+      unlocked: index === 0,
+      levelRequired: 1 + index * 5,
     }));
 
-    // Build resistance map from race resistances
     const res: Record<ElementId, number> = { ...DEFAULT_RES };
     Object.entries(race.resistances).forEach(([element, value]) => {
       if (element in res) {
@@ -374,12 +392,12 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       baseDef: 5 + (race.stats.def || 0),
       baseArmor: race.stats.armor || 0,
       baseMagicRes: race.stats.magicRes || 0,
-      baseCritRate: 0.03 + (race.stats.critBonus || 0), // Base 3% + race bonus
-      baseCritDmg: 1.3 + (race.stats.critMultBonus || 0), // Base 130% + race bonus
+      baseCritRate: 0.03 + (race.stats.critBonus || 0),
+      baseCritDmg: 1.3 + (race.stats.critMultBonus || 0),
       baseAtkSpeed: 1 + (race.stats.speed || 0) * 0.05,
       baseLuck: 0.001 + (race.stats.luck || 0),
       baseDodge: 0.01 + (race.stats.dodge || 0),
-      baseLifeSteal: Math.min(race.stats.lifeSteal || 0, 0.03), // Cap at 3% early game
+      baseLifeSteal: Math.min(race.stats.lifeSteal || 0, 0.03),
       baseArmorPen: race.stats.armorPen || 0,
       baseHpRegen: race.stats.hpRegen || 0,
       baseRes: res,
@@ -433,7 +451,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       if (!item) return prev;
       return {
         ...prev,
-        gold: prev.gold + item.value,
+        currencies: {
+          ...prev.currencies,
+          copper: prev.currencies.copper + item.value,
+        },
         inventory: prev.inventory.filter((i) => i.id !== itemId),
       };
     });
@@ -450,6 +471,16 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       }
       return { ...prev, activeSkills: skills };
     });
+  };
+
+  const addCurrency = (type: keyof Currencies, amount: number) => {
+    setState((prev) => ({
+      ...prev,
+      currencies: {
+        ...prev.currencies,
+        [type]: prev.currencies[type] + amount,
+      },
+    }));
   };
 
   const getTotalStats = () => {
@@ -470,7 +501,6 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     
     const res = { ...state.baseRes };
 
-    // Add equipment stats
     Object.values(state.equipment).forEach((item) => {
       if (item) {
         hp += item.hp;
@@ -488,7 +518,6 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         armorPen += item.armorPen;
         hpRegen += item.hpRegen;
         
-        // Elemental resistances
         res.fogo += item.resFire;
         res.agua += item.resWater;
         res.terra += item.resEarth;
@@ -513,10 +542,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       }
     });
 
-    // Cap some stats
-    critRate = Math.min(critRate, 0.8); // Max 80% crit rate
-    dodge = Math.min(dodge, 0.6); // Max 60% dodge
-    lifeSteal = Math.min(lifeSteal, 0.25); // Max 25% life steal
+    critRate = Math.min(critRate, 0.8);
+    dodge = Math.min(dodge, 0.6);
+    lifeSteal = Math.min(lifeSteal, 0.25);
 
     return { hp, atkF, atkM, def, armor, magicRes, critRate, critDmg, atkSpeed, luck, dodge, lifeSteal, armorPen, hpRegen, res };
   };
@@ -551,10 +579,6 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     };
   };
 
-  const addGold = (amount: number) => {
-    setState((prev) => ({ ...prev, gold: prev.gold + amount }));
-  };
-
   return (
     <GameContext.Provider
       value={{
@@ -569,9 +593,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         unequipItem,
         sellItem,
         useSkill,
+        addCurrency,
         getTotalStats,
         getAllRaceStats,
-        addGold,
       }}
     >
       {children}

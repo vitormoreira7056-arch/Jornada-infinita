@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Modal, Dimensions, Animated } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Modal, Animated, Dimensions } from "react-native";
 import { router } from "expo-router";
 import { useGame } from "@/context/GameContext";
 import { RACES, RaceId, RaceAbility } from "@/constants/races";
@@ -47,12 +47,11 @@ function StatsModal({
   const passiveAbility = race.abilities.find(a => a.type === "passiva");
 
   const formatPercent = (val: number) => `${(val * 100).toFixed(1)}%`;
-  const formatNumber = (val: number) => val > 0 ? `+${val}` : val;
+  const formatNumber = (val: number) => val > 0 ? `+${val}` : val.toString();
 
-  // Get resistances that are not zero
   const activeResistances = Object.entries(stats.res)
     .filter(([_, value]) => value !== 0)
-    .slice(0, 6); // Show max 6
+    .slice(0, 6);
 
   return (
     <Modal
@@ -63,22 +62,20 @@ function StatsModal({
     >
       <View style={modalStyles.overlay}>
         <View style={modalStyles.container}>
-          {/* Header */}
-          <View style={[modalStyles.header, { backgroundColor: `${race.color}15` }]}>
-            <View style={[modalStyles.emojiCircle, { backgroundColor: `${race.color}30`, borderColor: race.color }]}>
+          <View style={[modalStyles.header, { borderBottomColor: `${race.color}30` }]}>
+            <View style={[modalStyles.emojiCircle, { backgroundColor: `${race.color}20`, borderColor: race.color }]}>
               <Text style={modalStyles.emoji}>{race.emoji}</Text>
             </View>
-            <View>
+            <View style={{ flex: 1 }}>
               <Text style={modalStyles.name}>{race.name}</Text>
               <Text style={modalStyles.subtitle}>Atributos & Habilidades</Text>
             </View>
-            <TouchableOpacity style={modalStyles.closeBtnTop} onPress={onClose}>
-              <Text style={modalStyles.closeBtnText}>✕</Text>
+            <TouchableOpacity style={[modalStyles.closeBtn, { backgroundColor: `${race.color}20` }]} onPress={onClose}>
+              <Text style={[modalStyles.closeText, { color: race.color }]}>✕</Text>
             </TouchableOpacity>
           </View>
 
           <ScrollView style={modalStyles.content} showsVerticalScrollIndicator={false}>
-            {/* Primary Stats */}
             <Text style={modalStyles.sectionTitle}>ATRIBUTOS PRIMÁRIOS</Text>
             <View style={modalStyles.statsGrid}>
               <StatBox label="HP" value={formatNumber(stats.hp)} icon="❤️" color="#ef4444" />
@@ -89,7 +86,6 @@ function StatsModal({
               <StatBox label="RES. MÁGICA" value={formatNumber(stats.magicRes)} icon="✨" color="#ec4899" />
             </View>
 
-            {/* Secondary Stats */}
             <Text style={modalStyles.sectionTitle}>ATRIBUTOS SECUNDÁRIOS</Text>
             <View style={modalStyles.statsGrid}>
               <StatBox label="Taxa Crit" value={formatPercent(stats.critRate)} icon="🎯" color="#fbbf24" />
@@ -102,44 +98,33 @@ function StatsModal({
               <StatBox label="Regen HP" value={formatNumber(stats.hpRegen)} icon="💚" color="#10b981" />
             </View>
 
-            {/* Elemental Resistances */}
             {activeResistances.length > 0 && (
               <>
                 <Text style={modalStyles.sectionTitle}>RESISTÊNCIAS ELEMENTAIS</Text>
                 <View style={modalStyles.resGrid}>
                   {activeResistances.map(([element, value]) => (
-                    <ResBox 
-                      key={element} 
-                      element={element as ElementId} 
-                      value={value} 
-                    />
+                    <ResBox key={element} element={element as ElementId} value={value} />
                   ))}
                 </View>
               </>
             )}
 
-            {/* Active Skills */}
             <Text style={modalStyles.sectionTitle}>HABILIDADES ATIVAS</Text>
             {activeAbilities.map((ability, index) => (
-              <AbilityCard key={index} ability={ability} index={index} />
+              <AbilityCard key={index} ability={ability} index={index} color={race.color} />
             ))}
 
-            {/* Passive Skill */}
             {passiveAbility && (
               <>
                 <Text style={modalStyles.sectionTitle}>HABILIDADE PASSIVA</Text>
-                <AbilityCard ability={passiveAbility} isPassive />
+                <AbilityCard ability={passiveAbility} isPassive color={race.color} />
               </>
             )}
 
-            {/* Elements */}
             <Text style={modalStyles.sectionTitle}>ELEMENTOS</Text>
             <View style={modalStyles.elementsRow}>
               {race.primaryElements.map((e) => (
-                <View
-                  key={e}
-                  style={[modalStyles.elementPill, { backgroundColor: ELEMENTS[e]?.color }]}
-                >
+                <View key={e} style={[modalStyles.elementPill, { backgroundColor: ELEMENTS[e]?.color }]}>
                   <Text style={modalStyles.elementText}>
                     {ELEMENTS[e]?.emoji} {ELEMENTS[e]?.name}
                   </Text>
@@ -147,7 +132,7 @@ function StatsModal({
               ))}
             </View>
 
-            <View style={{ height: 20 }} />
+            <View style={{ height: 30 }} />
           </ScrollView>
         </View>
       </View>
@@ -158,7 +143,7 @@ function StatsModal({
 function StatBox({ label, value, icon, color }: { label: string; value: string; icon: string; color: string }) {
   return (
     <View style={modalStyles.statBox}>
-      <View style={[modalStyles.statIconBox, { backgroundColor: `${color}20` }]}>
+      <View style={[modalStyles.statIconBox, { backgroundColor: `${color}15` }]}>
         <Text style={modalStyles.statIcon}>{icon}</Text>
       </View>
       <Text style={[modalStyles.statValue, { color }]}>{value}</Text>
@@ -182,15 +167,13 @@ function ResBox({ element, value }: { element: ElementId; value: number }) {
   );
 }
 
-function AbilityCard({ ability, index, isPassive }: { ability: RaceAbility; index?: number; isPassive?: boolean }) {
+function AbilityCard({ ability, index, isPassive, color }: { ability: RaceAbility; index?: number; isPassive?: boolean; color: string }) {
   return (
-    <View style={[modalStyles.abilityCard, isPassive && modalStyles.passiveCard]}>
-      <View style={modalStyles.abilityHeader}>
-        <View style={[modalStyles.abilityTypeBadge, isPassive && modalStyles.passiveBadge]}>
-          <Text style={modalStyles.abilityTypeText}>
-            {isPassive ? "👑 PASSIVA" : `⚡ ATIVA ${(index || 0) + 1}`}
-          </Text>
-        </View>
+    <View style={[modalStyles.abilityCard, isPassive && { borderColor: `${color}50`, backgroundColor: `${color}08` }]}>
+      <View style={[modalStyles.abilityTypeBadge, { backgroundColor: isPassive ? `${color}25` : "rgba(124, 58, 237, 0.15)" }]}>
+        <Text style={[modalStyles.abilityTypeText, { color: isPassive ? color : "#7c3aed" }]}>
+          {isPassive ? "👑 PASSIVA" : `⚡ ATIVA ${(index || 0) + 1}`}
+        </Text>
       </View>
       <Text style={modalStyles.abilityName}>{ability.name}</Text>
       <Text style={modalStyles.abilityDesc}>{ability.description}</Text>
@@ -220,7 +203,6 @@ export default function RaceSelect() {
 
   return (
     <View style={styles.container}>
-      {/* Background */}
       <View style={styles.bgCircle1} />
       <View style={styles.bgCircle2} />
 
@@ -232,27 +214,26 @@ export default function RaceSelect() {
         <View style={{ width: 50 }} />
       </View>
       
-      <Text style={styles.welcome}>Bem-vindo, <Text style={styles.welcomeHighlight}>{state.playerName}</Text></Text>
+      <Text style={styles.welcome}>
+        Bem-vindo, <Text style={styles.welcomeHighlight}>{state.playerName}</Text>
+      </Text>
 
       <ScrollView style={styles.raceList} showsVerticalScrollIndicator={false}>
         {RACES.map((r) => (
           <TouchableOpacity
             key={r.id}
-            style={[styles.raceCard, selectedRace === r.id && styles.raceCardSelected]}
+            style={[styles.raceCard, selectedRace === r.id && { borderColor: r.color, backgroundColor: `${r.color}10` }]}
             onPress={() => setSelectedRace(r.id)}
             activeOpacity={0.8}
           >
-            <View style={[styles.emojiCircle, { backgroundColor: `${r.color}20`, borderColor: r.color }]}>
+            <View style={[styles.emojiCircle, { backgroundColor: `${r.color}15`, borderColor: r.color }]}>
               <Text style={styles.raceEmoji}>{r.emoji}</Text>
             </View>
             <View style={styles.raceInfo}>
               <Text style={styles.raceName}>{r.name}</Text>
               <View style={styles.elements}>
                 {r.primaryElements.slice(0, 3).map((e) => (
-                  <View
-                    key={e}
-                    style={[styles.elementBadge, { backgroundColor: `${ELEMENTS[e]?.color}20` }]}
-                  >
+                  <View key={e} style={[styles.elementBadge, { backgroundColor: `${ELEMENTS[e]?.color}20` }]}>
                     <Text style={styles.elementEmoji}>{ELEMENTS[e]?.emoji}</Text>
                   </View>
                 ))}
@@ -269,20 +250,15 @@ export default function RaceSelect() {
       {race && (
         <View style={styles.detailsPanel}>
           <View style={styles.detailsHeader}>
-            <View style={[styles.emojiCircleLarge, { backgroundColor: `${race.color}30`, borderColor: race.color }]}>
+            <View style={[styles.emojiCircleLarge, { backgroundColor: `${race.color}20`, borderColor: race.color }]}>
               <Text style={styles.emojiLarge}>{race.emoji}</Text>
             </View>
             <View style={styles.detailsInfo}>
               <Text style={styles.detailsName}>{race.name}</Text>
               <View style={styles.elementsRow}>
                 {race.primaryElements.slice(0, 2).map((e) => (
-                  <View
-                    key={e}
-                    style={[styles.elementPill, { backgroundColor: ELEMENTS[e]?.color }]}
-                  >
-                    <Text style={styles.elementPillText}>
-                      {ELEMENTS[e]?.emoji}
-                    </Text>
+                  <View key={e} style={[styles.elementPill, { backgroundColor: ELEMENTS[e]?.color }]}>
+                    <Text style={styles.elementPillText}>{ELEMENTS[e]?.emoji}</Text>
                   </View>
                 ))}
               </View>
@@ -291,7 +267,6 @@ export default function RaceSelect() {
 
           <Text style={styles.lore}>{race.lore}</Text>
 
-          {/* Quick Stats */}
           <View style={styles.quickStats}>
             <Text style={styles.quickStat}>❤️ {race.stats.hp}</Text>
             <Text style={styles.quickStat}>⚔️ {race.stats.atkF}</Text>
@@ -299,32 +274,27 @@ export default function RaceSelect() {
             <Text style={styles.quickStat}>🛡️ {race.stats.armor}</Text>
           </View>
 
-          {/* View Stats Button */}
           <TouchableOpacity 
-            style={[styles.viewStatsBtn, { borderColor: race.color }]}
+            style={[styles.viewStatsBtn, { borderColor: `${race.color}40` }]}
             onPress={() => setStatsModalVisible(true)}
           >
-            <Text style={[styles.viewStatsText, { color: race.color }]}>📊 VER ATRIBUTOS COMPLETOS</Text>
+            <Text style={[styles.viewStatsText, { color: race.color }]}>📊 VER ATRIBUTOS</Text>
           </TouchableOpacity>
 
           <View style={styles.genderRow}>
             <TouchableOpacity
-              style={[styles.genderBtn, gender === "male" && [styles.genderBtnActive, { borderColor: race.color }]]}
+              style={[styles.genderBtn, gender === "male" && { borderColor: race.color, backgroundColor: `${race.color}15` }]}
               onPress={() => setGender("male")}
             >
               <Text style={styles.genderEmoji}>♂️</Text>
-              <Text style={[styles.genderText, gender === "male" && { color: race.color }]}>
-                MASCULINO
-              </Text>
+              <Text style={[styles.genderText, gender === "male" && { color: race.color }]}>MASCULINO</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.genderBtn, gender === "female" && [styles.genderBtnActive, { borderColor: race.color }]]}
+              style={[styles.genderBtn, gender === "female" && { borderColor: race.color, backgroundColor: `${race.color}15` }]}
               onPress={() => setGender("female")}
             >
               <Text style={styles.genderEmoji}>♀️</Text>
-              <Text style={[styles.genderText, gender === "female" && { color: race.color }]}>
-                FEMININO
-              </Text>
+              <Text style={[styles.genderText, gender === "female" && { color: race.color }]}>FEMININO</Text>
             </TouchableOpacity>
           </View>
 
@@ -350,25 +320,25 @@ export default function RaceSelect() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#050508",
+    backgroundColor: "#020204",
   },
   bgCircle1: {
+    position: "absolute",
+    width: 400,
+    height: 400,
+    borderRadius: 200,
+    backgroundColor: "#7c3aed",
+    opacity: 0.03,
+    top: -100,
+    right: -100,
+  },
+  bgCircle2: {
     position: "absolute",
     width: 300,
     height: 300,
     borderRadius: 150,
-    backgroundColor: "#7c3aed",
-    opacity: 0.05,
-    top: -50,
-    right: -50,
-  },
-  bgCircle2: {
-    position: "absolute",
-    width: 250,
-    height: 250,
-    borderRadius: 125,
     backgroundColor: "#3b82f6",
-    opacity: 0.04,
+    opacity: 0.02,
     bottom: 100,
     left: -50,
   },
@@ -379,7 +349,7 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingTop: 60,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(124, 58, 237, 0.1)",
+    borderBottomColor: "rgba(124, 58, 237, 0.06)",
   },
   backBtn: {
     padding: 8,
@@ -394,7 +364,7 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     fontSize: 14,
     fontWeight: "800",
-    letterSpacing: 2,
+    letterSpacing: 3,
   },
   welcome: {
     color: "#64748b",
@@ -413,379 +383,356 @@ const styles = StyleSheet.create({
   raceCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(18, 18, 26, 0.8)",
+    backgroundColor: "rgba(16, 16, 24, 0.6)",
     borderRadius: 20,
     padding: 16,
-    marginBottom: 12,
+    marginBottom: 10,
     borderWidth: 1,
-    borderColor: "rgba(124, 58, 237, 0.1)",
-  },
-  raceCardSelected: {
-    borderColor: "#7c3aed",
-    backgroundColor: "rgba(124, 58, 237, 0.1)",
+    borderColor: "rgba(124, 58, 237, 0.08)",
   },
   emojiCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 54,
+    height: 54,
+    borderRadius: 18,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 16,
-    borderWidth: 2,
+    marginRight: 14,
+    borderWidth: 1.5,
   },
   raceEmoji: {
-    fontSize: 28,
+    fontSize: 26,
   },
   raceInfo: {
     flex: 1,
   },
   raceName: {
     color: "#ffffff",
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "700",
-    marginBottom: 8,
+    marginBottom: 6,
   },
   elements: {
     flexDirection: "row",
-    gap: 6,
+    gap: 5,
   },
   elementBadge: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
+    width: 26,
+    height: 26,
+    borderRadius: 7,
     justifyContent: "center",
     alignItems: "center",
   },
   elementEmoji: {
-    fontSize: 14,
+    fontSize: 13,
   },
   statsPreview: {
     alignItems: "flex-end",
   },
   statText: {
     color: "#64748b",
-    fontSize: 12,
-    marginBottom: 4,
+    fontSize: 11,
+    marginBottom: 3,
   },
   detailsPanel: {
-    backgroundColor: "rgba(18, 18, 26, 0.95)",
+    backgroundColor: "rgba(16, 16, 24, 0.95)",
     borderTopWidth: 1,
-    borderTopColor: "rgba(124, 58, 237, 0.2)",
+    borderTopColor: "rgba(124, 58, 237, 0.12)",
     padding: 20,
     paddingBottom: 40,
   },
   detailsHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: 14,
   },
   emojiCircleLarge: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+    width: 68,
+    height: 68,
+    borderRadius: 22,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 16,
+    marginRight: 14,
     borderWidth: 2,
   },
   emojiLarge: {
-    fontSize: 36,
+    fontSize: 34,
   },
   detailsInfo: {
     flex: 1,
   },
   detailsName: {
     color: "#ffffff",
-    fontSize: 20,
+    fontSize: 19,
     fontWeight: "700",
-    marginBottom: 8,
+    marginBottom: 6,
   },
   elementsRow: {
     flexDirection: "row",
-    gap: 6,
+    gap: 5,
   },
   elementPill: {
-    paddingHorizontal: 10,
+    paddingHorizontal: 9,
     paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: 8,
   },
   elementPillText: {
-    fontSize: 12,
+    fontSize: 11,
   },
   lore: {
     color: "#94a3b8",
     fontSize: 13,
     lineHeight: 20,
-    marginBottom: 16,
+    marginBottom: 14,
   },
   quickStats: {
     flexDirection: "row",
     justifyContent: "space-around",
-    backgroundColor: "rgba(10, 10, 15, 0.8)",
+    backgroundColor: "rgba(8, 8, 12, 0.6)",
     borderRadius: 12,
-    padding: 12,
+    padding: 10,
     marginBottom: 12,
   },
   quickStat: {
-    color: "#ffffff",
-    fontSize: 13,
+    color: "#e2e8f0",
+    fontSize: 12,
     fontWeight: "600",
   },
   viewStatsBtn: {
-    backgroundColor: "rgba(10, 10, 15, 0.8)",
+    backgroundColor: "rgba(8, 8, 12, 0.6)",
     borderRadius: 10,
     padding: 12,
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: 14,
     borderWidth: 1,
   },
   viewStatsText: {
-    fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 1,
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 1.5,
   },
   genderRow: {
     flexDirection: "row",
-    gap: 12,
-    marginBottom: 16,
+    gap: 10,
+    marginBottom: 14,
   },
   genderBtn: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(10, 10, 15, 0.8)",
+    backgroundColor: "rgba(8, 8, 12, 0.6)",
     borderRadius: 12,
-    padding: 14,
+    padding: 13,
     borderWidth: 1,
-    borderColor: "rgba(124, 58, 237, 0.2)",
-    gap: 8,
-  },
-  genderBtnActive: {
-    backgroundColor: "rgba(124, 58, 237, 0.15)",
+    borderColor: "rgba(124, 58, 237, 0.15)",
+    gap: 7,
   },
   genderEmoji: {
-    fontSize: 16,
+    fontSize: 15,
   },
   genderText: {
     color: "#64748b",
-    fontSize: 12,
-    fontWeight: "700",
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 0.5,
   },
   confirmBtn: {
     borderRadius: 14,
-    padding: 18,
+    padding: 17,
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 8,
   },
   confirmText: {
     color: "#fff",
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "800",
     letterSpacing: 2,
   },
   confirmArrow: {
     color: "#fff",
-    fontSize: 18,
+    fontSize: 16,
     marginLeft: 8,
+    opacity: 0.8,
   },
 });
 
 const modalStyles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(5, 5, 8, 0.95)",
+    backgroundColor: "rgba(2, 2, 4, 0.96)",
     justifyContent: "center",
     alignItems: "center",
-    padding: 16,
+    padding: 14,
   },
   container: {
-    backgroundColor: "#12121a",
+    backgroundColor: "#101018",
     borderRadius: 24,
     width: "100%",
-    maxHeight: "85%",
+    maxHeight: "82%",
     borderWidth: 1,
-    borderColor: "rgba(124, 58, 237, 0.2)",
+    borderColor: "rgba(124, 58, 237, 0.15)",
     overflow: "hidden",
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 20,
+    padding: 18,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(124, 58, 237, 0.1)",
   },
   emojiCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 52,
+    height: 52,
+    borderRadius: 18,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 16,
+    marginRight: 14,
     borderWidth: 2,
   },
   emoji: {
-    fontSize: 28,
+    fontSize: 26,
   },
   name: {
     color: "#ffffff",
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: "700",
   },
   subtitle: {
     color: "#64748b",
-    fontSize: 12,
+    fontSize: 11,
     marginTop: 2,
   },
-  closeBtnTop: {
+  closeBtn: {
     marginLeft: "auto",
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "rgba(124, 58, 237, 0.2)",
+    width: 34,
+    height: 34,
+    borderRadius: 10,
     justifyContent: "center",
     alignItems: "center",
   },
-  closeBtnText: {
-    color: "#ffffff",
-    fontSize: 16,
+  closeText: {
+    fontSize: 15,
     fontWeight: "700",
   },
   content: {
-    padding: 20,
+    padding: 18,
   },
   sectionTitle: {
     color: "#64748b",
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "800",
     letterSpacing: 2,
-    marginBottom: 12,
-    marginTop: 8,
+    marginBottom: 10,
+    marginTop: 6,
   },
   statsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 8,
+    gap: 7,
   },
   statBox: {
     width: "31%",
-    backgroundColor: "rgba(10, 10, 15, 0.8)",
-    borderRadius: 14,
-    padding: 12,
+    backgroundColor: "rgba(8, 8, 12, 0.6)",
+    borderRadius: 12,
+    padding: 11,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "rgba(124, 58, 237, 0.1)",
+    borderColor: "rgba(124, 58, 237, 0.08)",
   },
   statIconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    width: 32,
+    height: 32,
+    borderRadius: 9,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 6,
+    marginBottom: 5,
   },
   statIcon: {
-    fontSize: 18,
+    fontSize: 16,
   },
   statValue: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "700",
-    marginBottom: 2,
+    marginBottom: 1,
   },
   statLabel: {
     color: "#64748b",
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: "700",
   },
   resGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 8,
+    gap: 7,
   },
   resBox: {
     width: "30%",
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(10, 10, 15, 0.8)",
-    borderRadius: 10,
-    padding: 10,
+    backgroundColor: "rgba(8, 8, 12, 0.6)",
+    borderRadius: 9,
+    padding: 9,
     borderWidth: 1,
-    borderColor: "rgba(124, 58, 237, 0.1)",
+    borderColor: "rgba(124, 58, 237, 0.08)",
   },
   resEmoji: {
-    fontSize: 16,
-    marginRight: 8,
+    fontSize: 14,
+    marginRight: 6,
   },
   resName: {
     color: "#94a3b8",
-    fontSize: 10,
+    fontSize: 9,
     flex: 1,
+    textTransform: "capitalize",
   },
   resValue: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "700",
   },
   abilityCard: {
-    backgroundColor: "rgba(10, 10, 15, 0.8)",
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: "rgba(124, 58, 237, 0.15)",
-  },
-  passiveCard: {
-    borderColor: "rgba(245, 158, 11, 0.3)",
-    backgroundColor: "rgba(245, 158, 11, 0.05)",
-  },
-  abilityHeader: {
+    backgroundColor: "rgba(8, 8, 12, 0.6)",
+    borderRadius: 12,
+    padding: 13,
     marginBottom: 8,
+    borderWidth: 1,
+    borderColor: "rgba(124, 58, 237, 0.1)",
   },
   abilityTypeBadge: {
-    backgroundColor: "rgba(124, 58, 237, 0.2)",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+    borderRadius: 5,
     alignSelf: "flex-start",
-  },
-  passiveBadge: {
-    backgroundColor: "rgba(245, 158, 11, 0.2)",
+    marginBottom: 7,
   },
   abilityTypeText: {
-    color: "#7c3aed",
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: "800",
     letterSpacing: 1,
   },
   abilityName: {
     color: "#ffffff",
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "700",
-    marginBottom: 6,
+    marginBottom: 4,
   },
   abilityDesc: {
     color: "#94a3b8",
-    fontSize: 12,
-    lineHeight: 18,
+    fontSize: 11,
+    lineHeight: 16,
   },
   elementsRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 8,
+    gap: 6,
   },
   elementPill: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
   },
   elementText: {
     color: "#fff",
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "700",
   },
 });
