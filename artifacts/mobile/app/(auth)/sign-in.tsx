@@ -1,7 +1,6 @@
-import { useAuth, useSignIn } from "@clerk/expo";
 import { Feather } from "@expo/vector-icons";
 import { Link, useRouter } from "expo-router";
-import React, { useRef, useState } from "react";
+import React, { useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -130,120 +129,21 @@ function InputField({
 export default function SignInScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  
-  // Always call hooks unconditionally
-  let signInResult: ReturnType<typeof useSignIn> | null = null;
-  let authResult: ReturnType<typeof useAuth> | null = null;
-  let clerkError = false;
-  
-  try {
-    signInResult = useSignIn();
-    authResult = useAuth();
-  } catch (e) {
-    // Clerk not available (no key or not initialized)
-    clerkError = true;
-  }
-  
-  const signIn = signInResult?.signIn || null;
-  const isSignedIn = authResult?.isSignedIn || false;
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [verifyCode, setVerifyCode] = useState("");
 
   const [loading, setLoading] = useState(false);
   const [globalError, setGlobalError] = useState("");
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [needsTrust, setNeedsTrust] = useState(false);
 
-  const passwordRef = useRef<TextInput>(null);
+  const passwordRef = React.useRef<TextInput>(null);
 
   const clearErrors = () => {
     setGlobalError("");
-    setFieldErrors({});
   };
 
-  const goToTabs = () => router.replace("/(tabs)" as never);
-
-  const parseClerkError = (err: unknown): { global: string; fields: Record<string, string> } => {
-    const result = { global: "", fields: {} as Record<string, string> };
-    if (!err || typeof err !== "object") {
-      result.global = "Ocorreu um erro inesperado. Tente novamente.";
-      return result;
-    }
-    const e = err as Record<string, unknown>;
-
-    if (Array.isArray(e.errors)) {
-      const clerkErrors = e.errors as Array<{ message: string; meta?: { paramName?: string } }>;
-      for (const ce of clerkErrors) {
-        const field = ce.meta?.paramName;
-        if (field) {
-          result.fields[field] = ce.message;
-        } else {
-          result.global = result.global || ce.message;
-        }
-      }
-      if (!result.global && clerkErrors.length > 0) {
-        result.global = clerkErrors[0].message;
-      }
-    } else if (typeof e.message === "string") {
-      result.global = e.message;
-    } else {
-      result.global = "Nick-name ou senha inválidos.";
-    }
-    return result;
-  };
-
-  const handleSignIn = async () => {
-    clearErrors();
-
-    if (!username.trim()) {
-      setFieldErrors({ identifier: "Por favor insira seu nick-name" });
-      return;
-    }
-    if (!password) {
-      setFieldErrors({ password: "Por favor insira sua senha" });
-      return;
-    }
-    
-    if (clerkError || !signIn) {
-      setGlobalError("Serviço de autenticação indisponível. Use o Modo Desenvolvedor.");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const { error } = await signIn.create({
-        identifier: username.trim(),
-        password,
-      });
-
-      if (error) {
-        const parsed = parseClerkError(error);
-        setGlobalError(parsed.global || "Nick-name ou senha incorretos.");
-        setFieldErrors(parsed.fields);
-        return;
-      }
-
-      if (signIn.status === "complete") {
-        await signIn.finalize({
-          navigate: ({ session }) => {
-            if (!session?.currentTask) goToTabs();
-          },
-        });
-      } else if (signIn.status === "needs_client_trust") {
-        await signIn.mfa.sendEmailCode();
-        setNeedsTrust(true);
-      }
-    } catch (err: unknown) {
-      const parsed = parseClerkError(err);
-      setGlobalError(parsed.global || "Erro de conexão. Verifique sua internet.");
-      setFieldErrors(parsed.fields);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const goToTabs = () => router.replace("/(tabs)");
 
   const handleDevMode = async () => {
     clearErrors();
@@ -262,107 +162,21 @@ export default function SignInScreen() {
     }
   };
 
-  const handleVerify = async () => {
+  const handleSignIn = async () => {
     clearErrors();
-    if (verifyCode.length < 6) return;
-    
-    if (clerkError || !signIn) {
-      setGlobalError("Serviço de autenticação indisponível.");
+
+    if (!username.trim()) {
+      setGlobalError("Por favor insira seu nick-name");
+      return;
+    }
+    if (!password) {
+      setGlobalError("Por favor insira sua senha");
       return;
     }
 
-    setLoading(true);
-    try {
-      await signIn.mfa.verifyEmailCode({ code: verifyCode });
-
-      if (signIn.status === "complete") {
-        await signIn.finalize({
-          navigate: ({ session }) => {
-            if (!session?.currentTask) goToTabs();
-          },
-        });
-      } else {
-        setGlobalError("Verificação incompleta. Tente novamente.");
-      }
-    } catch (err: unknown) {
-      setGlobalError("Código inválido ou expirado. Tente novamente.");
-    } finally {
-      setLoading(false);
-    }
+    // For now, just show error - Clerk not configured
+    setGlobalError("Serviço de autenticação indisponível. Use o Modo Desenvolvedor.");
   };
-
-  if (isSignedIn) return null;
-
-  if (needsTrust) {
-    return (
-      <View style={[styles.root, { paddingTop: insets.top, backgroundColor: C.bg }]}>
-        <BrandHeader />
-        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
-          <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1 }}>
-            <View style={styles.card}>
-              <View style={styles.cardHeader}>
-                <View style={styles.verifyIconBadge}>
-                  <Feather name="shield" size={24} color={C.gold} />
-                </View>
-                <Text style={styles.cardTitle}>Verificar Identidade</Text>
-                <Text style={styles.cardSubtitle}>
-                  Enviamos um código de 6 dígitos para{"\n"}
-                  {username}
-                </Text>
-              </View>
-
-              <ErrorBanner message={globalError} />
-
-              <View style={styles.otpWrapper}>
-                <TextInput
-                  value={verifyCode}
-                  onChangeText={(v) => { setVerifyCode(v); clearErrors(); }}
-                  placeholder="000000"
-                  placeholderTextColor={C.muted}
-                  keyboardType="number-pad"
-                  maxLength={6}
-                  textAlign="center"
-                  selectionColor={C.gold}
-                  editable={!loading}
-                  style={[styles.otpInput, !!globalError && styles.otpInputError]}
-                />
-              </View>
-
-              <Pressable
-                style={({ pressed }) => [
-                  styles.primaryBtn,
-                  (loading || verifyCode.length < 6) && styles.primaryBtnDisabled,
-                  pressed && styles.primaryBtnPressed,
-                ]}
-                onPress={handleVerify}
-                disabled={loading || verifyCode.length < 6}
-              >
-                {loading ? (
-                  <>
-                    <ActivityIndicator size="small" color={C.bg} />
-                    <Text style={styles.primaryBtnText}>Verificando...</Text>
-                  </>
-                ) : (
-                  <>
-                    <Feather name="check-circle" size={18} color={C.bg} />
-                    <Text style={styles.primaryBtnText}>Entrar no Jogo</Text>
-                  </>
-                )}
-              </Pressable>
-
-              <Pressable onPress={() => signIn.mfa.sendEmailCode()} disabled={loading} style={styles.secondaryBtn}>
-                <Text style={styles.secondaryBtnText}>Não recebeu? Reenviar código</Text>
-              </Pressable>
-
-              <Pressable onPress={() => { setNeedsTrust(false); clearErrors(); setVerifyCode(""); }} disabled={loading}>
-                <Text style={[styles.footerLink, { fontSize: 13, marginTop: 12 }]}>← Voltar ao login</Text>
-              </Pressable>
-            </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </View>
-    );
-  }
 
   return (
     <View style={[styles.root, { paddingTop: insets.top, backgroundColor: C.bg }]}>
@@ -384,7 +198,6 @@ export default function SignInScreen() {
               onChangeText={(v) => { setUsername(v); clearErrors(); }}
               placeholder="Seu nick no jogo"
               autoCapitalize="none"
-              error={fieldErrors.identifier || fieldErrors.username}
               returnKeyType="next"
               onSubmitEditing={() => passwordRef.current?.focus()}
             />
@@ -397,7 +210,6 @@ export default function SignInScreen() {
               placeholder="Sua senha secreta"
               secureTextEntry={!showPassword}
               autoCapitalize="none"
-              error={fieldErrors.password}
               returnKeyType="go"
               onSubmitEditing={handleSignIn}
               inputRef={passwordRef}
@@ -473,7 +285,6 @@ const styles = StyleSheet.create({
   brandSubtitle: { fontSize: 13, color: C.mutedLight, letterSpacing: 2, fontFamily: "Inter_400Regular" },
   card: { flex: 1, backgroundColor: C.card, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 28, paddingBottom: 40, borderTopWidth: 1, borderLeftWidth: 1, borderRightWidth: 1, borderColor: C.border, gap: 16 },
   cardHeader: { alignItems: "center", marginBottom: 4, gap: 6 },
-  verifyIconBadge: { width: 56, height: 56, borderRadius: 28, backgroundColor: C.goldGlow, borderWidth: 1, borderColor: C.goldDim, justifyContent: "center", alignItems: "center", marginBottom: 8 },
   cardTitle: { fontSize: 22, fontWeight: "700", color: C.text, fontFamily: "Inter_700Bold" },
   cardSubtitle: { fontSize: 13, color: C.muted, fontFamily: "Inter_400Regular", textAlign: "center", lineHeight: 19 },
   errorBanner: { flexDirection: "row", alignItems: "flex-start", gap: 10, backgroundColor: C.dangerBg, borderRadius: 12, padding: 14, borderWidth: 1, borderColor: C.dangerBorder },
@@ -498,11 +309,6 @@ const styles = StyleSheet.create({
   footerRow: { flexDirection: "row", justifyContent: "center", alignItems: "center" },
   footerText: { fontSize: 14, color: C.muted, fontFamily: "Inter_400Regular" },
   footerLink: { fontSize: 14, color: C.gold, fontWeight: "600", fontFamily: "Inter_600SemiBold" },
-  secondaryBtn: { alignItems: "center", paddingVertical: 10 },
-  secondaryBtnText: { fontSize: 13, color: C.mutedLight, fontFamily: "Inter_400Regular" },
-  otpWrapper: { gap: 6, marginVertical: 8 },
-  otpInput: { backgroundColor: C.input, borderRadius: 14, borderWidth: 1, borderColor: C.border, height: 80, fontSize: 36, fontWeight: "700", color: C.gold, letterSpacing: 14, textAlign: "center", fontFamily: "Inter_700Bold" },
-  otpInputError: { borderColor: C.dangerBorder },
   devBtn: {
     flexDirection: "row",
     alignItems: "center",

@@ -1,7 +1,6 @@
-import { useAuth, useSignUp } from "@clerk/expo";
 import { Feather } from "@expo/vector-icons";
 import { Link, useRouter } from "expo-router";
-import React, { useRef, useState } from "react";
+import React, { useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -137,22 +136,6 @@ function InputField({
 export default function SignUpScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  
-  // Always call hooks unconditionally
-  let signUpResult: ReturnType<typeof useSignUp> | null = null;
-  let authResult: ReturnType<typeof useAuth> | null = null;
-  let clerkError = false;
-  
-  try {
-    signUpResult = useSignUp();
-    authResult = useAuth();
-  } catch (e) {
-    // Clerk not available (no key or not initialized)
-    clerkError = true;
-  }
-  
-  const signUp = signUpResult?.signUp || null;
-  const isSignedIn = authResult?.isSignedIn || false;
 
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
@@ -160,248 +143,45 @@ export default function SignUpScreen() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [verifyCode, setVerifyCode] = useState("");
 
   const [loading, setLoading] = useState(false);
   const [globalError, setGlobalError] = useState("");
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
-  const emailRef = useRef<TextInput>(null);
-  const passwordRef = useRef<TextInput>(null);
-  const confirmRef = useRef<TextInput>(null);
-
-  const [step, setStep] = useState<"form" | "verify">("form");
+  const emailRef = React.useRef<TextInput>(null);
+  const passwordRef = React.useRef<TextInput>(null);
+  const confirmRef = React.useRef<TextInput>(null);
 
   const clearErrors = () => {
     setGlobalError("");
-    setFieldErrors({});
-  };
-
-  const goToTabs = () => router.replace("/(tabs)" as never);
-
-  const parseClerkError = (err: unknown): { global: string; fields: Record<string, string> } => {
-    const result = { global: "", fields: {} as Record<string, string> };
-    if (!err || typeof err !== "object") {
-      result.global = "Ocorreu um erro inesperado. Tente novamente.";
-      return result;
-    }
-    const e = err as Record<string, unknown>;
-
-    if (Array.isArray(e.errors)) {
-      const clerkErrors = e.errors as Array<{ message: string; meta?: { paramName?: string } }>;
-      for (const ce of clerkErrors) {
-        const field = ce.meta?.paramName;
-        if (field) {
-          result.fields[field] = ce.message;
-        } else {
-          result.global = result.global || ce.message;
-        }
-      }
-      if (!result.global && clerkErrors.length > 0) {
-        result.global = clerkErrors[0].message;
-      }
-    } else if (typeof e.message === "string") {
-      result.global = e.message;
-    } else {
-      result.global = "Erro ao criar conta. Verifique seus dados.";
-    }
-    return result;
   };
 
   const handleRegister = async () => {
     clearErrors();
 
     if (!username.trim()) {
-      setFieldErrors({ username: "Por favor insira seu nick-name" });
+      setGlobalError("Por favor insira seu nick-name");
       return;
     }
     if (username.trim().length < 3) {
-      setFieldErrors({ username: "Nick-name deve ter pelo menos 3 caracteres" });
+      setGlobalError("Nick-name deve ter pelo menos 3 caracteres");
       return;
     }
     if (!email.trim()) {
-      setFieldErrors({ email_address: "Por favor insira seu e-mail" });
+      setGlobalError("Por favor insira seu e-mail");
       return;
     }
     if (password.length < 8) {
-      setFieldErrors({ password: "A senha deve ter pelo menos 8 caracteres" });
+      setGlobalError("A senha deve ter pelo menos 8 caracteres");
       return;
     }
     if (password !== confirmPassword) {
-      setFieldErrors({ confirmPassword: "As senhas não coincidem" });
-      return;
-    }
-    
-    if (clerkError || !signUp) {
-      setGlobalError("Serviço de autenticação indisponível. Use o Modo Desenvolvedor.");
+      setGlobalError("As senhas não coincidem");
       return;
     }
 
-    setLoading(true);
-    try {
-      const { error } = await signUp.create({
-        username: username.trim(),
-        emailAddress: email.trim(),
-        password,
-      });
-
-      if (error) {
-        const parsed = parseClerkError(error);
-        setGlobalError(parsed.global);
-        setFieldErrors(parsed.fields);
-        return;
-      }
-
-      await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
-      setStep("verify");
-    } catch (err: unknown) {
-      const parsed = parseClerkError(err);
-      setGlobalError(parsed.global || "Erro de conexão. Verifique sua internet.");
-      setFieldErrors(parsed.fields);
-    } finally {
-      setLoading(false);
-    }
+    // For now, show error - registration not available without Clerk
+    setGlobalError("Serviço de registro indisponível. Use o login com Modo Desenvolvedor.");
   };
-
-  const handleVerify = async () => {
-    clearErrors();
-    if (verifyCode.length < 6) return;
-    
-    if (clerkError || !signUp) {
-      setGlobalError("Serviço de autenticação indisponível.");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      await signUp.attemptEmailAddressVerification({ code: verifyCode });
-
-      if (signUp.status === "complete") {
-        await signUp.finalize({
-          navigate: ({ session }) => {
-            if (!session?.currentTask) goToTabs();
-          },
-        });
-      } else {
-        setGlobalError("Verificação incompleta. Tente novamente.");
-      }
-    } catch (err: unknown) {
-      const parsed = parseClerkError(err);
-      setGlobalError(parsed.global || "Código inválido ou expirado. Tente novamente.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleResend = async () => {
-    clearErrors();
-    
-    if (clerkError || !signUp) {
-      setGlobalError("Serviço de autenticação indisponível.");
-      return;
-    }
-    
-    setLoading(true);
-    try {
-      await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
-    } catch (err: unknown) {
-      setGlobalError("Não foi possível reenviar o código.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (isSignedIn) return null;
-
-  if (step === "verify") {
-    return (
-      <View style={[styles.root, { paddingTop: insets.top, backgroundColor: C.bg }]}>
-        <BrandHeader compact />
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-          style={{ flex: 1 }}
-        >
-          <ScrollView
-            keyboardShouldPersistTaps="handled"
-            contentContainerStyle={{ flexGrow: 1 }}
-          >
-            <View style={styles.card}>
-              <View style={styles.cardHeader}>
-                <View style={styles.verifyIconBadge}>
-                  <Feather name="mail" size={24} color={C.gold} />
-                </View>
-                <Text style={styles.cardTitle}>Verifique seu E-mail</Text>
-                <Text style={styles.cardSubtitle}>
-                  Enviamos um código de 6 dígitos para{"\n"}
-                  {email}
-                </Text>
-              </View>
-
-              <ErrorBanner message={globalError} />
-
-              <View style={styles.otpWrapper}>
-                <TextInput
-                  value={verifyCode}
-                  onChangeText={(v) => { setVerifyCode(v); clearErrors(); }}
-                  placeholder="000000"
-                  placeholderTextColor={C.muted}
-                  keyboardType="number-pad"
-                  maxLength={6}
-                  textAlign="center"
-                  selectionColor={C.gold}
-                  editable={!loading}
-                  style={[styles.otpInput, !!globalError && styles.otpInputError]}
-                />
-              </View>
-
-              <Pressable
-                style={({ pressed }) => [
-                  styles.primaryBtn,
-                  (loading || verifyCode.length < 6) && styles.primaryBtnDisabled,
-                  pressed && styles.primaryBtnPressed,
-                ]}
-                onPress={handleVerify}
-                disabled={loading || verifyCode.length < 6}
-              >
-                {loading ? (
-                  <>
-                    <ActivityIndicator size="small" color={C.bg} />
-                    <Text style={styles.primaryBtnText}>Verificando...</Text>
-                  </>
-                ) : (
-                  <>
-                    <Feather name="check-circle" size={18} color={C.bg} />
-                    <Text style={styles.primaryBtnText}>Confirmar e Entrar no Jogo</Text>
-                  </>
-                )}
-              </Pressable>
-
-              <Pressable onPress={handleResend} disabled={loading} style={styles.secondaryBtn}>
-                <Text style={styles.secondaryBtnText}>
-                  Não recebeu? Reenviar código
-                </Text>
-              </Pressable>
-
-              <View style={styles.successBadge}>
-                <Feather name="shield" size={14} color={C.success} />
-                <Text style={styles.successText}>
-                  Sua conta está protegida com verificação de e-mail
-                </Text>
-              </View>
-
-              <Pressable
-                onPress={() => { setStep("form"); clearErrors(); setVerifyCode(""); }}
-                disabled={loading}
-                style={{ marginTop: 12 }}
-              >
-                <Text style={[styles.footerLink, { fontSize: 13 }]}>← Voltar ao cadastro</Text>
-              </Pressable>
-            </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </View>
-    );
-  }
 
   return (
     <View style={[styles.root, { paddingTop: insets.top, backgroundColor: C.bg }]}>
@@ -428,7 +208,6 @@ export default function SignUpScreen() {
               onChangeText={(v) => { setUsername(v); clearErrors(); }}
               placeholder="Seu nick no jogo"
               autoCapitalize="none"
-              error={fieldErrors.username}
               returnKeyType="next"
               onSubmitEditing={() => emailRef.current?.focus()}
             />
@@ -441,7 +220,6 @@ export default function SignUpScreen() {
               placeholder="heroi@realm.com"
               keyboardType="email-address"
               autoCapitalize="none"
-              error={fieldErrors.email_address || fieldErrors.emailAddress}
               returnKeyType="next"
               onSubmitEditing={() => passwordRef.current?.focus()}
               inputRef={emailRef}
@@ -455,7 +233,6 @@ export default function SignUpScreen() {
               placeholder="Mínimo 8 caracteres"
               secureTextEntry={!showPassword}
               autoCapitalize="none"
-              error={fieldErrors.password}
               hint={password.length > 0 && password.length < 8 ? `${password.length}/8 caracteres` : "Mínimo de 8 caracteres"}
               returnKeyType="next"
               onSubmitEditing={() => confirmRef.current?.focus()}
@@ -475,7 +252,6 @@ export default function SignUpScreen() {
               placeholder="Repita sua senha"
               secureTextEntry={!showConfirm}
               autoCapitalize="none"
-              error={fieldErrors.confirmPassword}
               returnKeyType="go"
               onSubmitEditing={handleRegister}
               inputRef={confirmRef}
@@ -526,7 +302,7 @@ export default function SignUpScreen() {
             <View style={styles.securityNote}>
               <Feather name="shield" size={12} color={C.muted} />
               <Text style={styles.securityText}>
-                Verificação de e-mail obrigatória · Dados protegidos
+                Registro temporariamente indisponível. Use o Modo Desenvolvedor no login.
               </Text>
             </View>
           </View>
@@ -549,7 +325,6 @@ const styles = StyleSheet.create({
   brandSubtitle: { fontSize: 13, color: C.mutedLight, letterSpacing: 2, fontFamily: "Inter_400Regular" },
   card: { flex: 1, backgroundColor: C.card, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 28, paddingBottom: 40, borderTopWidth: 1, borderLeftWidth: 1, borderRightWidth: 1, borderColor: C.border, gap: 16 },
   cardHeader: { alignItems: "center", marginBottom: 4, gap: 6 },
-  verifyIconBadge: { width: 56, height: 56, borderRadius: 28, backgroundColor: C.goldGlow, borderWidth: 1, borderColor: C.goldDim, justifyContent: "center", alignItems: "center", marginBottom: 8 },
   cardTitle: { fontSize: 22, fontWeight: "700", color: C.text, fontFamily: "Inter_700Bold" },
   cardSubtitle: { fontSize: 13, color: C.muted, fontFamily: "Inter_400Regular", textAlign: "center", lineHeight: 19 },
   errorBanner: { flexDirection: "row", alignItems: "flex-start", gap: 10, backgroundColor: C.dangerBg, borderRadius: 12, padding: 14, borderWidth: 1, borderColor: C.dangerBorder },
@@ -578,11 +353,4 @@ const styles = StyleSheet.create({
   footerLink: { fontSize: 14, color: C.gold, fontWeight: "600", fontFamily: "Inter_600SemiBold" },
   securityNote: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingTop: 4 },
   securityText: { fontSize: 11, color: C.muted, fontFamily: "Inter_400Regular", textAlign: "center" },
-  successBadge: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, backgroundColor: C.successBg, borderRadius: 10, padding: 12, borderWidth: 1, borderColor: C.successBorder, marginTop: 4 },
-  successText: { fontSize: 12, color: C.success, fontFamily: "Inter_400Regular", flex: 1 },
-  secondaryBtn: { alignItems: "center", paddingVertical: 10 },
-  secondaryBtnText: { fontSize: 13, color: C.mutedLight, fontFamily: "Inter_400Regular" },
-  otpWrapper: { gap: 6, marginVertical: 8 },
-  otpInput: { backgroundColor: C.input, borderRadius: 14, borderWidth: 1, borderColor: C.border, height: 80, fontSize: 36, fontWeight: "700", color: C.gold, letterSpacing: 14, textAlign: "center", fontFamily: "Inter_700Bold" },
-  otpInputError: { borderColor: C.dangerBorder },
 });
