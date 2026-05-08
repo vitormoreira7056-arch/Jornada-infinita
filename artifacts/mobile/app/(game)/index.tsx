@@ -232,6 +232,14 @@ export default function Home() {
             <Text style={[styles.actionButtonTitleSmall, { color: "#3b82f6" }]}>MOCHILA</Text>
           </TouchableOpacity>
           <TouchableOpacity 
+            style={[styles.actionButtonSmall, { borderColor: "#f59e0b40" }]}
+            onPress={() => router.push("/(game)/equipment")}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.actionButtonIconSmall}>⚔️</Text>
+            <Text style={[styles.actionButtonTitleSmall, { color: "#f59e0b" }]}>EQUIPAR</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
             style={[styles.actionButtonSmall, { borderColor: "#ec489940" }]}
             onPress={() => router.push("/(game)/skills")}
             activeOpacity={0.85}
@@ -480,7 +488,7 @@ const styles = StyleSheet.create({
   },
   actionsRow: {
     flexDirection: "row",
-    gap: 12,
+    gap: 8,
     marginHorizontal: 20,
     marginBottom: 20,
   },

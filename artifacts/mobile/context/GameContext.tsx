@@ -5,6 +5,11 @@ import { ElementId } from "@/constants/elements";
 import { TierId, QualityId, rollTier, rollQuality, getTotalMultiplier, TIERS, QUALITIES } from "@/constants/tiers";
 import { BiomeId, DungeonDef, DiscoveredDungeon, BIOMES, tryDiscoverDungeon, calculateExpNeeded, TOWER_FLOORS_DATA, TowerFloor, getDiscoveredDungeonsForBiome, getBiomeDiscoveryProgress } from "@/constants/adventure";
 import { MobDef, FOREST_MOBS, findRandomMob, calculateDrops, MOB_RANK_MULTIPLIERS } from "@/constants/mobs";
+import { 
+  EquipmentBase, EquipmentSlot as NewEquipmentSlot,
+  generateRandomEquipment, generateBossLoot, generateMiniBossLoot,
+  getActiveSetBonuses, calculateTotalStatsWithSets, getTierColor, getTierName
+} from "@/constants/equipment";
 
 // Estado do inimigo em combate
 export interface EnemyState {
@@ -17,33 +22,23 @@ export interface EnemyState {
 const USERS_KEY = "rpg_idle_users_v5";
 const CURRENT_USER_KEY = "rpg_idle_current_user_v5";
 
-// 21 slots de equipamento
-export type EquipmentSlot =
-  | "helmet" | "chest" | "legs" | "boots"
-  | "mainHand" | "offHand"
-  | "cape" | "necklace" | "earrings"
-  | "ring1" | "ring2" | "ring3" | "ring4"
-  | "bracelet" | "face" | "shoulders"
-  | "pet" | "spirit";
+// Slots de equipamento (simplificado para 6 slots principais)
+export type EquipmentSlot = "mainHand" | "offHand" | "head" | "chest" | "legs" | "feet";
 
-export interface Item {
-  id: string;
-  name: string;
-  slot: EquipmentSlot;
-  tier: TierId;
+// Item de equipamento usando o novo sistema
+export interface Item extends EquipmentBase {
   quality: QualityId;
-  hp: number; atkF: number; atkM: number; def: number;
-  armor: number; magicRes: number; critRate: number; critDmg: number;
-  atkSpeed: number; luck: number; dodge: number; lifeSteal: number;
-  armorPen: number; hpRegen: number;
+  luck: number;
+  lifeSteal: number;
+  armorPen: number;
+  hpRegen: number;
+  value: number;
   resFire: number; resWater: number; resEarth: number; resThunder: number;
   resIce: number; resWind: number; resDark: number; resLight: number;
   resArcane: number; resPoison: number; resMetal: number; resNature: number;
   resBlood: number; resVoid: number; resChaos: number; resHoly: number;
   resShadow: number; resInfernal: number; resStorm: number; resRunic: number;
   resDivine: number;
-  value: number;
-  icon: string;
 }
 
 export interface ActiveSkill {
@@ -77,6 +72,7 @@ export interface GameState {
   activeSkills: ActiveSkill[]; passiveSkillUnlocked: boolean;
   equipment: Record<EquipmentSlot, Item | null>;
   inventory: Item[]; inventorySize: number;
+  activeSetBonuses: Map<string, any[]>; // Bônus de sets ativos
   maxZone: number; completedZones: number[];
   currentHp: number; currentMp: number; inCombat: boolean;
   currentEnemy: EnemyState | null; combatLog: string[];
@@ -104,12 +100,11 @@ const DEFAULT_STATE: GameState = {
   baseArmorPen: 0, baseHpRegen: 1, baseMpRegen: 0.5, baseRes: DEFAULT_RES,
   activeSkills: [], passiveSkillUnlocked: false,
   equipment: {
-    helmet: null, chest: null, legs: null, boots: null, mainHand: null, offHand: null,
-    cape: null, necklace: null, earrings: null, ring1: null, ring2: null, ring3: null,
-    ring4: null, bracelet: null, face: null, shoulders: null, pet: null, spirit: null,
+    head: null, chest: null, legs: null, feet: null, mainHand: null, offHand: null,
   },
   inventory: [], inventorySize: 50, maxZone: 1, completedZones: [],
   currentHp: 100, currentMp: 50, inCombat: false, currentEnemy: null, combatLog: [],
+  activeSetBonuses: new Map(),
 };
 
 interface GameContextType {
@@ -126,6 +121,10 @@ interface GameContextType {
   addCurrency: (type: keyof Currencies, amount: number) => void;
   generateItem: (slot: EquipmentSlot) => Item;
   getItemColor: (item: Item) => string;
+  getItemTierName: (item: Item) => string;
+  getEquippedSetBonuses: () => Map<string, any[]>;
+  generateLootFromMob: (mob: MobDef) => Item[];
+  generateLootFromBoss: (mob: MobDef) => Item[];
   exploreBiome: (biomeId: BiomeId) => { found: boolean; dungeon?: DungeonDef; expGained: number; isNew: boolean };
   getDiscoveredDungeons: (biomeId: BiomeId) => DungeonDef[];
   getBiomeProgress: (biomeId: BiomeId) => { discovered: number; total: number; percentage: number };
@@ -288,7 +287,12 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       const itemIndex = newInventory.findIndex(i => i.id === item.id);
       if (itemIndex > -1) newInventory.splice(itemIndex, 1);
       if (currentEquipped) newInventory.push(currentEquipped);
-      return { ...prev, equipment: { ...prev.equipment, [slot]: item }, inventory: newInventory };
+      
+      const newEquipment = { ...prev.equipment, [slot]: item };
+      const equippedItems = Object.values(newEquipment).filter((i): i is Item => i !== null);
+      const activeSetBonuses = getActiveSetBonuses(equippedItems);
+      
+      return { ...prev, equipment: newEquipment, inventory: newInventory, activeSetBonuses };
     });
   };
 
@@ -296,7 +300,12 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     setState(prev => {
       const item = prev.equipment[slot];
       if (!item || prev.inventory.length >= prev.inventorySize) return prev;
-      return { ...prev, equipment: { ...prev.equipment, [slot]: null }, inventory: [...prev.inventory, item] };
+      
+      const newEquipment = { ...prev.equipment, [slot]: null };
+      const equippedItems = Object.values(newEquipment).filter((i): i is Item => i !== null);
+      const activeSetBonuses = getActiveSetBonuses(equippedItems);
+      
+      return { ...prev, equipment: newEquipment, inventory: [...prev.inventory, item], activeSetBonuses };
     });
   };
 
@@ -334,21 +343,41 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     let armorPen = state.baseArmorPen, hpRegen = state.baseHpRegen, mpRegen = state.baseMpRegen;
     const res = { ...state.baseRes };
 
-    Object.values(state.equipment).forEach(item => {
-      if (item) {
-        hp += item.hp; atkF += item.atkF; atkM += item.atkM; def += item.def;
-        armor += item.armor; magicRes += item.magicRes; critRate += item.critRate;
-        critDmg += item.critDmg; atkSpeed += item.atkSpeed; luck += item.luck;
-        dodge += item.dodge; lifeSteal += item.lifeSteal; armorPen += item.armorPen; hpRegen += item.hpRegen;
-        res.fogo += item.resFire; res.agua += item.resWater; res.terra += item.resEarth;
-        res.trovao += item.resThunder; res.gelo += item.resIce; res.ar += item.resWind;
-        res.escuridao += item.resDark; res.luz += item.resLight; res.arcano += item.resArcane;
-        res.veneno += item.resPoison; res.metal += item.resMetal; res.natureza += item.resNature;
-        res.sangue += item.resBlood; res.void += item.resVoid; res.caos += item.resChaos;
-        res.sombra += item.resShadow; res.infernal += item.resInfernal; res.tempestade += item.resStorm;
-        res.runico += item.resRunic; res.divino += item.resDivine; res.sagrado += item.resHoly || 0;
-      }
+    // Stats base dos itens equipados
+    const equippedItems = Object.values(state.equipment).filter((i): i is Item => i !== null);
+    
+    equippedItems.forEach(item => {
+      hp += item.hp; atkF += item.atkF; atkM += item.atkM; def += item.def;
+      armor += item.armor; magicRes += item.magicRes; critRate += item.critRate;
+      critDmg += item.critDmg; atkSpeed += item.atkSpeed; luck += item.luck;
+      dodge += item.dodge; lifeSteal += item.lifeSteal; armorPen += item.armorPen; hpRegen += item.hpRegen;
+      res.fogo += item.resFire; res.agua += item.resWater; res.terra += item.resEarth;
+      res.trovao += item.resThunder; res.gelo += item.resIce; res.ar += item.resWind;
+      res.escuridao += item.resDark; res.luz += item.resLight; res.arcano += item.resArcane;
+      res.veneno += item.resPoison; res.metal += item.resMetal; res.natureza += item.resNature;
+      res.sangue += item.resBlood; res.void += item.resVoid; res.caos += item.resChaos;
+      res.sombra += item.resShadow; res.infernal += item.resInfernal; res.tempestade += item.resStorm;
+      res.runico += item.resRunic; res.divino += item.resDivine; res.sagrado += item.resHoly || 0;
     });
+
+    // Aplicar bônus de sets
+    for (const [setName, bonuses] of state.activeSetBonuses) {
+      for (const bonus of bonuses) {
+        if (bonus.stats) {
+          hp += bonus.stats.hp || 0;
+          mp += bonus.stats.mp || 0;
+          atkF += bonus.stats.atkF || 0;
+          atkM += bonus.stats.atkM || 0;
+          def += bonus.stats.def || 0;
+          armor += bonus.stats.armor || 0;
+          magicRes += bonus.stats.magicRes || 0;
+          critRate += bonus.stats.critRate || 0;
+          critDmg += bonus.stats.critDmg || 0;
+          atkSpeed += bonus.stats.atkSpeed || 0;
+          dodge += bonus.stats.dodge || 0;
+        }
+      }
+    }
 
     critRate = Math.min(critRate, 0.8); dodge = Math.min(dodge, 0.6); lifeSteal = Math.min(lifeSteal, 0.25);
     mp = hp * 0.5; mpRegen = hp * 0.01;
@@ -596,12 +625,80 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     };
   };
 
-  const getItemColor = (item: Item): string => item.tier === "god" ? "#ffffff" : TIERS[item.tier].color;
+  const getItemColor = (item: Item): string => getTierColor(item.tier);
+  const getItemTierName = (item: Item): string => getTierName(item.tier);
+  const getEquippedSetBonuses = (): Map<string, any[]> => state.activeSetBonuses;
+  
+  // Gerar loot de mob comum
+  const generateLootFromMob = (mob: MobDef): Item[] => {
+    const loot: Item[] = [];
+    const dropChance = MOB_RANK_MULTIPLIERS[mob.rank]?.dropRate || 0.3;
+    
+    if (Math.random() < dropChance) {
+      const slots: EquipmentSlot[] = ["mainHand", "offHand", "head", "chest", "legs", "feet"];
+      const slot = slots[Math.floor(Math.random() * slots.length)];
+      
+      // Tier baseado no rank do mob
+      const tierMap: Record<string, EquipmentBase["tier"]> = {
+        "F": "F", "E": "E", "D": "D", "C": "C", "B": "B",
+        "A": "A", "S": "S", "SS": "SS", "SSS": "SSS", "SSS+": "SSS+"
+      };
+      const tier = tierMap[mob.rank] || "F";
+      
+      const item = generateRandomEquipment(slot, tier, mob.level);
+      if (item) {
+        // Adicionar campos extras do Item
+        const fullItem: Item = {
+          ...item,
+          quality: "common",
+          luck: 0,
+          lifeSteal: 0,
+          armorPen: 0,
+          hpRegen: 0,
+          value: Math.floor(10 * (tier === "F" ? 1 : tier === "E" ? 2 : tier === "D" ? 5 : tier === "C" ? 10 : tier === "B" ? 25 : tier === "A" ? 50 : tier === "S" ? 100 : tier === "SS" ? 250 : tier === "SSS" ? 500 : 1000)),
+          resFire: 0, resWater: 0, resEarth: 0, resThunder: 0,
+          resIce: 0, resWind: 0, resDark: 0, resLight: 0,
+          resArcane: 0, resPoison: 0, resMetal: 0, resNature: 0,
+          resBlood: 0, resVoid: 0, resChaos: 0, resHoly: 0,
+          resShadow: 0, resInfernal: 0, resStorm: 0, resRunic: 0, resDivine: 0,
+        };
+        loot.push(fullItem);
+      }
+    }
+    
+    return loot;
+  };
+  
+  // Gerar loot de boss
+  const generateLootFromBoss = (mob: MobDef): Item[] => {
+    const tierMap: Record<string, EquipmentBase["tier"]> = {
+      "F": "D", "E": "C", "D": "B", "C": "A", "B": "S", "A": "SS", "S": "SSS", "SS": "SSS", "SSS": "SSS+", "SSS+": "SSS+"
+    };
+    const tier = tierMap[mob.rank] || "C";
+    const bossLoot = generateBossLoot(mob.name, mob.level, tier, 2);
+    
+    // Converter para Item completo
+    return bossLoot.map(item => ({
+      ...item,
+      quality: "epic",
+      luck: 0.01,
+      lifeSteal: 0,
+      armorPen: 0,
+      hpRegen: 0,
+      value: Math.floor(100 * (tier === "C" ? 10 : tier === "B" ? 25 : tier === "A" ? 50 : tier === "S" ? 100 : tier === "SS" ? 250 : tier === "SSS" ? 500 : 1000)),
+      resFire: 0, resWater: 0, resEarth: 0, resThunder: 0,
+      resIce: 0, resWind: 0, resDark: 0, resLight: 0,
+      resArcane: 0, resPoison: 0, resMetal: 0, resNature: 0,
+      resBlood: 0, resVoid: 0, resChaos: 0, resHoly: 0,
+      resShadow: 0, resInfernal: 0, resStorm: 0, resRunic: 0, resDivine: 0,
+    }));
+  };
 
   return (
     <GameContext.Provider value={{
       state, isLoading, login, register, logout, setPlayerName, selectRace,
       equipItem, unequipItem, sellItem, useSkill, addCurrency, generateItem, getItemColor,
+      getItemTierName, getEquippedSetBonuses, generateLootFromMob, generateLootFromBoss,
       exploreBiome, getDiscoveredDungeons, getBiomeProgress, enterDungeon, completeDungeon,
       getExpNeeded, getExpProgress, climbTower, getTotalStats, getAllRaceStats,
       startCombat, endCombat, playerAttack, playerUseSkill, enemyAttack, regenHpMp, findEncounter,

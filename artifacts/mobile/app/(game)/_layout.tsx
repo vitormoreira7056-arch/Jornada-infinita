@@ -324,6 +324,19 @@ export default function GameLayout() {
             href: null,
           }}
         />
+        <Tabs.Screen
+          name="equipment"
+          options={{
+            title: "EQUIP",
+            tabBarIcon: ({ focused }) => <TabIcon emoji="⚔️" focused={focused} />,
+          }}
+        />
+        <Tabs.Screen
+          name="biome"
+          options={{
+            href: null,
+          }}
+        />
       </Tabs>
     </View>
   );
