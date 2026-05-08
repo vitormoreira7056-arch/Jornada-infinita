@@ -6,7 +6,7 @@ export type ElementId =
   // Elementos Avançados (8)
   | "gelo" | "trovao" | "natureza" | "metal" | "veneno" | "sangue" | "arcano" | "caos"
   // Elementos Épicos (7)
-  | "void" | "infernal" | "divino" | "sombra" | "tempestade" | "runico" | "astral"; // Corrigido: sombras -> sombra
+  | "void" | "infernal" | "divino" | "sombra" | "tempestade" | "runico" | "astral";
 
 // Sub-elementos - Combinações de elementos
 export interface SubElement {
@@ -95,7 +95,7 @@ export function getBaseResistance(element: ElementId): number {
   const resistances: Record<ElementId, number> = {
     fogo: 0, agua: 0, terra: 0, ar: 0, luz: 0, escuridao: 0,
     gelo: 0, trovao: 0, natureza: 0, metal: 0, veneno: 0, sangue: 0,
-    arcano: 0, caos: 0, void: 0, infernal: 0, divino: 0, sombras: 0,
+    arcano: 0, caos: 0, void: 0, infernal: 0, divino: 0, sombra: 0,
     tempestade: 0, runico: 0, astral: 0,
   };
   return resistances[element] || 0;
