@@ -191,16 +191,13 @@ function ClassicTabLayout() {
 export default function TabLayout() {
   let isSignedIn = false;
   let authLoaded = true;
-  let authError = false;
   
   try {
     const auth = useAuth();
     isSignedIn = auth.isSignedIn;
     authLoaded = auth.isLoaded;
   } catch (e) {
-    // Clerk not available (no key), will fall back to dev mode
-    authError = true;
-    authLoaded = true;
+    // Clerk not available (no key) - ignore, dev mode check will handle access
   }
   
   const { state, isLoading: gameLoading } = useGame();
@@ -223,7 +220,7 @@ export default function TabLayout() {
     }
   }, []);
 
-  if ((!authLoaded || gameLoading) && !authError) {
+  if (!authLoaded || gameLoading) {
     return (
       <View style={{ flex: 1, backgroundColor: "#08080F", justifyContent: "center", alignItems: "center" }}>
         <ActivityIndicator size="large" color="#C8A84B" />
@@ -231,8 +228,8 @@ export default function TabLayout() {
     );
   }
 
-  // If auth error (Clerk not available) or dev mode, allow access
-  const allowAccess = isSignedIn || devMode || authError;
+  // Only allow access if user is signed in OR dev mode was explicitly activated
+  const allowAccess = isSignedIn || devMode;
 
   if (!allowAccess) {
     return <Redirect href="/(auth)/sign-in" />;

@@ -5,14 +5,12 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function AuthLayout() {
   let isSignedIn = false;
-  let authError = false;
   
   try {
     const auth = useAuth();
     isSignedIn = auth.isSignedIn;
   } catch (e) {
-    // Clerk not available (no key), will fall back to dev mode
-    authError = true;
+    // Clerk not available (no key) - ignore error, user can use dev mode
   }
   
   const [devMode, setDevMode] = useState<boolean | null>(null);
@@ -25,8 +23,9 @@ export default function AuthLayout() {
 
   if (devMode === null) return null;
 
-  // If auth error (Clerk not available) or dev mode, allow access
-  const allowAccess = isSignedIn || devMode || authError;
+  // Only redirect if user is actually signed in OR dev mode was explicitly activated
+  // Don't redirect just because Clerk is not available - show login screen instead
+  const allowAccess = isSignedIn || devMode;
 
   if (allowAccess) {
     return <Redirect href="/(tabs)" />;
