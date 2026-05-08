@@ -338,21 +338,42 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       try {
         const saved = await AsyncStorage.getItem(STORAGE_KEY);
         if (saved) {
-          const parsed = JSON.parse(saved) as GameState;
-          parsed.battle.isActive = false;
-          // Migrate old saves: add missing hero fields
-          if (parsed.hero.raceId === undefined) parsed.hero.raceId = null;
-          if (parsed.hero.gender === undefined) parsed.hero.gender = null;
-          if (parsed.hero.baseAtkM === undefined) parsed.hero.baseAtkM = 10;
-          if (parsed.hero.luck === undefined) parsed.hero.luck = 0.0001;
-          if (parsed.hero.dodge === undefined) parsed.hero.dodge = 0.001;
-          if (parsed.hero.lifeSteal === undefined) parsed.hero.lifeSteal = 0;
-          if (parsed.hero.speed === undefined) parsed.hero.speed = 0;
-          if (parsed.hero.magicPower === undefined) parsed.hero.magicPower = 0;
-          if (parsed.hero.fortune === undefined) parsed.hero.fortune = 0;
-          setState(parsed);
+          try {
+            const parsed = JSON.parse(saved) as GameState;
+            // Validate parsed data structure
+            if (!parsed || typeof parsed !== 'object') {
+              throw new Error('Invalid saved data structure');
+            }
+            // Ensure battle exists
+            if (!parsed.battle) parsed.battle = DEFAULT_STATE.battle;
+            parsed.battle.isActive = false;
+            // Ensure hero exists
+            if (!parsed.hero) parsed.hero = DEFAULT_STATE.hero;
+            // Migrate old saves: add missing hero fields
+            if (parsed.hero.raceId === undefined) parsed.hero.raceId = null;
+            if (parsed.hero.gender === undefined) parsed.hero.gender = null;
+            if (parsed.hero.baseAtkM === undefined) parsed.hero.baseAtkM = 10;
+            if (parsed.hero.luck === undefined) parsed.hero.luck = 0.0001;
+            if (parsed.hero.dodge === undefined) parsed.hero.dodge = 0.001;
+            if (parsed.hero.lifeSteal === undefined) parsed.hero.lifeSteal = 0;
+            if (parsed.hero.speed === undefined) parsed.hero.speed = 0;
+            if (parsed.hero.magicPower === undefined) parsed.hero.magicPower = 0;
+            if (parsed.hero.fortune === undefined) parsed.hero.fortune = 0;
+            // Ensure other required fields exist
+            if (!parsed.resources) parsed.resources = DEFAULT_STATE.resources;
+            if (!parsed.equippedItems) parsed.equippedItems = {};
+            if (!parsed.inventory) parsed.inventory = [];
+            if (!parsed.skillLevels) parsed.skillLevels = {};
+            if (!parsed.unlockedZones) parsed.unlockedZones = [1];
+            setState(parsed);
+          } catch (parseError) {
+            console.error("Error parsing saved game data:", parseError);
+            // Keep default state if parsing fails
+          }
         }
-      } catch {}
+      } catch (e) {
+        console.error("Error loading game data:", e);
+      }
       setIsLoading(false);
     })();
   }, []);

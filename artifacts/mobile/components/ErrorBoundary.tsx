@@ -7,7 +7,10 @@ export type ErrorBoundaryProps = PropsWithChildren<{
   onError?: (error: Error, stackTrace: string) => void;
 }>;
 
-type ErrorBoundaryState = { error: Error | null };
+type ErrorBoundaryState = { 
+  error: Error | null;
+  resetAttemptCount: number;
+};
 
 /**
  * This is a special case for for using the class components. Error boundaries must be class components because React only provides error boundary functionality through lifecycle methods (componentDidCatch and getDerivedStateFromError) which are not available in functional components.
@@ -17,7 +20,7 @@ export class ErrorBoundary extends Component<
   ErrorBoundaryProps,
   ErrorBoundaryState
 > {
-  state: ErrorBoundaryState = { error: null };
+  state: ErrorBoundaryState = { error: null, resetAttemptCount: 0 };
 
   static defaultProps: {
     FallbackComponent: ComponentType<ErrorFallbackProps>;
@@ -26,7 +29,7 @@ export class ErrorBoundary extends Component<
   };
 
   static getDerivedStateFromError(error: Error): ErrorBoundaryState {
-    return { error };
+    return { error, resetAttemptCount: 0 };
   }
 
   componentDidCatch(error: Error, info: { componentStack: string }): void {
@@ -36,19 +39,31 @@ export class ErrorBoundary extends Component<
   }
 
   resetError = (): void => {
-    this.setState({ error: null });
+    // Increment reset attempt count to force re-mount of children
+    this.setState((prevState) => ({ 
+      error: null, 
+      resetAttemptCount: prevState.resetAttemptCount + 1 
+    }));
   };
 
   render() {
     const { FallbackComponent } = this.props;
+    const { error, resetAttemptCount } = this.state;
 
-    return this.state.error && FallbackComponent ? (
-      <FallbackComponent
-        error={this.state.error}
-        resetError={this.resetError}
-      />
-    ) : (
-      this.props.children
+    if (error && FallbackComponent) {
+      return (
+        <FallbackComponent
+          error={error}
+          resetError={this.resetError}
+        />
+      );
+    }
+
+    // Wrap children in a key to force re-mount on reset
+    return (
+      <React.Fragment key={resetAttemptCount}>
+        {this.props.children}
+      </React.Fragment>
     );
   }
 }

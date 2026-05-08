@@ -4,7 +4,17 @@ import { useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function AuthLayout() {
-  const { isSignedIn } = useAuth();
+  let isSignedIn = false;
+  let authError = false;
+  
+  try {
+    const auth = useAuth();
+    isSignedIn = auth.isSignedIn;
+  } catch (e) {
+    // Clerk not available (no key), will fall back to dev mode
+    authError = true;
+  }
+  
   const [devMode, setDevMode] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -15,7 +25,10 @@ export default function AuthLayout() {
 
   if (devMode === null) return null;
 
-  if (isSignedIn || devMode) {
+  // If auth error (Clerk not available) or dev mode, allow access
+  const allowAccess = isSignedIn || devMode || authError;
+
+  if (allowAccess) {
     return <Redirect href="/(tabs)" />;
   }
 

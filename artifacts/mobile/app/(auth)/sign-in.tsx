@@ -128,8 +128,20 @@ function InputField({
 }
 
 export default function SignInScreen() {
-  const { signIn } = useSignIn();
-  const { isSignedIn } = useAuth();
+  let signIn: ReturnType<typeof useSignIn>['signIn'] | null = null;
+  let isSignedIn = false;
+  let clerkError = false;
+  
+  try {
+    const signInResult = useSignIn();
+    const authResult = useAuth();
+    signIn = signInResult.signIn;
+    isSignedIn = authResult.isSignedIn;
+  } catch (e) {
+    // Clerk not available (no key or not initialized)
+    clerkError = true;
+  }
+  
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -192,6 +204,11 @@ export default function SignInScreen() {
       setFieldErrors({ password: "Por favor insira sua senha" });
       return;
     }
+    
+    if (clerkError || !signIn) {
+      setGlobalError("Serviço de autenticação indisponível. Use o Modo Desenvolvedor.");
+      return;
+    }
 
     setLoading(true);
     try {
@@ -246,6 +263,11 @@ export default function SignInScreen() {
   const handleVerify = async () => {
     clearErrors();
     if (verifyCode.length < 6) return;
+    
+    if (clerkError || !signIn) {
+      setGlobalError("Serviço de autenticação indisponível.");
+      return;
+    }
 
     setLoading(true);
     try {

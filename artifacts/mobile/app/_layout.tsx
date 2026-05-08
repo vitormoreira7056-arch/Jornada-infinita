@@ -44,6 +44,7 @@ export default function RootLayout() {
   });
 
   const [devMode, setDevMode] = useState(false);
+  const [clerkKeyError, setClerkKeyError] = useState(false);
 
   useEffect(() => {
     AsyncStorage.getItem("__dev_mode_user").then((val) => {
@@ -65,10 +66,21 @@ export default function RootLayout() {
     return () => clearTimeout(t);
   }, []);
 
+  // Check if Clerk key is available
+  useEffect(() => {
+    if (!publishableKey || publishableKey === "undefined" || publishableKey === "null") {
+      console.warn("Clerk publishable key not found, enabling dev mode fallback");
+      setClerkKeyError(true);
+    }
+  }, []);
+
   if (!fontsLoaded && !fontError) return null;
 
+  // If Clerk key is missing, force dev mode
+  const effectiveDevMode = devMode || clerkKeyError || !publishableKey;
+
   // Dev mode: bypass Clerk entirely
-  if (devMode) {
+  if (effectiveDevMode) {
     return (
       <SafeAreaProvider>
         <GestureHandlerRootView style={{ flex: 1 }}>
@@ -90,7 +102,25 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <GestureHandlerRootView style={{ flex: 1 }}>
         <KeyboardProvider>
-          <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
+          <ClerkProvider 
+            publishableKey={publishableKey} 
+            tokenCache={tokenCache}
+            fallback={
+              <SafeAreaProvider>
+                <GestureHandlerRootView style={{ flex: 1 }}>
+                  <KeyboardProvider>
+                    <QueryClientProvider client={queryClient}>
+                      <ErrorBoundary>
+                        <GameProvider>
+                          <RootLayoutNav />
+                        </GameProvider>
+                      </ErrorBoundary>
+                    </QueryClientProvider>
+                  </KeyboardProvider>
+                </GestureHandlerRootView>
+              </SafeAreaProvider>
+            }
+          >
             <ClerkLoaded>
               <QueryClientProvider client={queryClient}>
                 <ErrorBoundary>

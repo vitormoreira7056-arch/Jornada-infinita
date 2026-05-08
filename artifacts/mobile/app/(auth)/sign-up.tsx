@@ -135,8 +135,20 @@ function InputField({
 }
 
 export default function SignUpScreen() {
-  const { signUp } = useSignUp();
-  const { isSignedIn } = useAuth();
+  let signUp: ReturnType<typeof useSignUp>['signUp'] | null = null;
+  let isSignedIn = false;
+  let clerkError = false;
+  
+  try {
+    const signUpResult = useSignUp();
+    const authResult = useAuth();
+    signUp = signUpResult.signUp;
+    isSignedIn = authResult.isSignedIn;
+  } catch (e) {
+    // Clerk not available (no key or not initialized)
+    clerkError = true;
+  }
+  
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -217,6 +229,11 @@ export default function SignUpScreen() {
       setFieldErrors({ confirmPassword: "As senhas não coincidem" });
       return;
     }
+    
+    if (clerkError || !signUp) {
+      setGlobalError("Serviço de autenticação indisponível. Use o Modo Desenvolvedor.");
+      return;
+    }
 
     setLoading(true);
     try {
@@ -247,6 +264,11 @@ export default function SignUpScreen() {
   const handleVerify = async () => {
     clearErrors();
     if (verifyCode.length < 6) return;
+    
+    if (clerkError || !signUp) {
+      setGlobalError("Serviço de autenticação indisponível.");
+      return;
+    }
 
     setLoading(true);
     try {
@@ -271,6 +293,12 @@ export default function SignUpScreen() {
 
   const handleResend = async () => {
     clearErrors();
+    
+    if (clerkError || !signUp) {
+      setGlobalError("Serviço de autenticação indisponível.");
+      return;
+    }
+    
     setLoading(true);
     try {
       await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
