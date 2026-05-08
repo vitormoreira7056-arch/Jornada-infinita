@@ -3,6 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { RaceId, getRaceById, RaceAbility } from "@/constants/races";
 import { ElementId } from "@/constants/elements";
 import { TierId, QualityId, rollTier, rollQuality, getTotalMultiplier, TIERS, QUALITIES } from "@/constants/tiers";
+import { BiomeId, DungeonDef, BIOMES, tryDiscoverDungeon, calculateExpNeeded, TOWER_FLOORS_DATA, TowerFloor } from "@/constants/adventure";
 
 const USERS_KEY = "rpg_idle_users_v5";
 const CURRENT_USER_KEY = "rpg_idle_current_user_v5";
@@ -93,9 +94,16 @@ export interface GameState {
   gender: "male" | "female" | null;
   level: number;
   exp: number;
+  maxLevel: number;
   
   // Currencies
   currencies: Currencies;
+  
+  // Adventure
+  discoveredDungeons: string[];
+  currentBiome: BiomeId | null;
+  towerProgress: number; // Último andar completado
+  unlockedFloors: number[]; // Andares desbloqueados na Torre
   
   // Stats base
   baseHp: number;
@@ -155,7 +163,12 @@ const DEFAULT_STATE: GameState = {
   gender: null,
   level: 1,
   exp: 0,
+  maxLevel: 300,
   currencies: { ...DEFAULT_CURRENCIES },
+  discoveredDungeons: [],
+  currentBiome: null,
+  towerProgress: 0,
+  unlockedFloors: [1],
   baseHp: 100,
   baseAtkF: 10,
   baseAtkM: 10,
@@ -200,6 +213,10 @@ interface GameContextType {
   addCurrency: (type: keyof Currencies, amount: number) => void;
   generateItem: (slot: EquipmentSlot) => Item;
   getItemColor: (item: Item) => string;
+  exploreBiome: (biomeId: BiomeId) => { found: boolean; dungeon?: DungeonDef; expGained: number };
+  getExpNeeded: () => number;
+  getExpProgress: () => number;
+  climbTower: (floor: number) => boolean;
   getTotalStats: () => {
     hp: number;
     atkF: number;
@@ -600,6 +617,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         addCurrency,
         generateItem,
         getItemColor,
+        exploreBiome,
+        getExpNeeded,
+        getExpProgress,
+        climbTower,
         getTotalStats,
         getAllRaceStats,
       }}
@@ -613,6 +634,63 @@ export function useGame() {
   const ctx = useContext(GameContext);
   if (!ctx) throw new Error("useGame must be used within GameProvider");
   return ctx;
+}
+
+// Função para explorar um bioma
+function exploreBiome(biomeId: BiomeId): { found: boolean; dungeon?: DungeonDef; expGained: number } {
+  const state = useGame().state;
+  
+  // Verificar se pode explorar
+  const biome = BIOMES[biomeId];
+  if (state.level < biome.minLevel) {
+    return { found: false, expGained: 0 };
+  }
+  
+  // Tentar encontrar dungeon
+  const dungeon = tryDiscoverDungeon(biomeId, state.discoveredDungeons);
+  
+  // Calcular XP ganho baseado no nível do bioma
+  const baseExp = 50 * biome.minLevel;
+  const expGained = Math.floor(baseExp * (0.8 + Math.random() * 0.4));
+  
+  return {
+    found: !!dungeon,
+    dungeon: dungeon || undefined,
+    expGained,
+  };
+}
+
+// Função para obter XP necessário para o próximo nível
+function getExpNeeded(): number {
+  const state = useGame().state;
+  return calculateExpNeeded(state.level);
+}
+
+// Função para obter progresso de XP
+function getExpProgress(): number {
+  const state = useGame().state;
+  const needed = calculateExpNeeded(state.level);
+  return (state.exp / needed) * 100;
+}
+
+// Função para subir um andar na Torre
+function climbTower(floor: number): boolean {
+  const state = useGame().state;
+  
+  // Verificar se o andar está desbloqueado
+  if (!state.unlockedFloors.includes(floor)) return false;
+  
+  // Verificar se já completou este andar
+  if (state.towerProgress >= floor) return false;
+  
+  const floorData = TOWER_FLOORS_DATA[floor - 1];
+  
+  // Verificar requisitos de grupo para bosses
+  if (floorData.type === "boss" && floorData.minGroupSize > 1) {
+    // TODO: Verificar se o jogador está em um grupo do tamanho adequado
+  }
+  
+  return true;
 }
 
 // Função para gerar um item aleatório

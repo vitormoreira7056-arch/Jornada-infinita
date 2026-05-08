@@ -7,11 +7,18 @@ import { ElementId } from "@/constants/elements";
 
 // Currency display component
 function CurrencyBadge({ icon, value, color }: { icon: string; value: number; color: string }) {
+  const formatValue = (val: number) => {
+    if (val >= 1000000) return `${(val / 1000000).toFixed(1)}M`;
+    if (val >= 1000) return `${(val / 1000).toFixed(1)}k`;
+    return val.toString();
+  };
+
   if (value === 0) return null;
+  
   return (
     <View style={[styles.currencyBadge, { backgroundColor: `${color}15`, borderColor: `${color}30` }]}>
       <Text style={styles.currencyIcon}>{icon}</Text>
-      <Text style={[styles.currencyValue, { color }]}>{value.toLocaleString()}</Text>
+      <Text style={[styles.currencyValue, { color }]}>{formatValue(value)}</Text>
     </View>
   );
 }
@@ -27,7 +34,6 @@ function StatsModal({ visible, onClose }: { visible: boolean; onClose: () => voi
     .slice(0, 8);
 
   const formatPercent = (val: number) => `${(val * 100).toFixed(1)}%`;
-  const formatNumber = (val: number) => val > 0 ? `+${val}` : val.toString();
 
   return (
     <Modal
@@ -104,7 +110,7 @@ function StatBox({ icon, label, value, color }: { icon: string; label: string; v
 }
 
 export default function Home() {
-  const { state, getTotalStats } = useGame();
+  const { state } = useGame();
   const race = state.raceId ? getRaceById(state.raceId) : null;
   const [statsVisible, setStatsVisible] = useState(false);
   const [fadeAnim] = useState(new Animated.Value(0));
@@ -170,27 +176,37 @@ export default function Home() {
 
         {/* Quick Actions - Clean */}
         <View style={styles.actionsContainer}>
-          <ActionButton 
-            icon="⚔️" 
-            title="BATALHAR" 
-            subtitle="Iniciar aventura"
+          <TouchableOpacity 
+            style={styles.actionButtonLarge}
             onPress={() => router.push("/(game)/adventure")}
-            color="#7c3aed"
-          />
+            activeOpacity={0.85}
+          >
+            <View style={styles.actionButtonGradient} />
+            <Text style={styles.actionButtonIconLarge}>⚔️</Text>
+            <View>
+              <Text style={styles.actionButtonTitle}>BATALHAR</Text>
+              <Text style={styles.actionButtonSubtitle}>Iniciar aventura</Text>
+            </View>
+            <Text style={styles.actionButtonArrow}>→</Text>
+          </TouchableOpacity>
           
           <View style={styles.actionsRow}>
-            <ActionButtonSmall 
-              icon="🎒" 
-              title="MOCHILA"
+            <TouchableOpacity 
+              style={[styles.actionButtonSmall, { borderColor: "#3b82f640" }]}
               onPress={() => router.push("/(game)/inventory")}
-              color="#3b82f6"
-            />
-            <ActionButtonSmall 
-              icon="✨" 
-              title="SKILLS"
+              activeOpacity={0.85}
+            >
+              <Text style={styles.actionButtonIconSmall}>🎒</Text>
+              <Text style={[styles.actionButtonTitleSmall, { color: "#3b82f6" }]}>MOCHILA</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.actionButtonSmall, { borderColor: "#ec489940" }]}
               onPress={() => router.push("/(game)/skills")}
-              color="#ec4899"
-            />
+              activeOpacity={0.85}
+            >
+              <Text style={styles.actionButtonIconSmall}>✨</Text>
+              <Text style={[styles.actionButtonTitleSmall, { color: "#ec4899" }]}>SKILLS</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -203,29 +219,6 @@ export default function Home() {
 
       <StatsModal visible={statsVisible} onClose={() => setStatsVisible(false)} />
     </ScrollView>
-  );
-}
-
-function ActionButton({ icon, title, subtitle, onPress }: { icon: string; title: string; subtitle: string; onPress: () => void }) {
-  return (
-    <TouchableOpacity style={styles.actionButtonLarge} onPress={onPress} activeOpacity={0.85}>
-      <View style={styles.actionButtonGradient} />
-      <Text style={styles.actionButtonIconLarge}>{icon}</Text>
-      <View>
-        <Text style={styles.actionButtonTitle}>{title}</Text>
-        <Text style={styles.actionButtonSubtitle}>{subtitle}</Text>
-      </View>
-      <Text style={styles.actionButtonArrow}>→</Text>
-    </TouchableOpacity>
-  );
-}
-
-function ActionButtonSmall({ icon, title, onPress, color }: { icon: string; title: string; onPress: () => void; color: string }) {
-  return (
-    <TouchableOpacity style={[styles.actionButtonSmall, { borderColor: `${color}40` }]} onPress={onPress} activeOpacity={0.85}>
-      <Text style={styles.actionButtonIconSmall}>{icon}</Text>
-      <Text style={[styles.actionButtonTitleSmall, { color }]}>{title}</Text>
-    </TouchableOpacity>
   );
 }
 
@@ -255,13 +248,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 2,
+    marginRight: 16,
   },
   avatarEmoji: {
     fontSize: 36,
   },
   characterInfo: {
     flex: 1,
-    marginLeft: 16,
   },
   characterName: {
     color: "#ffffff",
@@ -275,13 +268,13 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   levelBadge: {
-    backgroundColor: "rgba(124, 58, 237, 0.2)",
+    backgroundColor: "rgba(124, 58, 237, 0.15)",
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
     alignSelf: "flex-start",
     borderWidth: 1,
-    borderColor: "rgba(124, 58, 237, 0.3)",
+    borderColor: "rgba(124, 58, 237, 0.2)",
   },
   levelText: {
     color: "#7c3aed",
@@ -410,7 +403,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   actionButtonTitleSmall: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "700",
     letterSpacing: 0.5,
   },
@@ -422,6 +415,7 @@ const styles = StyleSheet.create({
     padding: 20,
     borderWidth: 1,
     borderColor: "rgba(124, 58, 237, 0.1)",
+    marginBottom: 30,
   },
   loreTitle: {
     color: "#64748b",

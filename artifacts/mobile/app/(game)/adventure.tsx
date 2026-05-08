@@ -1,248 +1,565 @@
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Modal, Animated } from "react-native";
 import { useGame } from "@/context/GameContext";
-import { ZONES } from "@/constants/game";
+import { BIOMES, BiomeId, TOWER_FLOORS_DATA, TOWER_NAME } from "@/constants/adventure";
+import { useState, useEffect } from "react";
+import { router } from "expo-router";
+
+// Tower Modal
+function TowerModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  const { state } = useGame();
+  const [selectedFloor, setSelectedFloor] = useState(1);
+  
+  const floorData = TOWER_FLOORS_DATA[selectedFloor - 1];
+  const isUnlocked = state.unlockedFloors.includes(selectedFloor);
+  const isCompleted = state.towerProgress >= selectedFloor;
+  
+  return (
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={visible}
+      onRequestClose={onClose}
+    >
+      <View style={towerStyles.overlay}>
+        <View style={towerStyles.container}>
+          <View style={towerStyles.header}>
+            <Text style={towerStyles.title}>🏰 {TOWER_NAME}</Text>
+            <TouchableOpacity style={towerStyles.closeBtn} onPress={onClose}>
+              <Text style={towerStyles.closeText}>✕</Text>
+            </TouchableOpacity>
+          </View>
+          
+          <View style={towerStyles.progressSection}>
+            <Text style={towerStyles.progressText}>Progresso: {state.towerProgress} / 1000</Text>
+            <View style={towerStyles.progressBar}>
+              <View style={[towerStyles.progressFill, { width: `${(state.towerProgress / 1000) * 100}%` }]} />
+            </View>
+          </View>
+          
+          <ScrollView style={towerStyles.floorList} showsVerticalScrollIndicator={false}>
+            {/* Floor selector */}
+            <View style={towerStyles.floorGrid}>
+              {Array.from({ length: 100 }, (_, i) => i + 1).map((floor) => {
+                const floorInfo = TOWER_FLOORS_DATA[floor - 1];
+                const unlocked = state.unlockedFloors.includes(floor);
+                const completed = state.towerProgress >= floor;
+                
+                let bgColor = "rgba(100, 100, 100, 0.2)";
+                let borderColor = "rgba(100, 100, 100, 0.3)";
+                
+                if (completed) {
+                  bgColor = "rgba(34, 197, 94, 0.2)";
+                  borderColor = "rgba(34, 197, 94, 0.5)";
+                } else if (unlocked) {
+                  bgColor = "rgba(124, 58, 237, 0.2)";
+                  borderColor = "rgba(124, 58, 237, 0.5)";
+                }
+                
+                if (floorInfo.type === "boss") {
+                  borderColor = completed ? "rgba(245, 158, 11, 0.8)" : unlocked ? "rgba(245, 158, 11, 0.6)" : "rgba(100, 100, 100, 0.3)";
+                }
+                
+                return (
+                  <TouchableOpacity
+                    key={floor}
+                    style={[
+                      towerStyles.floorBtn,
+                      { backgroundColor: bgColor, borderColor },
+                      selectedFloor === floor && towerStyles.floorBtnSelected
+                    ]}
+                    onPress={() => setSelectedFloor(floor)}
+                  >
+                    <Text style={[towerStyles.floorBtnText, { opacity: unlocked ? 1 : 0.3 }]}>
+                      {floor}
+                    </Text>
+                    {floorInfo.type === "boss" && <Text style={towerStyles.bossIcon}>👑</Text>}
+                    {floorInfo.type === "miniboss" && <Text style={towerStyles.minibossIcon}>⚔️</Text>}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </ScrollView>
+          
+          {/* Selected floor info */}
+          <View style={towerStyles.floorInfo}>
+            <Text style={towerStyles.floorName}>{floorData.name}</Text>
+            <Text style={towerStyles.floorDesc}>{floorData.description}</Text>
+            {floorData.type === "boss" && (
+              <Text style={towerStyles.groupReq}>Mínimo: {floorData.minGroupSize} jogadores</Text>
+            )}
+            <TouchableOpacity 
+              style={[towerStyles.enterBtn, !isUnlocked && towerStyles.enterBtnDisabled]}
+              disabled={!isUnlocked}
+            >
+              <Text style={towerStyles.enterBtnText}>
+                {isCompleted ? "✓ COMPLETADO" : isUnlocked ? "ENTRAR" : "🔒 BLOQUEADO"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+// Biome Card
+function BiomeCard({ 
+  biomeId, 
+  onPress, 
+  locked 
+}: { 
+  biomeId: BiomeId; 
+  onPress: () => void; 
+  locked: boolean;
+}) {
+  const biome = BIOMES[biomeId];
+  
+  return (
+    <TouchableOpacity 
+      style={[
+        styles.biomeCard,
+        locked && styles.biomeCardLocked,
+        { borderColor: locked ? "rgba(100,100,100,0.2)" : `${biome.color}40` }
+      ]}
+      onPress={onPress}
+      disabled={locked}
+      activeOpacity={0.8}
+    >
+      <View style={[styles.biomeIconBox, { backgroundColor: locked ? "rgba(100,100,100,0.1)" : `${biome.color}15` }]}>
+        <Text style={[styles.biomeEmoji, { opacity: locked ? 0.4 : 1 }]}>{biome.emoji}</Text>
+      </View>
+      <View style={styles.biomeInfo}>
+        <Text style={[styles.biomeName, { color: locked ? "#64748b" : "#ffffff" }]}>{biome.name}</Text>
+        <Text style={styles.biomeLevel}>Nv. {biome.minLevel}-{biome.maxLevel}</Text>
+        <Text style={styles.biomeDesc} numberOfLines={2}>{biome.description}</Text>
+      </View>
+      {locked ? (
+        <View style={styles.lockedBadge}>
+          <Text style={styles.lockedText}>🔒</Text>
+        </View>
+      ) : (
+        <View style={[styles.exploreBtn, { backgroundColor: `${biome.color}20` }]}>
+          <Text style={[styles.exploreText, { color: biome.color }]}>EXPLORAR →</Text>
+        </View>
+      )}
+    </TouchableOpacity>
+  );
+}
 
 export default function Adventure() {
-  const { state, addGold } = useGame();
+  const { state } = useGame();
+  const [towerVisible, setTowerVisible] = useState(false);
+  const [fadeAnim] = useState(new Animated.Value(0));
+
+  useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 600,
+      useNativeDriver: true,
+    }).start();
+  }, []);
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>🗺️ AVENTURA</Text>
-        <Text style={styles.headerSubtitle}>Escolha onde explorar</Text>
-      </View>
-
-      {/* Quick Farm Button */}
-      <TouchableOpacity style={styles.farmButton} onPress={() => addGold(10)}>
-        <Text style={styles.farmIcon}>⚔️</Text>
-        <View style={styles.farmTextContainer}>
-          <Text style={styles.farmTitle}>BATALHA RÁPIDA</Text>
-          <Text style={styles.farmDesc}>Ganhe ouro e experiência</Text>
+      <Animated.View style={{ opacity: fadeAnim }}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>🗺️ AVENTURA</Text>
+          <Text style={styles.headerSubtitle}>Explore biomas e descubra dungeons</Text>
         </View>
-        <Text style={styles.farmArrow}>→</Text>
-      </TouchableOpacity>
 
-      {/* Zones */}
-      <Text style={styles.sectionTitle}>ZONAS</Text>
-      {ZONES.map((zone, index) => {
-        const zoneNum = index + 1;
-        const isUnlocked = zoneNum <= state.maxZone;
-        const isCurrent = zoneNum === state.maxZone;
-
-        return (
-          <TouchableOpacity
-            key={zone.id}
-            style={[
-              styles.zoneCard,
-              !isUnlocked && styles.zoneLocked,
-              isCurrent && styles.zoneCurrent,
-            ]}
-            disabled={!isUnlocked}
-          >
-            <View style={styles.zoneHeader}>
-              <View style={[styles.zoneIconBox, { backgroundColor: `${zone.color}20` }]}>
-                <Text style={styles.zoneEmoji}>{zone.emoji}</Text>
-              </View>
-              <View style={styles.zoneInfo}>
-                <Text style={styles.zoneName}>{zone.name}</Text>
-                <Text style={styles.zoneDesc} numberOfLines={2}>{zone.description}</Text>
-              </View>
-              <View style={styles.zoneMeta}>
-                {!isUnlocked ? (
-                  <Text style={styles.lockedIcon}>🔒</Text>
-                ) : isCurrent ? (
-                  <View style={styles.currentBadge}>
-                    <Text style={styles.currentText}>ATUAL</Text>
-                  </View>
-                ) : (
-                  <Text style={styles.completedIcon}>✓</Text>
-                )}
-              </View>
-            </View>
-
-            <View style={styles.zoneFooter}>
-              <View style={styles.monsterPreview}>
-                <Text style={styles.monsterLabel}>MONSTROS:</Text>
-                <View style={styles.monsterIcons}>
-                  {zone.monsters.slice(0, 4).map((m, i) => (
-                    <Text key={i} style={styles.monsterEmoji}>{m.emoji}</Text>
-                  ))}
+        {/* Tower Card */}
+        <TouchableOpacity 
+          style={styles.towerCard}
+          onPress={() => setTowerVisible(true)}
+          activeOpacity={0.85}
+        >
+          <View style={styles.towerGradient} />
+          <View style={styles.towerContent}>
+            <Text style={styles.towerIcon}>🏰</Text>
+            <View style={styles.towerInfo}>
+              <Text style={styles.towerName}>{TOWER_NAME}</Text>
+              <Text style={styles.towerDesc}>1000 andares de desafios épicos</Text>
+              <View style={styles.towerProgress}>
+                <Text style={styles.towerProgressText}>Andar {state.towerProgress + 1}</Text>
+                <View style={styles.towerProgressBar}>
+                  <View style={[styles.towerProgressFill, { width: `${(state.towerProgress / 1000) * 100}%` }]} />
                 </View>
               </View>
-              <View style={styles.bossPreview}>
-                <Text style={styles.bossLabel}>BOSS:</Text>
-                <Text style={styles.bossName} numberOfLines={1}>{zone.bossName}</Text>
-              </View>
             </View>
-          </TouchableOpacity>
-        );
-      })}
+            <Text style={styles.towerArrow}>→</Text>
+          </View>
+        </TouchableOpacity>
+
+        {/* Biomes Section */}
+        <Text style={styles.sectionTitle}>BIOMES</Text>
+        
+        {(Object.keys(BIOMES) as BiomeId[]).map((biomeId) => (
+          <BiomeCard
+            key={biomeId}
+            biomeId={biomeId}
+            onPress={() => {/* TODO: Navigate to biome exploration */}}
+            locked={state.level < BIOMES[biomeId].minLevel}
+          />
+        ))}
+
+        {/* Info Card */}
+        <View style={styles.infoCard}>
+          <Text style={styles.infoTitle}>💡 COMO FUNCIONA</Text>
+          <View style={styles.infoList}>
+            <InfoItem icon="🗺️" text="Explore biomas para ganhar XP" />
+            <InfoItem icon="🏛️" text="Descubra dungeons secretas" />
+            <InfoItem icon="🎲" text="Dungeons são encontradas por sorte" />
+            <InfoItem icon="🏰" text="A Torre é a história principal" />
+            <InfoItem icon="👥" text="Dungeons em grupo precisam de amigos" />
+          </View>
+        </View>
+      </Animated.View>
+
+      <TowerModal visible={towerVisible} onClose={() => setTowerVisible(false)} />
     </ScrollView>
+  );
+}
+
+function InfoItem({ icon, text }: { icon: string; text: string }) {
+  return (
+    <View style={styles.infoItem}>
+      <Text style={styles.infoIcon}>{icon}</Text>
+      <Text style={styles.infoText}>{text}</Text>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0a0a0f",
-    padding: 16,
+    backgroundColor: "#050508",
+    padding: 20,
   },
   header: {
-    marginBottom: 20,
+    marginBottom: 24,
   },
   headerTitle: {
-    color: "#f8fafc",
-    fontSize: 24,
-    fontWeight: "700",
-    marginBottom: 4,
+    color: "#ffffff",
+    fontSize: 28,
+    fontWeight: "800",
+    marginBottom: 6,
+    letterSpacing: 1,
   },
   headerSubtitle: {
     color: "#64748b",
     fontSize: 14,
   },
-  farmButton: {
+  towerCard: {
+    backgroundColor: "#7c3aed",
+    borderRadius: 24,
+    padding: 24,
+    marginBottom: 28,
+    position: "relative",
+    overflow: "hidden",
+  },
+  towerGradient: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "#8b5cf6",
+    opacity: 0.3,
+  },
+  towerContent: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#7c3aed",
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 20,
   },
-  farmIcon: {
-    fontSize: 32,
-    marginRight: 16,
+  towerIcon: {
+    fontSize: 48,
+    marginRight: 18,
+    zIndex: 1,
   },
-  farmTextContainer: {
+  towerInfo: {
     flex: 1,
+    zIndex: 1,
   },
-  farmTitle: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "700",
-    letterSpacing: 1,
+  towerName: {
+    color: "#ffffff",
+    fontSize: 20,
+    fontWeight: "800",
+    marginBottom: 4,
   },
-  farmDesc: {
-    color: "#c4b5fd",
+  towerDesc: {
+    color: "rgba(255,255,255,0.7)",
     fontSize: 13,
-    marginTop: 2,
+    marginBottom: 12,
   },
-  farmArrow: {
-    color: "#fff",
+  towerProgress: {
+    marginTop: 4,
+  },
+  towerProgressText: {
+    color: "rgba(255,255,255,0.9)",
+    fontSize: 12,
+    fontWeight: "600",
+    marginBottom: 6,
+  },
+  towerProgressBar: {
+    height: 6,
+    backgroundColor: "rgba(0,0,0,0.3)",
+    borderRadius: 3,
+    overflow: "hidden",
+  },
+  towerProgressFill: {
+    height: "100%",
+    backgroundColor: "#fbbf24",
+    borderRadius: 3,
+  },
+  towerArrow: {
+    color: "#ffffff",
     fontSize: 24,
+    zIndex: 1,
+    opacity: 0.8,
   },
   sectionTitle: {
     color: "#64748b",
     fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 2,
-    marginBottom: 12,
+    fontWeight: "800",
+    letterSpacing: 3,
+    marginBottom: 16,
   },
-  zoneCard: {
-    backgroundColor: "#12121a",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: "#1e1e2e",
-  },
-  zoneLocked: {
-    opacity: 0.5,
-  },
-  zoneCurrent: {
-    borderColor: "#7c3aed",
-  },
-  zoneHeader: {
+  biomeCard: {
     flexDirection: "row",
     alignItems: "center",
+    backgroundColor: "rgba(18, 18, 26, 0.6)",
+    borderRadius: 20,
+    padding: 18,
     marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "rgba(124, 58, 237, 0.15)",
   },
-  zoneIconBox: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
+  biomeCardLocked: {
+    opacity: 0.6,
+  },
+  biomeIconBox: {
+    width: 60,
+    height: 60,
+    borderRadius: 18,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 12,
+    marginRight: 16,
   },
-  zoneEmoji: {
-    fontSize: 28,
+  biomeEmoji: {
+    fontSize: 32,
   },
-  zoneInfo: {
+  biomeInfo: {
     flex: 1,
   },
-  zoneName: {
-    color: "#f8fafc",
-    fontSize: 16,
+  biomeName: {
+    fontSize: 17,
     fontWeight: "700",
+    marginBottom: 3,
+  },
+  biomeLevel: {
+    color: "#7c3aed",
+    fontSize: 12,
+    fontWeight: "600",
     marginBottom: 4,
   },
-  zoneDesc: {
+  biomeDesc: {
     color: "#64748b",
     fontSize: 12,
     lineHeight: 18,
   },
-  zoneMeta: {
-    alignItems: "flex-end",
+  lockedBadge: {
+    padding: 10,
   },
-  lockedIcon: {
+  lockedText: {
     fontSize: 20,
-    opacity: 0.5,
   },
-  currentBadge: {
-    backgroundColor: "#7c3aed",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
+  exploreBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
   },
-  currentText: {
-    color: "#fff",
-    fontSize: 10,
-    fontWeight: "700",
+  exploreText: {
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 0.5,
   },
-  completedIcon: {
-    color: "#22c55e",
-    fontSize: 20,
-    fontWeight: "700",
+  infoCard: {
+    backgroundColor: "rgba(18, 18, 26, 0.4)",
+    borderRadius: 20,
+    padding: 20,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: "rgba(124, 58, 237, 0.1)",
+    marginBottom: 30,
   },
-  zoneFooter: {
-    borderTopWidth: 1,
-    borderTopColor: "#1e1e2e",
-    paddingTop: 12,
+  infoTitle: {
+    color: "#64748b",
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 2,
+    marginBottom: 14,
+  },
+  infoList: {
+    gap: 10,
+  },
+  infoItem: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  infoIcon: {
+    fontSize: 16,
+    marginRight: 12,
+    width: 26,
+  },
+  infoText: {
+    color: "#94a3b8",
+    fontSize: 13,
+  },
+});
+
+const towerStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(2, 2, 4, 0.95)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 16,
+  },
+  container: {
+    backgroundColor: "#12121a",
+    borderRadius: 24,
+    width: "100%",
+    maxHeight: "85%",
+    borderWidth: 1,
+    borderColor: "rgba(124, 58, 237, 0.2)",
+    overflow: "hidden",
+  },
+  header: {
     flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "center",
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(124, 58, 237, 0.1)",
   },
-  monsterPreview: {
-    flexDirection: "row",
+  title: {
+    color: "#ffffff",
+    fontSize: 20,
+    fontWeight: "800",
+    letterSpacing: 2,
+  },
+  closeBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: "rgba(124, 58, 237, 0.2)",
+    justifyContent: "center",
     alignItems: "center",
   },
-  monsterLabel: {
-    color: "#64748b",
-    fontSize: 10,
-    fontWeight: "700",
-    marginRight: 8,
-  },
-  monsterIcons: {
-    flexDirection: "row",
-    gap: 4,
-  },
-  monsterEmoji: {
+  closeText: {
+    color: "#ffffff",
     fontSize: 16,
-  },
-  bossPreview: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  bossLabel: {
-    color: "#f59e0b",
-    fontSize: 10,
     fontWeight: "700",
-    marginRight: 6,
   },
-  bossName: {
-    color: "#f8fafc",
+  progressSection: {
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(124, 58, 237, 0.1)",
+  },
+  progressText: {
+    color: "#64748b",
     fontSize: 12,
     fontWeight: "600",
-    maxWidth: 100,
+    marginBottom: 8,
+  },
+  progressBar: {
+    height: 8,
+    backgroundColor: "rgba(10, 10, 15, 0.8)",
+    borderRadius: 4,
+    overflow: "hidden",
+  },
+  progressFill: {
+    height: "100%",
+    backgroundColor: "#7c3aed",
+    borderRadius: 4,
+  },
+  floorList: {
+    maxHeight: 300,
+    padding: 16,
+  },
+  floorGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    justifyContent: "center",
+  },
+  floorBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    position: "relative",
+  },
+  floorBtnSelected: {
+    borderColor: "#7c3aed",
+    borderWidth: 2,
+  },
+  floorBtnText: {
+    color: "#ffffff",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  bossIcon: {
+    position: "absolute",
+    top: 2,
+    right: 2,
+    fontSize: 10,
+  },
+  minibossIcon: {
+    position: "absolute",
+    top: 2,
+    right: 2,
+    fontSize: 8,
+    opacity: 0.7,
+  },
+  floorInfo: {
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(124, 58, 237, 0.1)",
+  },
+  floorName: {
+    color: "#ffffff",
+    fontSize: 18,
+    fontWeight: "700",
+    marginBottom: 6,
+  },
+  floorDesc: {
+    color: "#94a3b8",
+    fontSize: 13,
+    lineHeight: 20,
+    marginBottom: 8,
+  },
+  groupReq: {
+    color: "#f59e0b",
+    fontSize: 12,
+    fontWeight: "600",
+    marginBottom: 16,
+  },
+  enterBtn: {
+    backgroundColor: "#7c3aed",
+    borderRadius: 12,
+    padding: 16,
+    alignItems: "center",
+  },
+  enterBtnDisabled: {
+    backgroundColor: "rgba(100, 100, 100, 0.3)",
+  },
+  enterBtnText: {
+    color: "#ffffff",
+    fontSize: 14,
+    fontWeight: "800",
+    letterSpacing: 2,
   },
 });
