@@ -175,7 +175,7 @@ export default function Home() {
             title="BATALHAR" 
             subtitle="Iniciar aventura"
             onPress={() => router.push("/(game)/adventure")}
-            gradient={["#7c3aed", #6d28d9"]}
+            color="#7c3aed"
           />
           
           <View style={styles.actionsRow}>
