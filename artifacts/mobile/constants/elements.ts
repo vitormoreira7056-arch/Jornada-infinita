@@ -81,7 +81,7 @@ export const SUB_ELEMENTS: SubElement[] = [
   { id: "prismatico", name: "Prismático", description: "Todos os elementos básicos", parentElements: ["fogo", "agua"], color: "#ff00ff", emoji: "🌈", effects: { damageBonus: 2.0, resistanceBonus: 1.8, specialEffect: "Dano de todos os elementos" } },
 ];
 
-// Elementos principais para exibição
+// Elementos como array
 export const MAIN_ELEMENTS: { id: ElementId; name: string; emoji: string; color: string; description: string }[] = [
   { id: "fogo", name: "Fogo", emoji: "🔥", color: "#ff4444", description: "Queima tudo em seu caminho" },
   { id: "agua", name: "Água", emoji: "💧", color: "#4444ff", description: "Fluido e adaptável" },
@@ -106,6 +106,32 @@ export const MAIN_ELEMENTS: { id: ElementId; name: string; emoji: string; color:
   { id: "astral", name: "Astral", emoji: "🌌", color: "#191970", description: "Energia das estrelas" },
   { id: "sagrado", name: "Sagrado", emoji: "✨", color: "#ffd700", description: "Poder sagrado divino" },
 ];
+
+// Elementos como objeto indexado (para compatibilidade)
+export const ELEMENTS: Record<ElementId, { id: ElementId; name: string; emoji: string; color: string; description: string }> = {
+  fogo: { id: "fogo", name: "Fogo", emoji: "🔥", color: "#ff4444", description: "Queima tudo em seu caminho" },
+  agua: { id: "agua", name: "Água", emoji: "💧", color: "#4444ff", description: "Fluido e adaptável" },
+  terra: { id: "terra", name: "Terra", emoji: "🌍", color: "#8b4513", description: "Sólido e resistente" },
+  ar: { id: "ar", name: "Ar", emoji: "💨", color: "#87ceeb", description: "Veloz e imprevisível" },
+  luz: { id: "luz", name: "Luz", emoji: "☀️", color: "#ffd700", description: "Ilumina e purifica" },
+  escuridao: { id: "escuridao", name: "Escuridão", emoji: "🌑", color: "#4b0082", description: "Consome e corrompe" },
+  gelo: { id: "gelo", name: "Gelo", emoji: "❄️", color: "#e0ffff", description: "Congela até o tempo" },
+  trovao: { id: "trovao", name: "Trovão", emoji: "⚡", color: "#ffff00", description: "Rápido e devastador" },
+  natureza: { id: "natureza", name: "Natureza", emoji: "🌿", color: "#228b22", description: "Cresce e adapta-se" },
+  metal: { id: "metal", name: "Metal", emoji: "⚙️", color: "#c0c0c0", description: "Indestrutível e afiado" },
+  veneno: { id: "veneno", name: "Veneno", emoji: "☠️", color: "#32cd32", description: "Mata silenciosamente" },
+  sangue: { id: "sangue", name: "Sangue", emoji: "🩸", color: "#8b0000", description: "Vida e morte unidas" },
+  arcano: { id: "arcano", name: "Arcano", emoji: "🔮", color: "#9370db", description: "Magia pura e bruta" },
+  caos: { id: "caos", name: "Caos", emoji: "🌀", color: "#9932cc", description: "Imprevisível e destrutivo" },
+  void: { id: "void", name: "Vazio", emoji: "🕳️", color: "#000000", description: "O nada absoluto" },
+  infernal: { id: "infernal", name: "Infernal", emoji: "👹", color: "#dc143c", description: "Fogo demoníaco" },
+  divino: { id: "divino", name: "Divino", emoji: "😇", color: "#ffffff", description: "Poder celestial" },
+  sombra: { id: "sombra", name: "Sombras", emoji: "👤", color: "#2f2f2f", description: "A escuridão viva" },
+  tempestade: { id: "tempestade", name: "Tempestade", emoji: "⛈️", color: "#4682b4", description: "Fúria dos céus" },
+  runico: { id: "runico", name: "Rúnico", emoji: "ᚢ", color: "#ff8c00", description: "Magia ancestral" },
+  astral: { id: "astral", name: "Astral", emoji: "🌌", color: "#191970", description: "Energia das estrelas" },
+  sagrado: { id: "sagrado", name: "Sagrado", emoji: "✨", color: "#ffd700", description: "Poder sagrado divino" },
+};
 
 // Resistências base por elemento
 export function getBaseResistance(element: ElementId): number {

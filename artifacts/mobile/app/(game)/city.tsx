@@ -182,7 +182,7 @@ export default function CityScreen() {
           />
         ))}
         
-        {/* Quick Stats -->
+        {/* Quick Stats */}
         <View style={styles.statsCard}>
           <Text style={styles.statsTitle}>📊 ESTATÍSTICAS</Text>
           <View style={styles.statsGrid}>

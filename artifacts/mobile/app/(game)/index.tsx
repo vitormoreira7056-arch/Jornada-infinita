@@ -3,7 +3,6 @@ import { useGame } from "@/context/GameContext";
 import { getRaceById } from "@/constants/races";
 import { router } from "expo-router";
 import { useState, useEffect } from "react";
-import { ElementId } from "@/constants/elements";
 
 // Currency display component
 function CurrencyBadge({ icon, value, color }: { icon: string; value: number; color: string }) {
