@@ -7,7 +7,7 @@ import { BiomeId, DungeonDef, DiscoveredDungeon, BIOMES, tryDiscoverDungeon, cal
 import { MobDef, FOREST_MOBS, findRandomMob, calculateDrops, MOB_RANK_MULTIPLIERS } from "@/constants/mobs";
 import { 
   EquipmentBase, EquipmentSlot as NewEquipmentSlot,
-  generateRandomEquipment, generateBossLoot, generateMiniBossLoot,
+  generateRandomEquipment, generateBossLoot, generateMiniBossLoot, generateMobLoot,
   getActiveSetBonuses, calculateTotalStatsWithSets, getTierColor, getTierName
 } from "@/constants/equipment";
 
@@ -414,6 +414,11 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       const silver = Math.floor(remaining / 100); remaining %= 100;
       const copper = remaining;
       
+      // Gerar loot de equipamentos baseado no tipo do mob
+      const mobType = mob.type || "normal";
+      const itemDrops = generateMobLoot(mob.name, mob.level, mob.rank, mobType as any);
+      const itemDropMessages: string[] = [];
+      
       setState(prev => {
         const newCurrencies = { ...prev.currencies };
         if (copper > 0) newCurrencies.copper += copper;
@@ -421,15 +426,43 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         if (gold > 0) newCurrencies.gold += gold;
         if (drops.diamonds > 0) newCurrencies.diamond += drops.diamonds;
         if (drops.mithril > 0) newCurrencies.mithril += drops.mithril;
+        
+        // Adicionar itens ao inventário (se houver espaço)
+        const newInventory = [...prev.inventory];
+        let itemsAdded = 0;
+        let itemsDropped = 0;
+        
+        for (const item of itemDrops) {
+          itemsDropped++;
+          if (newInventory.length < prev.inventorySize) {
+            newInventory.push(item);
+            itemsAdded++;
+            itemDropMessages.push(`${item.icon} ${item.name} (${getTierName(item.tier)})`);
+          }
+        }
+        
+        if (itemsDropped > 0 && itemsAdded === 0) {
+          itemDropMessages.push("📦 Inventário cheio! Itens perdidos...");
+        }
+        
         const expGained = Math.floor(mob.level * 10 * (MOB_RANK_MULTIPLIERS[mob.rank]?.statMult || 1));
+        
+        const combatLogMessages: string[] = [
+          `🎉 Vitória! +${expGained} XP`,
+          ...(drops.gold > 0 ? [`💰 +${drops.gold} ouro`] : []),
+          ...(drops.diamonds > 0 ? [`💎 +${drops.diamonds} diamantes`] : []),
+          ...(drops.mithril > 0 ? [`✨ +${drops.mithril} mithril`] : []),
+          ...(itemDropMessages.length > 0 ? ["📦 Drops:", ...itemDropMessages] : []),
+        ];
+        
         return {
-          ...prev, inCombat: false, currentEnemy: null,
-          currencies: newCurrencies, exp: prev.exp + expGained,
-          combatLog: [...prev.combatLog, `🎉 Vitória! +${expGained} XP`, 
-            drops.gold > 0 ? `💰 +${drops.gold} ouro` : null,
-            drops.diamonds > 0 ? `💎 +${drops.diamonds} diamantes` : null,
-            drops.mithril > 0 ? `✨ +${drops.mithril} mithril` : null,
-          ].filter(Boolean) as string[],
+          ...prev, 
+          inCombat: false, 
+          currentEnemy: null,
+          currencies: newCurrencies, 
+          exp: prev.exp + expGained,
+          inventory: newInventory,
+          combatLog: [...prev.combatLog, ...combatLogMessages],
         };
       });
     } else {

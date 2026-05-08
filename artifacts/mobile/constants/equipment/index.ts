@@ -96,6 +96,95 @@ export function generateMiniBossLoot(
   return null;
 }
 
+// Gerar loot baseado no tipo e rank do mob
+export function generateMobLoot(
+  mobName: string,
+  mobLevel: number,
+  mobRank: string,
+  mobType: "normal" | "elite" | "boss" | "unique"
+): EquipmentBase[] {
+  const loot: EquipmentBase[] = [];
+  
+  // Mapear rank para tier
+  const rankToTier: Record<string, EquipmentBase["tier"]> = {
+    "F": "F", "E": "E", "D": "D", "C": "C", "B": "B",
+    "A": "A", "S": "S", "SS": "SS", "SSS": "SSS", "SSS+": "SSS+"
+  };
+  
+  // Chance base de drop por tipo
+  const dropChances: Record<string, number> = {
+    "normal": 0.15,    // 15% chance
+    "elite": 0.40,     // 40% chance
+    "boss": 0.85,      // 85% chance (1-2 itens)
+    "unique": 0.60,    // 60% chance
+  };
+  
+  // Número de itens por tipo
+  const itemCounts: Record<string, { min: number; max: number }> = {
+    "normal": { min: 0, max: 1 },
+    "elite": { min: 0, max: 2 },
+    "boss": { min: 1, max: 3 },
+    "unique": { min: 0, max: 2 },
+  };
+  
+  const dropChance = dropChances[mobType] || 0.15;
+  const itemCountRange = itemCounts[mobType] || { min: 0, max: 1 };
+  
+  // Determinar quantos itens dropar
+  let itemsToDrop = 0;
+  if (Math.random() < dropChance) {
+    itemsToDrop = Math.floor(Math.random() * (itemCountRange.max - itemCountRange.min + 1)) + itemCountRange.min;
+  }
+  
+  // Bosses sempre dropam pelo menos 1 item
+  if (mobType === "boss" && itemsToDrop === 0) {
+    itemsToDrop = 1;
+  }
+  
+  // Ajustar tier baseado no tipo
+  let tier = rankToTier[mobRank] || "F";
+  
+  // Bosses e uniques dropam tier melhor
+  if (mobType === "boss") {
+    const tierBoost: Record<string, EquipmentBase["tier"]> = {
+      "F": "D", "E": "C", "D": "B", "C": "A", "B": "S", "A": "SS", "S": "SSS", "SS": "SSS+", "SSS": "SSS+", "SSS+": "SSS+"
+    };
+    tier = tierBoost[tier] || tier;
+  } else if (mobType === "elite" || mobType === "unique") {
+    const tierBoost: Record<string, EquipmentBase["tier"]> = {
+      "F": "E", "E": "D", "D": "C", "C": "B", "B": "A", "A": "S", "S": "SS", "SS": "SSS", "SSS": "SSS+", "SSS+": "SSS+"
+    };
+    tier = tierBoost[tier] || tier;
+  }
+  
+  // Gerar os itens
+  const slots: EquipmentSlot[] = ["mainHand", "offHand", "head", "chest", "legs", "feet"];
+  
+  for (let i = 0; i < itemsToDrop; i++) {
+    const slot = slots[Math.floor(Math.random() * slots.length)];
+    const item = generateRandomEquipment(slot, tier, mobLevel);
+    
+    if (item) {
+      // Adicionar sufixo do mob para itens de boss/unique
+      if (mobType === "boss" || mobType === "unique") {
+        item.name = `${item.name} de ${mobName}`;
+        // Melhorar stats para bosses
+        if (mobType === "boss") {
+          item.atkF = Math.floor(item.atkF * 1.3);
+          item.atkM = Math.floor(item.atkM * 1.3);
+          item.def = Math.floor(item.def * 1.3);
+          item.armor = Math.floor(item.armor * 1.3);
+          item.hp = Math.floor(item.hp * 1.3);
+          item.mp = Math.floor(item.mp * 1.3);
+        }
+      }
+      loot.push(item);
+    }
+  }
+  
+  return loot;
+}
+
 // Calcular power level de um item
 export function calculateItemPower(item: EquipmentBase): number {
   let power = 0;

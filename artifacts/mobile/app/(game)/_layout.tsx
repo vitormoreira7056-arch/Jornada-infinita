@@ -337,6 +337,12 @@ export default function GameLayout() {
             href: null,
           }}
         />
+        <Tabs.Screen
+          name="loot"
+          options={{
+            href: null,
+          }}
+        />
       </Tabs>
     </View>
   );
