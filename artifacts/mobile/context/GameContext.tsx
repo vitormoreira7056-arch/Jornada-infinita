@@ -260,7 +260,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     }));
     const res: Record<ElementId, number> = { ...DEFAULT_RES };
     Object.entries(race.resistances).forEach(([element, value]) => {
-      if (element in res) res[element as ElementId] = value;
+      if (element in res && value !== undefined) res[element as ElementId] = value;
     });
     setState(prev => ({
       ...prev, raceId, gender,
@@ -361,7 +361,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     if (!race) return null;
     const res: Record<ElementId, number> = { ...DEFAULT_RES };
     Object.entries(race.resistances).forEach(([element, value]) => {
-      if (element in res) res[element as ElementId] = value;
+      if (element in res && value !== undefined) res[element as ElementId] = value;
     });
     return { ...race.stats, res };
   };

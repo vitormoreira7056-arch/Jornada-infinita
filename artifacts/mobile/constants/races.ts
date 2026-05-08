@@ -41,7 +41,7 @@ export interface RaceDef {
   primaryElements: ElementId[];
   learnableElements: ElementId[];
   stats: RaceStats;
-  resistances: ResistanceMap;
+  resistances: Partial<ResistanceMap>;
   abilities: RaceAbility[];
 }
 
@@ -144,7 +144,7 @@ export const RACES: RaceDef[] = [
     emoji: "👤",
     color: "#FF9800",
     lore: "Sem dons inatos, os Humanos compensam com adaptabilidade inigualável. Sua sorte e determinação os tornam imprevisíveis em batalha.",
-    primaryElements: [],
+    primaryElements: ["fogo", "agua"],
     learnableElements: ["fogo", "agua", "terra", "trovao", "gelo", "ar", "escuridao", "luz"],
     stats: { ...EMPTY_STATS, hp: 30, armor: 3, magicRes: 3, atkF: 4, atkM: 4, def: 3, critBonus: 0.01, luck: 0.0003, dodge: 0.015 },
     resistances: { fogo: 5, agua: 5, terra: 5, trovao: 5, gelo: 5, ar: 5 },

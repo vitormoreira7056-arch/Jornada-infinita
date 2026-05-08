@@ -1,13 +1,27 @@
-// Sistema de Elementos - 21 Elementos Principais + Sub-elementos
+// Sistema de Elementos - Elementos Principais
 
 export type ElementId = 
-  // Elementos Básicos (6)
-  | "fogo" | "agua" | "terra" | "ar" | "luz" | "escuridao"
-  // Elementos Avançados (8)
-  | "gelo" | "trovao" | "natureza" | "metal" | "veneno" | "sangue" | "arcano" | "caos"
-  // Elementos Épicos (7)
-  | "void" | "infernal" | "divino" | "sombra" | "tempestade" | "runico" | "astral"
-  // Sub-elementos especiais
+  | "fogo" 
+  | "agua" 
+  | "terra" 
+  | "ar" 
+  | "luz" 
+  | "escuridao"
+  | "gelo" 
+  | "trovao" 
+  | "natureza" 
+  | "metal" 
+  | "veneno" 
+  | "sangue" 
+  | "arcano" 
+  | "caos"
+  | "void" 
+  | "infernal" 
+  | "divino" 
+  | "sombra" 
+  | "tempestade" 
+  | "runico" 
+  | "astral"
   | "sagrado";
 
 // Sub-elementos - Combinações de elementos
@@ -51,18 +65,18 @@ export const SUB_ELEMENTS: SubElement[] = [
   { id: "caos_aereo", name: "Ciclone", description: "Ar + Caos", parentElements: ["ar", "caos"], color: "#9932cc", emoji: "🌪️", effects: { damageBonus: 1.5, resistanceBonus: 0.9, specialEffect: "Dano aleatório" } },
   
   // Luz + X
-  { id: "sagrado", name: "Sagrado", description: "Luz + Natureza", parentElements: ["luz", "natureza"], color: "#ffd700", emoji: "✨", effects: { damageBonus: 1.35, resistanceBonus: 1.25, specialEffect: "Cura ao causar dano" } },
+  { id: "sagrado_sub", name: "Sagrado", description: "Luz + Natureza", parentElements: ["luz", "natureza"], color: "#ffd700", emoji: "✨", effects: { damageBonus: 1.35, resistanceBonus: 1.25, specialEffect: "Cura ao causar dano" } },
   { id: "celestial", name: "Celestial", description: "Luz + Arcano", parentElements: ["luz", "arcano"], color: "#fffacd", emoji: "⭐", effects: { damageBonus: 1.4, resistanceBonus: 1.2, specialEffect: "Dano verdadeiro" } },
   { id: "ordem", name: "Ordem", description: "Luz + Metal", parentElements: ["luz", "metal"], color: "#f5f5dc", emoji: "⚖️", effects: { damageBonus: 1.25, resistanceBonus: 1.35, specialEffect: "Remoção de buffs" } },
   
   // Escuridão + X
   { id: "necrotico", name: "Necrótico", description: "Escuridão + Sangue", parentElements: ["escuridao", "sangue"], color: "#4b0082", emoji: "💀", effects: { damageBonus: 1.45, resistanceBonus: 1.1, specialEffect: "Dreno de vida" } },
   { id: "corrupto", name: "Corrupto", description: "Escuridão + Veneno", parentElements: ["escuridao", "veneno"], color: "#2f004f", emoji: "🦠", effects: { damageBonus: 1.4, resistanceBonus: 1.15, specialEffect: "Decomposição" } },
-  { id: "void", name: "Vazio", description: "Escuridão + Void", parentElements: ["escuridao", "void"], color: "#000000", emoji: "🕳️", effects: { damageBonus: 1.6, resistanceBonus: 1.0, specialEffect: "Aniquilação" } },
+  { id: "void_sub", name: "Vazio", description: "Escuridão + Void", parentElements: ["escuridao", "void"], color: "#000000", emoji: "🕳️", effects: { damageBonus: 1.6, resistanceBonus: 1.0, specialEffect: "Aniquilação" } },
   
   // Elementos Épicos Combinados
   { id: "inferno", name: "Inferno", description: "Fogo + Infernal", parentElements: ["fogo", "infernal"], color: "#dc143c", emoji: "🔥", effects: { damageBonus: 1.7, resistanceBonus: 1.3, specialEffect: "Queimadura eterna" } },
-  { id: "divino", name: "Divino Supremo", description: "Luz + Divino", parentElements: ["luz", "divino"], color: "#ffffff", emoji: "👑", effects: { damageBonus: 1.8, resistanceBonus: 1.5, specialEffect: "Ressurreição passiva" } },
+  { id: "divino_supremo", name: "Divino Supremo", description: "Luz + Divino", parentElements: ["luz", "divino"], color: "#ffffff", emoji: "👑", effects: { damageBonus: 1.8, resistanceBonus: 1.5, specialEffect: "Ressurreição passiva" } },
   { id: "temporal", name: "Temporal", description: "Arcano + Astral", parentElements: ["arcano", "astral"], color: "#00ced1", emoji: "⏳", effects: { damageBonus: 1.6, resistanceBonus: 1.2, specialEffect: "Manipulação do tempo" } },
   { id: "prismatico", name: "Prismático", description: "Todos os elementos básicos", parentElements: ["fogo", "agua"], color: "#ff00ff", emoji: "🌈", effects: { damageBonus: 2.0, resistanceBonus: 1.8, specialEffect: "Dano de todos os elementos" } },
 ];
@@ -98,7 +112,7 @@ export function getBaseResistance(element: ElementId): number {
   const resistances: Record<ElementId, number> = {
     fogo: 0, agua: 0, terra: 0, ar: 0, luz: 0, escuridao: 0,
     gelo: 0, trovao: 0, natureza: 0, metal: 0, veneno: 0, sangue: 0,
-      arcano: 0, caos: 0, void: 0, infernal: 0, divino: 0, sombra: 0,
+    arcano: 0, caos: 0, void: 0, infernal: 0, divino: 0, sombra: 0,
     tempestade: 0, runico: 0, astral: 0, sagrado: 0,
   };
   return resistances[element] || 0;
