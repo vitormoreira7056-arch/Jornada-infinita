@@ -189,16 +189,17 @@ function ClassicTabLayout() {
 }
 
 export default function TabLayout() {
-  let isSignedIn = false;
-  let authLoaded = true;
+  // Always call hooks unconditionally at the top
+  let authResult: ReturnType<typeof useAuth> | null = null;
   
   try {
-    const auth = useAuth();
-    isSignedIn = auth.isSignedIn;
-    authLoaded = auth.isLoaded;
+    authResult = useAuth();
   } catch (e) {
-    // Clerk not available (no key) - ignore, dev mode check will handle access
+    // Clerk not available (no key) - will be handled below
   }
+  
+  const isSignedIn = authResult?.isSignedIn || false;
+  const authLoaded = authResult?.isLoaded || true;
   
   const { state, isLoading: gameLoading } = useGame();
   const [devMode, setDevMode] = useState(false);
@@ -235,7 +236,8 @@ export default function TabLayout() {
     return <Redirect href="/(auth)/sign-in" />;
   }
 
-  if (!state.hero.raceId) {
+  // Only redirect to race-select if user has access but no race selected
+  if (allowAccess && !state.hero.raceId) {
     return <Redirect href="/race-select" />;
   }
 

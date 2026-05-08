@@ -128,22 +128,24 @@ function InputField({
 }
 
 export default function SignInScreen() {
-  let signIn: ReturnType<typeof useSignIn>['signIn'] | null = null;
-  let isSignedIn = false;
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  
+  // Always call hooks unconditionally
+  let signInResult: ReturnType<typeof useSignIn> | null = null;
+  let authResult: ReturnType<typeof useAuth> | null = null;
   let clerkError = false;
   
   try {
-    const signInResult = useSignIn();
-    const authResult = useAuth();
-    signIn = signInResult.signIn;
-    isSignedIn = authResult.isSignedIn;
+    signInResult = useSignIn();
+    authResult = useAuth();
   } catch (e) {
     // Clerk not available (no key or not initialized)
     clerkError = true;
   }
   
-  const router = useRouter();
-  const insets = useSafeAreaInsets();
+  const signIn = signInResult?.signIn || null;
+  const isSignedIn = authResult?.isSignedIn || false;
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -162,7 +164,7 @@ export default function SignInScreen() {
     setFieldErrors({});
   };
 
-  const navigate = () => router.replace("/(tabs)" as never);
+  const goToTabs = () => router.replace("/(tabs)" as never);
 
   const parseClerkError = (err: unknown): { global: string; fields: Record<string, string> } => {
     const result = { global: "", fields: {} as Record<string, string> };
@@ -227,7 +229,7 @@ export default function SignInScreen() {
       if (signIn.status === "complete") {
         await signIn.finalize({
           navigate: ({ session }) => {
-            if (!session?.currentTask) navigate();
+            if (!session?.currentTask) goToTabs();
           },
         });
       } else if (signIn.status === "needs_client_trust") {
@@ -252,7 +254,7 @@ export default function SignInScreen() {
         devMode: true,
         timestamp: Date.now(),
       }));
-      navigate();
+      goToTabs();
     } catch {
       setGlobalError("Erro ao ativar modo desenvolvedor.");
     } finally {
@@ -276,7 +278,7 @@ export default function SignInScreen() {
       if (signIn.status === "complete") {
         await signIn.finalize({
           navigate: ({ session }) => {
-            if (!session?.currentTask) navigate();
+            if (!session?.currentTask) goToTabs();
           },
         });
       } else {

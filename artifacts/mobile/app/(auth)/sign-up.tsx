@@ -135,22 +135,24 @@ function InputField({
 }
 
 export default function SignUpScreen() {
-  let signUp: ReturnType<typeof useSignUp>['signUp'] | null = null;
-  let isSignedIn = false;
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  
+  // Always call hooks unconditionally
+  let signUpResult: ReturnType<typeof useSignUp> | null = null;
+  let authResult: ReturnType<typeof useAuth> | null = null;
   let clerkError = false;
   
   try {
-    const signUpResult = useSignUp();
-    const authResult = useAuth();
-    signUp = signUpResult.signUp;
-    isSignedIn = authResult.isSignedIn;
+    signUpResult = useSignUp();
+    authResult = useAuth();
   } catch (e) {
     // Clerk not available (no key or not initialized)
     clerkError = true;
   }
   
-  const router = useRouter();
-  const insets = useSafeAreaInsets();
+  const signUp = signUpResult?.signUp || null;
+  const isSignedIn = authResult?.isSignedIn || false;
 
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
@@ -175,7 +177,7 @@ export default function SignUpScreen() {
     setFieldErrors({});
   };
 
-  const navigate = () => router.replace("/(tabs)" as never);
+  const goToTabs = () => router.replace("/(tabs)" as never);
 
   const parseClerkError = (err: unknown): { global: string; fields: Record<string, string> } => {
     const result = { global: "", fields: {} as Record<string, string> };
@@ -277,7 +279,7 @@ export default function SignUpScreen() {
       if (signUp.status === "complete") {
         await signUp.finalize({
           navigate: ({ session }) => {
-            if (!session?.currentTask) navigate();
+            if (!session?.currentTask) goToTabs();
           },
         });
       } else {

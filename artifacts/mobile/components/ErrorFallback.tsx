@@ -24,6 +24,9 @@ export function ErrorFallback({ error, resetError }: ErrorFallbackProps) {
 
   const [isModalVisible, setIsModalVisible] = useState(false);
 
+  // Log error to console for debugging
+  console.error("ErrorBoundary caught error:", error);
+
   const handleRestart = async () => {
     // Simple approach: just reset the error boundary
     // This will re-render the children and hopefully recover

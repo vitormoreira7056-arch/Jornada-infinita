@@ -26,10 +26,10 @@ const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!;
 
 function RootLayoutNav() {
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="(auth)" />
-      <Stack.Screen name="(tabs)" />
-      <Stack.Screen name="race-select" />
+    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: "#08080F" } }}>
+      <Stack.Screen name="(auth)" options={{ animation: "fade" }} />
+      <Stack.Screen name="(tabs)" options={{ animation: "fade" }} />
+      <Stack.Screen name="race-select" options={{ animation: "slide_from_bottom" }} />
       <Stack.Screen name="+not-found" />
     </Stack>
   );
@@ -89,9 +89,9 @@ export default function RootLayout() {
   // Check if Clerk key is available
   const hasClerkKey = publishableKey && publishableKey !== "undefined" && publishableKey !== "null";
 
-  // If no Clerk key, render without ClerkProvider but still show login screen
-  // User will need to activate dev mode from the login screen
-  if (!hasClerkKey) {
+  // If no Clerk key and not in dev mode, we still need to show the auth screens
+  // The auth layout will handle showing the login screen with dev mode option
+  if (!hasClerkKey && !devMode) {
     return (
       <SafeAreaProvider>
         <GestureHandlerRootView style={{ flex: 1 }}>

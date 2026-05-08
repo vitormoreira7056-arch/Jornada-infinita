@@ -1,30 +1,42 @@
 import { Stack, Redirect } from "expo-router";
 import { useAuth } from "@clerk/expo";
 import { useEffect, useState } from "react";
+import { View, ActivityIndicator } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function AuthLayout() {
-  let isSignedIn = false;
+  // Always call hooks unconditionally at the top
+  let authResult: ReturnType<typeof useAuth> | null = null;
   
   try {
-    const auth = useAuth();
-    isSignedIn = auth.isSignedIn;
+    authResult = useAuth();
   } catch (e) {
-    // Clerk not available (no key) - ignore error, user can use dev mode
+    // Clerk not available (no key) - will be handled below
   }
   
-  const [devMode, setDevMode] = useState<boolean | null>(null);
+  const isSignedIn = authResult?.isSignedIn || false;
+  const authLoaded = authResult?.isLoaded || true;
+  
+  const [devMode, setDevMode] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     AsyncStorage.getItem("__dev_mode_user").then((val) => {
       setDevMode(!!val);
+      setIsLoading(false);
     });
   }, []);
 
-  if (devMode === null) return null;
+  // Show loading while checking dev mode
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, backgroundColor: "#08080F", justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" color="#C8A84B" />
+      </View>
+    );
+  }
 
   // Only redirect if user is actually signed in OR dev mode was explicitly activated
-  // Don't redirect just because Clerk is not available - show login screen instead
   const allowAccess = isSignedIn || devMode;
 
   if (allowAccess) {

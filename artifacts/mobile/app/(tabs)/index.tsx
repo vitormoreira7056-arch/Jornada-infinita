@@ -8,14 +8,16 @@ import {
   Platform,
   Modal,
   Pressable,
+  ActivityIndicator,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { useColors } from "@/hooks/useColors";
-import { useGame, computePlayerAtk, computePlayerAtkM, computePlayerDef, computePlayerMaxHp, computePlayerCritRate, computePlayerDodge, computePlayerLuck, computePlayerLifeSteal, computePlayerFortune } from "@/context/GameContext";
+import { useGame } from "@/context/GameContext";
 import { getRaceById } from "@/constants/races";
 import { formatNumber } from "@/constants/game";
 
@@ -65,19 +67,14 @@ function PlayerStatsModal({
   const race = state.hero.raceId ? getRaceById(state.hero.raceId) : null;
 
   const stats = [
-    { label: "Nível", value: state.hero.level, icon: "star", color: colors.gold },
-    { label: "HP Máximo", value: computePlayerMaxHp(state), icon: "heart", color: "#EF5350" },
-    { label: "Ataque Físico", value: computePlayerAtk(state), icon: "zap", color: "#FF9800" },
-    { label: "Ataque Mágico", value: computePlayerAtkM(state), icon: "feather", color: "#AB47BC" },
-    { label: "Defesa", value: computePlayerDef(state), icon: "shield", color: "#78909C" },
-    { label: "Taxa Crítica", value: `${(computePlayerCritRate(state) * 100).toFixed(1)}%`, icon: "crosshair", color: "#FFD700" },
+    { label: "Nível", value: state.hero.level, icon: "star", color: "#C8A84B" },
+    { label: "HP Máximo", value: state.hero.maxHp + (state.hero.raceId ? 100 : 0), icon: "heart", color: "#EF5350" },
+    { label: "Ataque", value: state.hero.baseAtk, icon: "zap", color: "#FF9800" },
+    { label: "Defesa", value: state.hero.baseDef, icon: "shield", color: "#78909C" },
+    { label: "Taxa Crítica", value: `${(state.hero.critRate * 100).toFixed(1)}%`, icon: "crosshair", color: "#FFD700" },
     { label: "Dano Crítico", value: `${(state.hero.critDmg * 100).toFixed(0)}%`, icon: "award", color: "#FFC107" },
-    { label: "Esquiva", value: `${(computePlayerDodge(state) * 100).toFixed(1)}%`, icon: "wind", color: "#26C6DA" },
-    { label: "Sorte", value: `${(computePlayerLuck(state) * 100).toFixed(3)}%`, icon: "clover", color: "#66BB6A" },
-    { label: "Roubo de Vida", value: `${(computePlayerLifeSteal(state) * 100).toFixed(1)}%`, icon: "droplet", color: "#EF5350" },
-    { label: "Velocidade", value: state.hero.speed, icon: "activity", color: "#80CBC4" },
-    { label: "Poder Mágico", value: state.hero.magicPower, icon: "cloud-lightning", color: "#CE93D8" },
-    { label: "Fortuna", value: `${computePlayerFortune(state)}%`, icon: "trending-up", color: "#FFD54F" },
+    { label: "Esquiva", value: `${(state.hero.dodge * 100).toFixed(1)}%`, icon: "wind", color: "#26C6DA" },
+    { label: "Sorte", value: `${(state.hero.luck * 100).toFixed(3)}%`, icon: "heart", color: "#66BB6A" },
   ];
 
   return (
@@ -96,10 +93,10 @@ function PlayerStatsModal({
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.modalTitle, { color: race?.color || "#C8A84B" }]}>
-                  {state.profile.name}
+                  {state.profile?.name || "Aventureiro"}
                 </Text>
                 <Text style={styles.modalSubtitle}>
-                  {race?.name || "Aventureiro"} • {state.profile.title}
+                  {race?.name || "Desconhecido"} • {state.profile?.title || "Novato"}
                 </Text>
               </View>
               <Pressable onPress={onClose} style={[styles.modalClose, { backgroundColor: "#1A1A30" }]}>
@@ -129,19 +126,20 @@ function PlayerStatsModal({
 // Menu modal
 function MenuModal({ 
   visible, 
-  onClose 
+  onClose,
+  onLogout,
 }: { 
   visible: boolean; 
   onClose: () => void;
+  onLogout: () => void;
 }) {
-  const colors = useColors();
   const insets = useSafeAreaInsets();
 
   const menuItems = [
     { icon: "settings", label: "Configurações", onPress: () => {} },
     { icon: "help-circle", label: "Ajuda", onPress: () => {} },
     { icon: "info", label: "Sobre", onPress: () => {} },
-    { icon: "log-out", label: "Sair", onPress: () => {} },
+    { icon: "log-out", label: "Sair", onPress: onLogout },
   ];
 
   return (
@@ -201,13 +199,33 @@ export default function HomeScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { state } = useGame();
+  const { state, isLoading } = useGame();
   const [showStats, setShowStats] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   
   const race = state.hero.raceId ? getRaceById(state.hero.raceId) : null;
   const topPad = Platform.OS === "web" ? 24 : insets.top;
   const bottomPad = Platform.OS === "web" ? 24 : insets.bottom;
+
+  const handleLogout = async () => {
+    try {
+      // Clear dev mode
+      await AsyncStorage.removeItem("__dev_mode_user");
+      // Reload app to go back to login
+      router.replace("/(auth)/sign-in");
+    } catch (e) {
+      console.error("Error logging out:", e);
+    }
+  };
+
+  // Show loading while game state is loading
+  if (isLoading) {
+    return (
+      <View style={[styles.container, { backgroundColor: "#08080F", justifyContent: "center", alignItems: "center" }]}>
+        <ActivityIndicator size="large" color="#C8A84B" />
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { backgroundColor: "#08080F" }]}>
@@ -234,8 +252,8 @@ export default function HomeScreen() {
             <Text style={styles.avatarEmoji}>{race?.emoji || "👤"}</Text>
           </View>
           <View>
-            <Text style={styles.playerName}>{state.profile.name}</Text>
-            <Text style={styles.playerTitle}>{state.profile.title}</Text>
+            <Text style={styles.playerName}>{state.profile?.name || "Aventureiro"}</Text>
+            <Text style={styles.playerTitle}>{state.profile?.title || "Novato"}</Text>
           </View>
         </TouchableOpacity>
 
@@ -250,11 +268,11 @@ export default function HomeScreen() {
 
       {/* Currency bar */}
       <View style={styles.currencyBar}>
-        <CurrencyDisplay type="bronze" amount={state.resources.bronze} />
-        <CurrencyDisplay type="silver" amount={state.resources.silver} />
-        <CurrencyDisplay type="gold" amount={state.resources.goldCoins} />
-        <CurrencyDisplay type="diamond" amount={state.resources.diamond} />
-        <CurrencyDisplay type="mithril" amount={state.resources.mithril} />
+        <CurrencyDisplay type="bronze" amount={state.resources?.bronze || 0} />
+        <CurrencyDisplay type="silver" amount={state.resources?.silver || 0} />
+        <CurrencyDisplay type="gold" amount={state.resources?.goldCoins || 0} />
+        <CurrencyDisplay type="diamond" amount={state.resources?.diamond || 0} />
+        <CurrencyDisplay type="mithril" amount={state.resources?.mithril || 0} />
       </View>
 
       {/* Main content */}
@@ -264,7 +282,7 @@ export default function HomeScreen() {
       >
         {/* Welcome section */}
         <View style={styles.welcomeSection}>
-          <Text style={styles.welcomeTitle}>Bem-vindo, {state.profile.name}</Text>
+          <Text style={styles.welcomeTitle}>Bem-vindo, {state.profile?.name || "Aventureiro"}</Text>
           <Text style={styles.welcomeSubtitle}>
             Sua jornada como {race?.name || "Aventureiro"} começou
           </Text>
@@ -279,7 +297,7 @@ export default function HomeScreen() {
           <View style={styles.characterVisual}>
             <Text style={styles.characterEmoji}>{race?.emoji || "👤"}</Text>
             <View style={[styles.levelBadge, { backgroundColor: race?.color || "#C8A84B" }]}>
-              <Text style={styles.levelText}>Nv. {state.hero.level}</Text>
+              <Text style={styles.levelText}>Nv. {state.hero?.level || 1}</Text>
             </View>
           </View>
           <View style={styles.characterInfo}>
@@ -296,17 +314,17 @@ export default function HomeScreen() {
         <View style={styles.quickStats}>
           <View style={styles.quickStat}>
             <Feather name="heart" size={16} color="#EF5350" />
-            <Text style={styles.quickStatValue}>{computePlayerMaxHp(state)}</Text>
+            <Text style={styles.quickStatValue}>{state.hero?.maxHp || 100}</Text>
             <Text style={styles.quickStatLabel}>HP</Text>
           </View>
           <View style={styles.quickStat}>
             <Feather name="zap" size={16} color="#FF9800" />
-            <Text style={styles.quickStatValue}>{computePlayerAtk(state)}</Text>
+            <Text style={styles.quickStatValue}>{state.hero?.baseAtk || 20}</Text>
             <Text style={styles.quickStatLabel}>ATK</Text>
           </View>
           <View style={styles.quickStat}>
             <Feather name="shield" size={16} color="#78909C" />
-            <Text style={styles.quickStatValue}>{computePlayerDef(state)}</Text>
+            <Text style={styles.quickStatValue}>{state.hero?.baseDef || 10}</Text>
             <Text style={styles.quickStatLabel}>DEF</Text>
           </View>
         </View>
@@ -342,7 +360,7 @@ export default function HomeScreen() {
 
       {/* Modals */}
       <PlayerStatsModal visible={showStats} onClose={() => setShowStats(false)} />
-      <MenuModal visible={showMenu} onClose={() => setShowMenu(false)} />
+      <MenuModal visible={showMenu} onClose={() => setShowMenu(false)} onLogout={handleLogout} />
     </View>
   );
 }
@@ -356,7 +374,6 @@ const styles = StyleSheet.create({
     width: 300,
     height: 300,
     borderRadius: 150,
-    blur: 100,
   },
   header: {
     flexDirection: "row",
