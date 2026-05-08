@@ -43,7 +43,7 @@ export default function RootLayout() {
     Inter_700Bold,
   });
 
-  const [devMode, setDevMode] = useState(false);
+  const [devMode, setDevMode] = useState<boolean | null>(null);
 
   useEffect(() => {
     AsyncStorage.getItem("__dev_mode_user").then((val) => {
@@ -66,6 +66,9 @@ export default function RootLayout() {
   }, []);
 
   if (!fontsLoaded && !fontError) return null;
+  
+  // Wait for dev mode check to complete
+  if (devMode === null) return null;
 
   // Dev mode: bypass Clerk entirely (only when explicitly activated by user)
   if (devMode) {
@@ -89,9 +92,9 @@ export default function RootLayout() {
   // Check if Clerk key is available
   const hasClerkKey = publishableKey && publishableKey !== "undefined" && publishableKey !== "null";
 
-  // If no Clerk key and not in dev mode, we still need to show the auth screens
-  // The auth layout will handle showing the login screen with dev mode option
-  if (!hasClerkKey && !devMode) {
+  // If no Clerk key, render without ClerkProvider
+  // Auth layout will handle showing login with dev mode option
+  if (!hasClerkKey) {
     return (
       <SafeAreaProvider>
         <GestureHandlerRootView style={{ flex: 1 }}>
