@@ -1017,7 +1017,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       }
     }
     if (roll < 75) return { type: "dungeon", message: "Você sente uma presença misteriosa..." };
-    if (roll < 75) return { type: "resource", message: "Você encontrou alguns recursos!" };
+    if (roll < 90) return { type: "resource", message: "Você encontrou alguns recursos!" };
     return { type: "nothing", message: "Você explorou a área mas não encontrou nada de interessante." };
   };
 

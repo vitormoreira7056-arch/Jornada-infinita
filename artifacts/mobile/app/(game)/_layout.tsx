@@ -55,50 +55,76 @@ function CurrencyDisplay({ icon, value, color }: { icon: string; value: number; 
   );
 }
 
+// Confirmation Modal
+function ConfirmationModal({ 
+  visible, 
+  onClose, 
+  title, 
+  message, 
+  onConfirm,
+  confirmText = "Confirmar",
+  danger = false
+}: { 
+  visible: boolean; 
+  onClose: () => void; 
+  title: string; 
+  message: string; 
+  onConfirm: () => void;
+  confirmText?: string;
+  danger?: boolean;
+}) {
+  return (
+    <Modal
+      animationType="fade"
+      transparent={true}
+      visible={visible}
+      onRequestClose={onClose}
+    >
+      <View style={confirmStyles.overlay}>
+        <View style={confirmStyles.container}>
+          <Text style={confirmStyles.title}>{title}</Text>
+          <Text style={confirmStyles.message}>{message}</Text>
+          <View style={confirmStyles.buttons}>
+            <TouchableOpacity style={confirmStyles.cancelBtn} onPress={onClose}>
+              <Text style={confirmStyles.cancelText}>Cancelar</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[confirmStyles.confirmBtn, danger && confirmStyles.dangerBtn]} 
+              onPress={() => { onClose(); onConfirm(); }}
+            >
+              <Text style={[confirmStyles.confirmText, danger && confirmStyles.dangerText]}>
+                {confirmText}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 // Menu Modal
 function MenuModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const { logout, resetAccount } = useGame();
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
-  const handleLogout = () => {
-    onClose();
-    setTimeout(() => {
-      Alert.alert(
-        "Sair",
-        "Deseja sair da conta?",
-        [
-          { text: "Cancelar", style: "cancel" },
-          { 
-            text: "Sair", 
-            style: "destructive",
-            onPress: async () => {
-              await logout();
-              router.replace("/login");
-            }
-          },
-        ]
-      );
-    }, 300);
+  const handleLogoutConfirm = async () => {
+    try {
+      await logout();
+      router.replace("/login");
+    } catch (error) {
+      console.error("Erro ao sair:", error);
+    }
   };
 
-  const handleResetAccount = () => {
-    onClose();
-    setTimeout(() => {
-      Alert.alert(
-        "⚠️ Resetar Conta",
-        "ATENÇÃO: Isso apagará TODOS os dados do personagem atual (nível, itens, progresso, etc.) e voltará para a seleção de raça.\n\nEsta ação não pode ser desfeita!\n\nTem certeza?",
-        [
-          { text: "Cancelar", style: "cancel" },
-          { 
-            text: "Resetar", 
-            style: "destructive",
-            onPress: async () => {
-              await resetAccount();
-              router.replace("/character-creation");
-            }
-          },
-        ]
-      );
-    }, 300);
+  const handleResetConfirm = async () => {
+    try {
+      await resetAccount();
+      router.replace("/character-creation");
+    } catch (error) {
+      console.error("Erro ao resetar:", error);
+    }
   };
 
   return (
@@ -128,12 +154,34 @@ function MenuModal({ visible, onClose }: { visible: boolean; onClose: () => void
           
           <View style={menuStyles.divider} />
           
-          <TouchableOpacity style={[menuStyles.menuItem, menuStyles.logoutItem]} onPress={handleLogout}>
+          <TouchableOpacity style={[menuStyles.menuItem, menuStyles.logoutItem]} onPress={() => { onClose(); setShowLogoutConfirm(true); }}>
             <Text style={menuStyles.menuIcon}>🚪</Text>
             <Text style={[menuStyles.menuText, menuStyles.logoutText]}>Sair da Conta</Text>
           </TouchableOpacity>
         </View>
       </TouchableOpacity>
+      
+      {/* Logout Confirmation */}
+      <ConfirmationModal
+        visible={showLogoutConfirm}
+        onClose={() => setShowLogoutConfirm(false)}
+        title="Sair"
+        message="Deseja sair da conta?"
+        onConfirm={handleLogoutConfirm}
+        confirmText="Sair"
+        danger={true}
+      />
+      
+      {/* Reset Confirmation */}
+      <ConfirmationModal
+        visible={showResetConfirm}
+        onClose={() => setShowResetConfirm(false)}
+        title="⚠️ Resetar Conta"
+        message="ATENÇÃO: Isso apagará TODOS os dados do personagem atual (nível, itens, progresso, etc.) e voltará para a seleção de raça.\n\nEsta ação não pode ser desfeita!"
+        onConfirm={handleResetConfirm}
+        confirmText="Resetar"
+        danger={true}
+      />
     </Modal>
   );
 }
@@ -338,6 +386,73 @@ const menuStyles = StyleSheet.create({
   },
   resetText: {
     color: "#f59e0b",
+  },
+});
+
+const confirmStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.8)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  container: {
+    backgroundColor: "#1e1e2e",
+    borderRadius: 16,
+    padding: 24,
+    width: "100%",
+    maxWidth: 320,
+    borderWidth: 1,
+    borderColor: "rgba(124, 58, 237, 0.3)",
+  },
+  title: {
+    color: "#ffffff",
+    fontSize: 18,
+    fontWeight: "800",
+    textAlign: "center",
+    marginBottom: 12,
+  },
+  message: {
+    color: "#94a3b8",
+    fontSize: 14,
+    textAlign: "center",
+    lineHeight: 20,
+    marginBottom: 24,
+  },
+  buttons: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  cancelBtn: {
+    flex: 1,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    borderRadius: 10,
+    padding: 14,
+    alignItems: "center",
+  },
+  cancelText: {
+    color: "#94a3b8",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  confirmBtn: {
+    flex: 1,
+    backgroundColor: "rgba(124, 58, 237, 0.8)",
+    borderRadius: 10,
+    padding: 14,
+    alignItems: "center",
+  },
+  confirmText: {
+    color: "#ffffff",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  dangerBtn: {
+    backgroundColor: "rgba(239, 68, 68, 0.8)",
+  },
+  dangerText: {
+    color: "#ffffff",
   },
 });
 

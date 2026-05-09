@@ -484,11 +484,19 @@ export default function BiomeScreen() {
             // Primeiro tenta encontrar mob
             const encounterResult = findEncounter(id);
             
-            if (encounterResult.type === "mob" && encounterResult.mob) {
-              // Encontrou mob - inicia combate
-              const mob = encounterResult.mob;
-              addLogEntry("combat", `⚔️ Encontrou: ${mob.name}`, `Nv.${mob.level} • Rank ${mob.rank}`);
-              startCombat(mob);
+            if (encounterResult.type === "mob" && encounterResult.mobs && encounterResult.mobs.length > 0) {
+              // Encontrou mob(s) - inicia combate
+              const mobs = encounterResult.mobs;
+              const mobCount = mobs.length;
+              const firstMob = mobs[0];
+              
+              if (mobCount === 1) {
+                addLogEntry("combat", `⚔️ Encontrou: ${firstMob.name}`, `Nv.${firstMob.level} • Rank ${firstMob.rank}`);
+              } else {
+                addLogEntry("combat", `⚔️ Encontrou grupo de ${mobCount} inimigos!`, `Primeiro: ${firstMob.name}`);
+              }
+              
+              startCombat(mobs);
               setIsExploring(false);
               router.push("/(game)/combat");
               return;
