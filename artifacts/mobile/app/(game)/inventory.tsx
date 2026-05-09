@@ -116,23 +116,26 @@ function EquipmentSlotCard({
   item: Item | null;
   onPress: () => void;
 }) {
+  const tier = item ? ITEM_TIERS[item.tier] || ITEM_TIERS["F"] : null;
+  const quality = item ? ITEM_QUALITIES[item.quality] || ITEM_QUALITIES["normal"] : null;
+  
   return (
     <TouchableOpacity style={styles.slotCard} onPress={onPress} activeOpacity={0.8}>
       <View style={[
         styles.slotIconBox,
-        item && { borderColor: TIERS[item.tier].color }
+        tier && { borderColor: tier.color }
       ]}>
         <Text style={styles.slotIcon}>{item ? item.icon : icon}</Text>
-        {item && <View style={[styles.equippedDot, { backgroundColor: TIERS[item.tier].color }]} />}
+        {tier && <View style={[styles.equippedDot, { backgroundColor: tier.color }]} />}
       </View>
       <Text style={styles.slotName}>{name}</Text>
-      {item ? (
+      {item && tier && quality ? (
         <View style={styles.slotItemInfo}>
-          <Text style={[styles.slotTierText, { color: TIERS[item.tier].color }]} numberOfLines={1}>
-            {TIERS[item.tier].name}
+          <Text style={[styles.slotTierText, { color: tier.color }]} numberOfLines={1}>
+            {tier.name}
           </Text>
-          <Text style={[styles.slotQualityText, { color: QUALITIES[item.quality].color }]} numberOfLines={1}>
-            {QUALITIES[item.quality].name}
+          <Text style={[styles.slotQualityText, { color: quality.color }]} numberOfLines={1}>
+            {quality.name}
           </Text>
         </View>
       ) : (

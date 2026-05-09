@@ -1,8 +1,37 @@
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Animated, Alert } from "react-native";
-import { useGame } from "@/context/GameContext";
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Animated, Alert, Modal } from "react-native";
+import { useGame, Item } from "@/context/GameContext";
 import { useState, useEffect, useCallback } from "react";
 import { router } from "expo-router";
 import { MOB_RANK_MULTIPLIERS } from "@/constants/mobs";
+
+// Tiers e Qualidades para o painel de recompensas
+const ITEM_TIERS: Record<string, { name: string; color: string; icon: string }> = {
+  "F": { name: "Rank F", color: "#9ca3af", icon: "⚪" },
+  "E": { name: "Rank E", color: "#22c55e", icon: "🟢" },
+  "D": { name: "Rank D", color: "#3b82f6", icon: "🔵" },
+  "C": { name: "Rank C", color: "#a855f7", icon: "🟣" },
+  "B": { name: "Rank B", color: "#f59e0b", icon: "🟠" },
+  "A": { name: "Rank A", color: "#ef4444", icon: "🔴" },
+  "S": { name: "Rank S", color: "#ec4899", icon: "🌟" },
+  "SS": { name: "Rank SS", color: "#22d3ee", icon: "💫" },
+  "SSS": { name: "Rank SSS", color: "#fbbf24", icon: "👑" },
+  "SSS+": { name: "Rank SSS+", color: "#ffffff", icon: "🔱" },
+};
+
+const ITEM_QUALITIES: Record<string, { name: string; color: string }> = {
+  "normal": { name: "Normal", color: "#9ca3af" },
+  "good": { name: "Bom", color: "#22c55e" },
+  "exceptional": { name: "Excepcional", color: "#3b82f6" },
+  "excellent": { name: "Excelente", color: "#a855f7" },
+  "masterpiece": { name: "Obra-prima", color: "#fbbf24" },
+  "common": { name: "Comum", color: "#9ca3af" },
+  "uncommon": { name: "Incomum", color: "#22c55e" },
+  "rare": { name: "Raro", color: "#3b82f6" },
+  "epic": { name: "Épico", color: "#a855f7" },
+  "legendary": { name: "Lendário", color: "#f59e0b" },
+  "mythic": { name: "Mítico", color: "#ef4444" },
+  "divine": { name: "Divino", color: "#ec4899" },
+};
 
 // HP/MP Bar
 function ResourceBar({ current, max, color, icon }: { current: number; max: number; color: string; icon: string }) {
@@ -60,6 +89,7 @@ export default function CombatScreen() {
   const { state, getTotalStats, playerAttack, playerUseSkill, enemyAttack, endCombat, regenHpMp, tickSkillCooldowns } = useGame();
   const [fadeAnim] = useState(new Animated.Value(0));
   const [combatTick, setCombatTick] = useState(0);
+  const [showRewards, setShowRewards] = useState(false);
   
   const stats = getTotalStats();
   const enemy = state.currentEnemy;
@@ -84,20 +114,20 @@ export default function CombatScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.inCombat, enemy]);
   
-  // Verificar fim de combate (vitória) - separado para evitar loops
+  // Verificar fim de combate (vitória) - mostrar painel de recompensas
   useEffect(() => {
     if (!state.inCombat && !state.currentEnemy && state.combatLog.length > 0) {
-      // Verificar se há mensagem de vitória no log (procurar em todas as mensagens recentes)
-      const recentLogs = state.combatLog.slice(-10);
+      // Verificar se há mensagem de vitória no log
+      const recentLogs = state.combatLog.slice(-15);
       const hasVictory = recentLogs.some(log => 
-        log && (log.includes("VITÓRIA") || log.includes("Vitória") || log.includes("🎉"))
+        log && (log.includes("VITÓRIA") || log.includes("Vitória") || log.includes("🎉") || log.includes("VITÓRIA COMPLETA"))
       );
       
       if (hasVictory) {
-        // Redirecionar para tela de loot após um pequeno delay
+        // Mostrar painel de recompensas após um pequeno delay
         const timeout = setTimeout(() => {
-          router.push("/(game)/loot");
-        }, 800);
+          setShowRewards(true);
+        }, 500);
         return () => clearTimeout(timeout);
       }
     }
@@ -161,6 +191,128 @@ export default function CombatScreen() {
       ]
     );
   }, []);
+  
+  // Painel de Recompensas Pós-Combate
+  if (showRewards) {
+    // Pegar os últimos itens adicionados ao inventário
+    const recentLoot = state.inventory.slice(-6).reverse();
+    
+    // Encontrar mensagens de recompensa no log
+    const rewardMessages = state.combatLog.slice(-20).filter(log => 
+      log && (log.includes("+") || log.includes("💰") || log.includes("💎") || log.includes("📦") || log.includes("🆙"))
+    );
+    
+    return (
+      <View style={rewardStyles.container}>
+        <Text style={rewardStyles.title}>🎉 VITÓRIA!</Text>
+        
+        <ScrollView style={rewardStyles.scrollView} showsVerticalScrollIndicator={false}>
+          {/* XP e Level */}
+          <View style={rewardStyles.section}>
+            <Text style={rewardStyles.sectionTitle}>📊 Experiência</Text>
+            <View style={rewardStyles.xpBox}>
+              <Text style={rewardStyles.xpText}>Nível {state.level}</Text>
+              <Text style={rewardStyles.xpValue}>{Math.floor(state.exp).toLocaleString()} XP</Text>
+            </View>
+          </View>
+          
+          {/* Moedas */}
+          <View style={rewardStyles.section}>
+            <Text style={rewardStyles.sectionTitle}>💰 Moedas</Text>
+            <View style={rewardStyles.currencyGrid}>
+              {state.currencies.gold > 0 && (
+                <View style={rewardStyles.currencyBox}>
+                  <Text style={rewardStyles.currencyIcon}>🥇</Text>
+                  <Text style={rewardStyles.currencyValue}>{state.currencies.gold.toLocaleString()}</Text>
+                  <Text style={rewardStyles.currencyLabel}>Ouro</Text>
+                </View>
+              )}
+              {state.currencies.silver > 0 && (
+                <View style={rewardStyles.currencyBox}>
+                  <Text style={rewardStyles.currencyIcon}>🥈</Text>
+                  <Text style={rewardStyles.currencyValue}>{state.currencies.silver.toLocaleString()}</Text>
+                  <Text style={rewardStyles.currencyLabel}>Prata</Text>
+                </View>
+              )}
+              {state.currencies.copper > 0 && (
+                <View style={rewardStyles.currencyBox}>
+                  <Text style={rewardStyles.currencyIcon}>🥉</Text>
+                  <Text style={rewardStyles.currencyValue}>{state.currencies.copper.toLocaleString()}</Text>
+                  <Text style={rewardStyles.currencyLabel}>Cobre</Text>
+                </View>
+              )}
+              {state.currencies.diamond > 0 && (
+                <View style={rewardStyles.currencyBox}>
+                  <Text style={rewardStyles.currencyIcon}>💎</Text>
+                  <Text style={rewardStyles.currencyValue}>{state.currencies.diamond.toLocaleString()}</Text>
+                  <Text style={rewardStyles.currencyLabel}>Diamantes</Text>
+                </View>
+              )}
+              {state.currencies.mithril > 0 && (
+                <View style={rewardStyles.currencyBox}>
+                  <Text style={rewardStyles.currencyIcon}>✨</Text>
+                  <Text style={rewardStyles.currencyValue}>{state.currencies.mithril.toLocaleString()}</Text>
+                  <Text style={rewardStyles.currencyLabel}>Mithril</Text>
+                </View>
+              )}
+            </View>
+          </View>
+          
+          {/* Itens Dropados */}
+          {recentLoot.length > 0 && (
+            <View style={rewardStyles.section}>
+              <Text style={rewardStyles.sectionTitle}>📦 Itens Obtidos ({recentLoot.length})</Text>
+              {recentLoot.map((item, index) => {
+                const tier = ITEM_TIERS[item.tier] || ITEM_TIERS["F"];
+                const quality = ITEM_QUALITIES[item.quality] || ITEM_QUALITIES["normal"];
+                return (
+                  <View key={item.id || index} style={[rewardStyles.itemCard, { borderColor: tier.color }]}>
+                    <View style={rewardStyles.itemHeader}>
+                      <Text style={rewardStyles.itemIcon}>{item.icon}</Text>
+                      <View style={rewardStyles.itemInfo}>
+                        <Text style={[rewardStyles.itemName, { color: quality.color }]}>{item.name}</Text>
+                        <Text style={[rewardStyles.itemTier, { color: tier.color }]}>
+                          {tier.name} • {quality.name}
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={rewardStyles.itemStats}>
+                      {item.atkF > 0 && <Text style={rewardStyles.stat}>⚔️ +{item.atkF}</Text>}
+                      {item.atkM > 0 && <Text style={rewardStyles.stat}>🔮 +{item.atkM}</Text>}
+                      {item.def > 0 && <Text style={rewardStyles.stat}>🛡️ +{item.def}</Text>}
+                      {item.hp > 0 && <Text style={rewardStyles.stat}>❤️ +{item.hp}</Text>}
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+          
+          {/* Log de Recompensas */}
+          {rewardMessages.length > 0 && (
+            <View style={rewardStyles.section}>
+              <Text style={rewardStyles.sectionTitle}>📝 Resumo</Text>
+              <View style={rewardStyles.logBox}>
+                {rewardMessages.map((msg, idx) => (
+                  <Text key={idx} style={rewardStyles.logText}>{msg}</Text>
+                ))}
+              </View>
+            </View>
+          )}
+        </ScrollView>
+        
+        <TouchableOpacity 
+          style={rewardStyles.continueBtn} 
+          onPress={() => {
+            setShowRewards(false);
+            router.back();
+          }}
+        >
+          <Text style={rewardStyles.continueBtnText}>Continuar →</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
   
   if (!state.inCombat || !enemy) {
     return (
@@ -586,5 +738,148 @@ const queueStyles = StyleSheet.create({
     height: "100%",
     backgroundColor: "#ef4444",
     borderRadius: 4,
+  },
+});
+
+// Estilos para o painel de recompensas
+const rewardStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#0f172a",
+    padding: 16,
+    paddingTop: 50,
+  },
+  title: {
+    fontSize: 32,
+    fontWeight: "bold",
+    color: "#fbbf24",
+    textAlign: "center",
+    marginBottom: 20,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  section: {
+    backgroundColor: "#1e293b",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#334155",
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#94a3b8",
+    marginBottom: 12,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  xpBox: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "#0f172a",
+    padding: 12,
+    borderRadius: 12,
+  },
+  xpText: {
+    fontSize: 16,
+    color: "#fbbf24",
+    fontWeight: "600",
+  },
+  xpValue: {
+    fontSize: 16,
+    color: "#22c55e",
+    fontWeight: "bold",
+  },
+  currencyGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  currencyBox: {
+    backgroundColor: "#0f172a",
+    borderRadius: 12,
+    padding: 12,
+    alignItems: "center",
+    minWidth: 70,
+    flex: 1,
+  },
+  currencyIcon: {
+    fontSize: 24,
+    marginBottom: 4,
+  },
+  currencyValue: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: "#f8fafc",
+  },
+  currencyLabel: {
+    fontSize: 10,
+    color: "#64748b",
+    marginTop: 2,
+  },
+  itemCard: {
+    backgroundColor: "#0f172a",
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: "#334155",
+  },
+  itemHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  itemIcon: {
+    fontSize: 28,
+    marginRight: 12,
+  },
+  itemInfo: {
+    flex: 1,
+  },
+  itemName: {
+    fontSize: 14,
+    fontWeight: "bold",
+  },
+  itemTier: {
+    fontSize: 11,
+  },
+  itemStats: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  stat: {
+    fontSize: 11,
+    color: "#94a3b8",
+    backgroundColor: "#1e293b",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  logBox: {
+    backgroundColor: "#0f172a",
+    borderRadius: 12,
+    padding: 12,
+  },
+  logText: {
+    fontSize: 11,
+    color: "#64748b",
+    marginBottom: 2,
+  },
+  continueBtn: {
+    backgroundColor: "#22c55e",
+    borderRadius: 16,
+    padding: 18,
+    alignItems: "center",
+    marginTop: 12,
+  },
+  continueBtnText: {
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: 16,
   },
 });
