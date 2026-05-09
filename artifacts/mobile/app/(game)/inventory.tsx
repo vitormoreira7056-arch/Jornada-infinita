@@ -1,7 +1,36 @@
 import { useState } from "react";
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert } from "react-native";
 import { useGame, Item, EquipmentSlot } from "@/context/GameContext";
-import { TIERS, QUALITIES, TierId, QualityId } from "@/constants/tiers";
+
+// Tiers de equipamentos (F, E, D, C, B, A, S, SS, SSS, SSS+)
+const ITEM_TIERS: Record<string, { name: string; color: string; icon: string }> = {
+  "F": { name: "Rank F", color: "#9ca3af", icon: "⚪" },
+  "E": { name: "Rank E", color: "#22c55e", icon: "🟢" },
+  "D": { name: "Rank D", color: "#3b82f6", icon: "🔵" },
+  "C": { name: "Rank C", color: "#a855f7", icon: "🟣" },
+  "B": { name: "Rank B", color: "#f59e0b", icon: "🟠" },
+  "A": { name: "Rank A", color: "#ef4444", icon: "🔴" },
+  "S": { name: "Rank S", color: "#ec4899", icon: "🌟" },
+  "SS": { name: "Rank SS", color: "#22d3ee", icon: "💫" },
+  "SSS": { name: "Rank SSS", color: "#fbbf24", icon: "👑" },
+  "SSS+": { name: "Rank SSS+", color: "#ffffff", icon: "🔱" },
+};
+
+// Qualidades de equipamentos
+const ITEM_QUALITIES: Record<string, { name: string; color: string }> = {
+  "normal": { name: "Normal", color: "#9ca3af" },
+  "good": { name: "Bom", color: "#22c55e" },
+  "exceptional": { name: "Excepcional", color: "#3b82f6" },
+  "excellent": { name: "Excelente", color: "#a855f7" },
+  "masterpiece": { name: "Obra-prima", color: "#fbbf24" },
+  "common": { name: "Comum", color: "#9ca3af" },
+  "uncommon": { name: "Incomum", color: "#22c55e" },
+  "rare": { name: "Raro", color: "#3b82f6" },
+  "epic": { name: "Épico", color: "#a855f7" },
+  "legendary": { name: "Lendário", color: "#f59e0b" },
+  "mythic": { name: "Mítico", color: "#ef4444" },
+  "divine": { name: "Divino", color: "#ec4899" },
+};
 
 const SLOT_CONFIG: { slot: EquipmentSlot; name: string; icon: string }[] = [
   { slot: "head", name: "Cabeça", icon: "⛑️" },
@@ -34,8 +63,8 @@ function ItemCard({
   onSell?: () => void;
   showDetails?: boolean;
 }) {
-  const tier = TIERS[item.tier as TierId] || TIERS.F;
-  const quality = QUALITIES[item.quality as QualityId] || QUALITIES.common;
+  const tier = ITEM_TIERS[item.tier] || ITEM_TIERS["F"];
+  const quality = ITEM_QUALITIES[item.quality] || ITEM_QUALITIES["normal"];
   
   const hasStats = item.atkF > 0 || item.atkM > 0 || item.def > 0 || item.hp > 0 || 
                    item.armor > 0 || item.magicRes > 0 || item.critRate > 0 || item.dodge > 0;

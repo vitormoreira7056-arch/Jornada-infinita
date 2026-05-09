@@ -476,57 +476,62 @@ export default function BiomeScreen() {
             if (isExploring) return;
             setIsExploring(true);
             
-            addLogEntry("nothing", "🔍 Iniciando exploração...", "Procurando por inimigos, dungeons ou recursos");
-            
-            // Simular tempo de exploração
-            await new Promise(resolve => setTimeout(resolve, 1500));
-            
-            // Primeiro tenta encontrar mob
-            const encounterResult = findEncounter(id);
-            
-            if (encounterResult.type === "mob" && encounterResult.mobs && encounterResult.mobs.length > 0) {
-              // Encontrou mob(s) - inicia combate
-              const mobs = encounterResult.mobs;
-              const mobCount = mobs.length;
-              const firstMob = mobs[0];
+            try {
+              addLogEntry("nothing", "🔍 Iniciando exploração...", "Procurando por inimigos, dungeons ou recursos");
               
-              if (mobCount === 1) {
-                addLogEntry("combat", `⚔️ Encontrou: ${firstMob.name}`, `Nv.${firstMob.level} • Rank ${firstMob.rank}`);
-              } else {
-                addLogEntry("combat", `⚔️ Encontrou grupo de ${mobCount} inimigos!`, `Primeiro: ${firstMob.name}`);
+              // Simular tempo de exploração
+              await new Promise(resolve => setTimeout(resolve, 1500));
+              
+              // Primeiro tenta encontrar mob
+              const encounterResult = findEncounter(id);
+              
+              if (encounterResult.type === "mob" && encounterResult.mobs && encounterResult.mobs.length > 0) {
+                // Encontrou mob(s) - inicia combate
+                const mobs = encounterResult.mobs;
+                const mobCount = mobs.length;
+                const firstMob = mobs[0];
+                
+                if (mobCount === 1) {
+                  addLogEntry("combat", `⚔️ Encontrou: ${firstMob.name}`, `Nv.${firstMob.level} • Rank ${firstMob.rank}`);
+                } else {
+                  addLogEntry("combat", `⚔️ Encontrou grupo de ${mobCount} inimigos!`, `Primeiro: ${firstMob.name}`);
+                }
+                
+                startCombat(mobs);
+                setIsExploring(false);
+                router.push("/(game)/combat");
+                return;
               }
               
-              startCombat(mobs);
+              // Se não encontrou mob, tenta encontrar dungeon
+              const dungeonResult = exploreBiome(id);
+              
+              if (dungeonResult.found && dungeonResult.dungeon) {
+                addLogEntry("dungeon", `🏰 Dungeon descoberta: ${dungeonResult.dungeon.name}`, `Tier ${dungeonResult.dungeon.tier}`);
+                setFoundDungeon(dungeonResult.dungeon);
+                setDiscoveryModal(true);
+                const dungeons = getDiscoveredDungeons(id);
+                setDiscoveredDungeons(dungeons);
+                const prog = getBiomeProgress(id);
+                setProgress(prog);
+              } else if (encounterResult.type === "dungeon") {
+                Alert.alert("Exploração", "Você sente uma presença misteriosa... (dungeon próxima)");
+              } else if (encounterResult.type === "resource") {
+                Alert.alert("Exploração", "Você encontrou alguns recursos! (em desenvolvimento)");
+              } else {
+                // Nada encontrado - ganha XP
+                Alert.alert(
+                  "Exploração Completa",
+                  `Você explorou ${biome.name} mas não encontrou nada de interessante.\n\nXP Ganhado: ${dungeonResult.expGained}`,
+                  [{ text: "Continuar" }]
+                );
+              }
+            } catch (error) {
+              console.error("Erro na exploração:", error);
+              Alert.alert("Erro", "Ocorreu um erro durante a exploração. Tente novamente.");
+            } finally {
               setIsExploring(false);
-              router.push("/(game)/combat");
-              return;
             }
-            
-            // Se não encontrou mob, tenta encontrar dungeon
-            const dungeonResult = exploreBiome(id);
-            
-            if (dungeonResult.found && dungeonResult.dungeon) {
-              addLogEntry("dungeon", `🏰 Dungeon descoberta: ${dungeonResult.dungeon.name}`, `Tier ${dungeonResult.dungeon.tier}`);
-              setFoundDungeon(dungeonResult.dungeon);
-              setDiscoveryModal(true);
-              const dungeons = getDiscoveredDungeons(id);
-              setDiscoveredDungeons(dungeons);
-              const prog = getBiomeProgress(id);
-              setProgress(prog);
-            } else if (encounterResult.type === "dungeon") {
-              Alert.alert("Exploração", "Você sente uma presença misteriosa... (dungeon próxima)");
-            } else if (encounterResult.type === "resource") {
-              Alert.alert("Exploração", "Você encontrou alguns recursos! (em desenvolvimento)");
-            } else {
-              // Nada encontrado - ganha XP
-              Alert.alert(
-                "Exploração Completa",
-                `Você explorou ${biome.name} mas não encontrou nada de interessante.\n\nXP Ganhado: ${dungeonResult.expGained}`,
-                [{ text: "Continuar" }]
-              );
-            }
-            
-            setIsExploring(false);
           }}
           disabled={isExploring}
         >

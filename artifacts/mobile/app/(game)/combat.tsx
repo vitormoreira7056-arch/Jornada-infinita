@@ -87,12 +87,17 @@ export default function CombatScreen() {
   // Verificar fim de combate (vitória) - separado para evitar loops
   useEffect(() => {
     if (!state.inCombat && !state.currentEnemy && state.combatLog.length > 0) {
-      const lastLog = state.combatLog[state.combatLog.length - 1];
-      if (lastLog && lastLog.includes("Vitória")) {
+      // Verificar se há mensagem de vitória no log (procurar em todas as mensagens recentes)
+      const recentLogs = state.combatLog.slice(-10);
+      const hasVictory = recentLogs.some(log => 
+        log && (log.includes("VITÓRIA") || log.includes("Vitória") || log.includes("🎉"))
+      );
+      
+      if (hasVictory) {
         // Redirecionar para tela de loot após um pequeno delay
         const timeout = setTimeout(() => {
           router.push("/(game)/loot");
-        }, 500);
+        }, 800);
         return () => clearTimeout(timeout);
       }
     }

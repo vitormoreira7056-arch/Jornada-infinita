@@ -1071,23 +1071,32 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   const findEncounter = (biomeId: BiomeId): { type: "mob" | "resource" | "dungeon" | "nothing"; mobs?: MobDef[]; message: string } => {
     const roll = Math.random() * 100;
-    if (roll < 60) { // Aumentado para 60% chance de encontrar mob
+    
+    // 70% chance de encontrar mob
+    if (roll < 70) {
       // Encontro de múltiplos mobs (1-6 mobs)
-      const mobCount = Math.floor(Math.random() * 6) + 1; // 1 a 6 mobs
+      const mobCount = Math.floor(Math.random() * 6) + 1;
       const mobs: MobDef[] = [];
       
       for (let i = 0; i < mobCount; i++) {
+        // Tentar encontrar mob da lista
         let mob = findRandomMob(state.level, FOREST_MOBS);
         
-        // Se não encontrou mob adequado, gerar um dinamicamente
+        // Se não encontrou, gerar um dinamicamente baseado no nível do jogador
         if (!mob) {
-          const elements = ["natureza", "terra", "veneno", "escuridao", "ar"];
+          const elements: ElementId[] = ["natureza", "terra", "veneno", "escuridao", "ar"];
           const names = ["Lobo Selvagem", "Aranha Gigante", "Goblin Florestal", "Mosca Carnívora", "Cobra Venenosa"];
           const name = names[Math.floor(Math.random() * names.length)];
           const element = elements[Math.floor(Math.random() * elements.length)];
           
-          // Importar generateMob dinamicamente
-          mob = generateMob(name, "F", "normal", state.level, element, "lobo", 100);
+          // Determinar rank baseado no nível do jogador
+          let rank: MobRank = "F";
+          if (state.level >= 80) rank = "B";
+          else if (state.level >= 60) rank = "C";
+          else if (state.level >= 40) rank = "D";
+          else if (state.level >= 20) rank = "E";
+          
+          mob = generateMob(name, rank, "normal", state.level, element, "lobo", 100);
         }
         
         if (mob) mobs.push(mob);
@@ -1100,8 +1109,14 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         return { type: "mob", mobs, message };
       }
     }
-    if (roll < 75) return { type: "dungeon", message: "Você sente uma presença misteriosa..." };
-    if (roll < 90) return { type: "resource", message: "Você encontrou alguns recursos!" };
+    
+    // 15% chance de encontrar dungeon
+    if (roll < 85) return { type: "dungeon", message: "Você sente uma presença misteriosa..." };
+    
+    // 10% chance de encontrar recursos
+    if (roll < 95) return { type: "resource", message: "Você encontrou alguns recursos!" };
+    
+    // 5% chance de não encontrar nada
     return { type: "nothing", message: "Você explorou a área mas não encontrou nada de interessante." };
   };
 
