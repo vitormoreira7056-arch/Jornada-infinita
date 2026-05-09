@@ -6,7 +6,7 @@ import { TierId, QualityId, rollTier, rollQuality, getTotalMultiplier, TIERS, QU
 import { BiomeId, DungeonDef, DiscoveredDungeon, BIOMES, tryDiscoverDungeon, calculateExpNeeded, TOWER_FLOORS_DATA, TowerFloor, getDiscoveredDungeonsForBiome, getBiomeDiscoveryProgress } from "@/constants/adventure";
 import { MobDef, FOREST_MOBS, findRandomMob, calculateDrops, MOB_RANK_MULTIPLIERS } from "@/constants/mobs";
 import { 
-  EquipmentBase, EquipmentSlot as NewEquipmentSlot,
+  EquipmentBase,
   generateRandomEquipment, generateBossLoot, generateMiniBossLoot, generateMobLoot,
   getActiveSetBonuses, calculateTotalStatsWithSets, getTierColor, getTierName
 } from "@/constants/equipment";
@@ -26,7 +26,37 @@ const CURRENT_USER_KEY = "rpg_idle_current_user_v5";
 export type EquipmentSlot = "mainHand" | "offHand" | "head" | "chest" | "legs" | "feet";
 
 // Item de equipamento usando o novo sistema
-export interface Item extends EquipmentBase {
+// Inclui todas as propriedades de EquipmentBase + propriedades extras do jogo
+export interface Item {
+  // Propriedades de EquipmentBase
+  id: string;
+  name: string;
+  slot: EquipmentSlot;
+  type: any;
+  tier: "F" | "E" | "D" | "C" | "B" | "A" | "S" | "SS" | "SSS" | "SSS+";
+  level: number;
+  atkF: number;
+  atkM: number;
+  def: number;
+  armor: number;
+  magicRes: number;
+  hp: number;
+  mp: number;
+  critRate: number;
+  critDmg: number;
+  atkSpeed: number;
+  dodge: number;
+  passiveEffect?: string;
+  activeSkill?: {
+    name: string;
+    description: string;
+    cooldown: number;
+    manaCost: number;
+  };
+  icon: string;
+  color: string;
+  setName?: string;
+  // Propriedades extras do jogo
   quality: QualityId;
   luck: number;
   lifeSteal: number;
@@ -664,7 +694,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         resArcane: 0, resPoison: 0, resMetal: 0, resNature: 0,
         resBlood: 0, resVoid: 0, resChaos: 0, resHoly: 0,
         resShadow: 0, resInfernal: 0, resStorm: 0, resRunic: 0, resDivine: 0,
-      };
+      } as Item;
     }
     
     // Fallback caso falhe
@@ -699,7 +729,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       resDivine: 0,
       icon: "🗡️",
       color: TIERS[tier].color,
-    };
+    } as Item;
   };
 
   const getItemColor = (item: Item): string => getTierColor(item.tier);
@@ -738,7 +768,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           resArcane: 0, resPoison: 0, resMetal: 0, resNature: 0,
           resBlood: 0, resVoid: 0, resChaos: 0, resHoly: 0,
           resShadow: 0, resInfernal: 0, resStorm: 0, resRunic: 0, resDivine: 0,
-        };
+        } as Item;
         loot.push(fullItem);
       }
     }
@@ -768,7 +798,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       resArcane: 0, resPoison: 0, resMetal: 0, resNature: 0,
       resBlood: 0, resVoid: 0, resChaos: 0, resHoly: 0,
       resShadow: 0, resInfernal: 0, resStorm: 0, resRunic: 0, resDivine: 0,
-    }));
+    } as Item));
   };
 
   return (

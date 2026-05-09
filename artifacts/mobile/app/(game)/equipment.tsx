@@ -178,7 +178,7 @@ export default function EquipmentScreen() {
           {Array.from(setBonuses.entries()).map(([setName, bonuses]) => (
             <View key={setName} style={styles.activeSetBox}>
               <Text style={styles.activeSetName}>{setName}</Text>
-              {bonuses.map((bonus, idx) => (
+              {(bonuses as any[]).map((bonus, idx) => (
                 <Text key={idx} style={styles.activeBonus}>✨ {bonus.description}</Text>
               ))}
             </View>
