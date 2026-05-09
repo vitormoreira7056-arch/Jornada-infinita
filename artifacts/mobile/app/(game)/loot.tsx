@@ -1,19 +1,69 @@
-// Tela de Loot - Mostra itens dropados após combate
+// Tela de Loot - Mostra recompensas completas após combate
 import React from "react";
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
 import { useGame, Item } from "@/context/GameContext";
 import { router } from "expo-router";
+import { TIERS, QUALITIES } from "@/constants/tiers";
+
+// Componente de Card de Item
+function LootItemCard({ item }: { item: Item }) {
+  const tier = TIERS[item.tier as keyof typeof TIERS] || TIERS.F;
+  const quality = QUALITIES[item.quality as keyof typeof QUALITIES] || QUALITIES.common;
+  
+  return (
+    <View style={[styles.itemCard, { borderColor: tier.color }]}>
+      <View style={styles.itemHeader}>
+        <Text style={styles.itemIcon}>{item.icon}</Text>
+        <View style={styles.itemInfo}>
+          <Text style={[styles.itemName, { color: quality.color }]}>
+            {item.name}
+          </Text>
+          <Text style={[styles.itemTier, { color: tier.color }]}>
+            {tier.name} • {quality.name}
+          </Text>
+        </View>
+      </View>
+      
+      <View style={styles.itemStats}>
+        {item.atkF > 0 && <Text style={styles.stat}>⚔️ +{item.atkF}</Text>}
+        {item.atkM > 0 && <Text style={styles.stat}>🔮 +{item.atkM}</Text>}
+        {item.def > 0 && <Text style={styles.stat}>🛡️ +{item.def}</Text>}
+        {item.armor > 0 && <Text style={styles.stat}>🧱 +{item.armor}</Text>}
+        {item.hp > 0 && <Text style={styles.stat}>❤️ +{item.hp}</Text>}
+        {item.mp > 0 && <Text style={styles.stat}>💧 +{item.mp}</Text>}
+        {item.critRate > 0 && <Text style={styles.stat}>🎯 +{(item.critRate * 100).toFixed(0)}%</Text>}
+        {item.dodge > 0 && <Text style={styles.stat}>💨 +{(item.dodge * 100).toFixed(0)}%</Text>}
+      </View>
+    </View>
+  );
+}
 
 export default function LootScreen() {
-  const { state, getItemColor, getItemTierName, equipItem } = useGame();
+  const { state, getTotalStats } = useGame();
+  
+  // Pegar as últimas mensagens do combat log (recompensas da última batalha)
+  const combatLog = state.combatLog;
+  
+  // Encontrar o índice do início do log de vitória mais recente
+  const findVictoryStart = () => {
+    for (let i = combatLog.length - 1; i >= 0; i--) {
+      if (combatLog[i]?.includes("VITÓRIA COMPLETA")) {
+        return i;
+      }
+    }
+    return -1;
+  };
+  
+  const victoryStartIndex = findVictoryStart();
+  const rewardLog = victoryStartIndex >= 0 
+    ? combatLog.slice(victoryStartIndex, victoryStartIndex + 30)
+    : [];
   
   // Pegar os últimos itens adicionados ao inventário (máximo 6)
   const recentLoot = state.inventory.slice(-6).reverse();
   
-  const handleEquip = (item: Item) => {
-    equipItem(item, item.slot as any);
-    router.back();
-  };
+  // Calcular totais do estado atual
+  const { currencies, level, exp } = state;
   
   const handleContinue = () => {
     router.back();
@@ -21,71 +71,88 @@ export default function LootScreen() {
   
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>🎉 Vitória!</Text>
-      <Text style={styles.subtitle}>Itens dropados:</Text>
+      <Text style={styles.title}>🎉 VITÓRIA!</Text>
       
-      <ScrollView style={styles.lootContainer}>
-        {recentLoot.length > 0 ? (
-          recentLoot.map((item, index) => (
-            <View key={item.id} style={styles.itemCard}>
-              <View style={styles.itemHeader}>
-                <Text style={styles.itemIcon}>{item.icon}</Text>
-                <View style={styles.itemInfo}>
-                  <Text style={[styles.itemName, { color: getItemColor(item) }]}>
-                    {item.name}
-                  </Text>
-                  <Text style={styles.itemTier}>
-                    {getItemTierName(item)} • Nível {item.level}
-                  </Text>
-                  {item.setName && (
-                    <Text style={styles.setBadge}>⭐ {item.setName}</Text>
-                  )}
-                </View>
-              </View>
-              
-              <View style={styles.itemStats}>
-                {item.atkF > 0 && (
-                  <Text style={styles.statText}>⚔️ ATK F: +{item.atkF}</Text>
-                )}
-                {item.atkM > 0 && (
-                  <Text style={styles.statText}>🔮 ATK M: +{item.atkM}</Text>
-                )}
-                {item.def > 0 && (
-                  <Text style={styles.statText}>🛡️ DEF: +{item.def}</Text>
-                )}
-                {item.armor > 0 && (
-                  <Text style={styles.statText}>🛡️ ARM: +{item.armor}</Text>
-                )}
-                {item.hp > 0 && (
-                  <Text style={styles.statText}>❤️ HP: +{item.hp}</Text>
-                )}
-                {item.mp > 0 && (
-                  <Text style={styles.statText}>💧 MP: +{item.mp}</Text>
-                )}
-              </View>
-              
-              {item.passiveEffect && (
-                <Text style={styles.passiveEffect}>✨ {item.passiveEffect}</Text>
-              )}
-              
-              {item.activeSkill && (
-                <View style={styles.activeSkill}>
-                  <Text style={styles.skillName}>⚡ {item.activeSkill.name}</Text>
-                  <Text style={styles.skillDesc}>{item.activeSkill.description}</Text>
-                </View>
-              )}
-              
-              <TouchableOpacity 
-                style={styles.equipBtn}
-                onPress={() => handleEquip(item)}
-              >
-                <Text style={styles.equipBtnText}>📥 Equipar Agora</Text>
-              </TouchableOpacity>
+      <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+        {/* Painel de Recompensas */}
+        <View style={styles.rewardsPanel}>
+          <Text style={styles.panelTitle}>📊 Recompensas Obtidas</Text>
+          
+          {/* XP e Level */}
+          <View style={styles.rewardSection}>
+            <Text style={styles.sectionTitle}>Experiência</Text>
+            <View style={styles.xpRow}>
+              <Text style={styles.xpValue}>+{Math.floor(exp).toLocaleString()} XP</Text>
+              <Text style={styles.levelText}>Nível {level}</Text>
             </View>
-          ))
-        ) : (
-          <Text style={styles.noLoot}>Nenhum item dropado desta vez.</Text>
-        )}
+          </View>
+          
+          {/* Moedas */}
+          <View style={styles.rewardSection}>
+            <Text style={styles.sectionTitle}>Moedas</Text>
+            <View style={styles.currencyGrid}>
+              {currencies.gold > 0 && (
+                <View style={styles.currencyItem}>
+                  <Text style={styles.currencyIcon}>🥇</Text>
+                  <Text style={styles.currencyValue}>{currencies.gold.toLocaleString()}</Text>
+                  <Text style={styles.currencyLabel}>Ouro</Text>
+                </View>
+              )}
+              {currencies.silver > 0 && (
+                <View style={styles.currencyItem}>
+                  <Text style={styles.currencyIcon}>🥈</Text>
+                  <Text style={styles.currencyValue}>{currencies.silver.toLocaleString()}</Text>
+                  <Text style={styles.currencyLabel}>Prata</Text>
+                </View>
+              )}
+              {currencies.copper > 0 && (
+                <View style={styles.currencyItem}>
+                  <Text style={styles.currencyIcon}>🥉</Text>
+                  <Text style={styles.currencyValue}>{currencies.copper.toLocaleString()}</Text>
+                  <Text style={styles.currencyLabel}>Cobre</Text>
+                </View>
+              )}
+              {currencies.diamond > 0 && (
+                <View style={styles.currencyItem}>
+                  <Text style={styles.currencyIcon}>💎</Text>
+                  <Text style={styles.currencyValue}>{currencies.diamond.toLocaleString()}</Text>
+                  <Text style={styles.currencyLabel}>Diamantes</Text>
+                </View>
+              )}
+              {currencies.mithril > 0 && (
+                <View style={styles.currencyItem}>
+                  <Text style={styles.currencyIcon}>✨</Text>
+                  <Text style={styles.currencyValue}>{currencies.mithril.toLocaleString()}</Text>
+                  <Text style={styles.currencyLabel}>Mithril</Text>
+                </View>
+              )}
+            </View>
+          </View>
+          
+          {/* Itens Dropados */}
+          {recentLoot.length > 0 && (
+            <View style={styles.rewardSection}>
+              <Text style={styles.sectionTitle}>📦 Itens Obtidos ({recentLoot.length})</Text>
+              <View style={styles.itemsContainer}>
+                {recentLoot.map((item) => (
+                  <LootItemCard key={item.id} item={item} />
+                ))}
+              </View>
+            </View>
+          )}
+          
+          {/* Log de Combate Detalhado */}
+          {rewardLog.length > 0 && (
+            <View style={styles.rewardSection}>
+              <Text style={styles.sectionTitle}>📝 Log de Batalha</Text>
+              <View style={styles.logContainer}>
+                {rewardLog.map((log, index) => (
+                  <Text key={index} style={styles.logText}>{log}</Text>
+                ))}
+              </View>
+            </View>
+          )}
+        </View>
       </ScrollView>
       
       <TouchableOpacity style={styles.continueBtn} onPress={handleContinue}>
@@ -99,112 +166,150 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#0f172a",
-    padding: 20,
-    paddingTop: 60,
+    padding: 16,
+    paddingTop: 50,
   },
   title: {
     fontSize: 32,
     fontWeight: "bold",
     color: "#fbbf24",
     textAlign: "center",
-    marginBottom: 8,
+    marginBottom: 16,
   },
-  subtitle: {
-    fontSize: 16,
-    color: "#94a3b8",
-    textAlign: "center",
-    marginBottom: 20,
-  },
-  lootContainer: {
+  scrollContainer: {
     flex: 1,
   },
-  itemCard: {
+  rewardsPanel: {
     backgroundColor: "#1e293b",
-    borderRadius: 16,
+    borderRadius: 20,
     padding: 16,
-    marginBottom: 12,
+    borderWidth: 2,
+    borderColor: "#334155",
+  },
+  panelTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#f8fafc",
+    textAlign: "center",
+    marginBottom: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#334155",
+  },
+  rewardSection: {
+    marginBottom: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#334155",
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#94a3b8",
+    marginBottom: 8,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  xpRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "#0f172a",
+    padding: 12,
+    borderRadius: 12,
+  },
+  xpValue: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#22c55e",
+  },
+  levelText: {
+    fontSize: 14,
+    color: "#fbbf24",
+    fontWeight: "600",
+  },
+  currencyGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  currencyItem: {
+    backgroundColor: "#0f172a",
+    borderRadius: 12,
+    padding: 12,
+    alignItems: "center",
+    minWidth: 80,
+    flex: 1,
+  },
+  currencyIcon: {
+    fontSize: 24,
+    marginBottom: 4,
+  },
+  currencyValue: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: "#f8fafc",
+  },
+  currencyLabel: {
+    fontSize: 10,
+    color: "#64748b",
+    marginTop: 2,
+  },
+  itemsContainer: {
+    gap: 8,
+  },
+  itemCard: {
+    backgroundColor: "#0f172a",
+    borderRadius: 12,
+    padding: 12,
     borderWidth: 1,
     borderColor: "#334155",
   },
   itemHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: 8,
   },
   itemIcon: {
-    fontSize: 32,
+    fontSize: 28,
     marginRight: 12,
   },
   itemInfo: {
     flex: 1,
   },
   itemName: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "bold",
-    marginBottom: 2,
   },
   itemTier: {
-    fontSize: 12,
-    color: "#64748b",
-  },
-  setBadge: {
     fontSize: 11,
-    color: "#fbbf24",
-    marginTop: 2,
   },
   itemStats: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
-    marginBottom: 12,
   },
-  statText: {
-    fontSize: 12,
-    color: "#cbd5e1",
-  },
-  passiveEffect: {
-    fontSize: 12,
-    color: "#22c55e",
-    marginBottom: 8,
-    fontStyle: "italic",
-  },
-  activeSkill: {
-    backgroundColor: "#0f172a",
-    borderRadius: 8,
-    padding: 10,
-    marginBottom: 12,
-    borderLeftWidth: 3,
-    borderLeftColor: "#3b82f6",
-  },
-  skillName: {
-    fontSize: 13,
-    fontWeight: "bold",
-    color: "#fbbf24",
-    marginBottom: 2,
-  },
-  skillDesc: {
+  stat: {
     fontSize: 11,
     color: "#94a3b8",
+    backgroundColor: "#1e293b",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
   },
-  equipBtn: {
-    backgroundColor: "#22c55e",
-    borderRadius: 10,
+  logContainer: {
+    backgroundColor: "#0f172a",
+    borderRadius: 12,
     padding: 12,
-    alignItems: "center",
   },
-  equipBtnText: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontSize: 14,
-  },
-  noLoot: {
-    fontSize: 14,
+  logText: {
+    fontSize: 11,
     color: "#64748b",
-    textAlign: "center",
-    marginTop: 40,
+    fontFamily: "monospace",
+    lineHeight: 16,
   },
   continueBtn: {
-    backgroundColor: "#3b82f6",
+    backgroundColor: "#22c55e",
     borderRadius: 16,
     padding: 18,
     alignItems: "center",

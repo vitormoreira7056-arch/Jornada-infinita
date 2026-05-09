@@ -34,8 +34,8 @@ function ItemCard({
   onSell?: () => void;
   showDetails?: boolean;
 }) {
-  const tier = TIERS[item.tier];
-  const quality = QUALITIES[item.quality];
+  const tier = TIERS[item.tier as TierId] || TIERS.F;
+  const quality = QUALITIES[item.quality as QualityId] || QUALITIES.common;
   
   const hasStats = item.atkF > 0 || item.atkM > 0 || item.def > 0 || item.hp > 0 || 
                    item.armor > 0 || item.magicRes > 0 || item.critRate > 0 || item.dodge > 0;
