@@ -4,7 +4,7 @@ import { RaceId, getRaceById, RaceAbility } from "@/constants/races";
 import { ElementId } from "@/constants/elements";
 import { TierId, QualityId, rollTier, rollQuality, getTotalMultiplier, TIERS, QUALITIES } from "@/constants/tiers";
 import { BiomeId, DungeonDef, DiscoveredDungeon, BIOMES, tryDiscoverDungeon, calculateExpNeeded, TOWER_FLOORS_DATA, TowerFloor, getDiscoveredDungeonsForBiome, getBiomeDiscoveryProgress } from "@/constants/adventure";
-import { MobDef, FOREST_MOBS, findRandomMob, calculateDrops, MOB_RANK_MULTIPLIERS, generateMob } from "@/constants/mobs";
+import { MobDef, FOREST_MOBS, findRandomMob, calculateDrops, MOB_RANK_MULTIPLIERS, generateMob, rollEquipmentDrop } from "@/constants/mobs";
 import { 
   EquipmentBase,
   generateRandomEquipment, generateBossLoot, generateMiniBossLoot, generateMobLoot,
@@ -586,12 +586,25 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           if (newInventory.length < prev.inventorySize) {
             newInventory.push(item);
             itemsAdded++;
-            itemDropMessages.push(`${item.icon} ${item.name} (${getTierName(item.tier)})`);
+            // Mostrar tier e qualidade do item
+            const qualityEmoji: Record<string, string> = {
+              "common": "⚪",
+              "uncommon": "🟢",
+              "rare": "🔵", 
+              "epic": "🟣",
+              "legendary": "🟠",
+              "mythic": "🔴",
+              "divine": "🟡",
+            };
+            const emoji = qualityEmoji[item.quality] || "⚪";
+            itemDropMessages.push(`${emoji} ${item.icon} ${item.name} [${item.tier}] (${item.quality})`);
           }
         }
         
         if (itemsDropped > 0 && itemsAdded === 0) {
           itemDropMessages.push("📦 Inventário cheio! Itens perdidos...");
+        } else if (itemsDropped === 0) {
+          itemDropMessages.push("📭 Nenhum item dropado desta vez");
         }
         
         const expGained = Math.floor(mob.level * 10 * (MOB_RANK_MULTIPLIERS[mob.rank]?.statMult || 1));
@@ -1073,28 +1086,36 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const getItemTierName = (item: Item): string => getTierName(item.tier);
   const getEquippedSetBonuses = (): Map<string, any[]> => state.activeSetBonuses || new Map();
   
-  // Gerar loot de mob comum
+  // Gerar loot de mob comum usando o sistema profissional de drop
   const generateLootFromMob = (mob: MobDef): Item[] => {
     const loot: Item[] = [];
-    const dropChance = MOB_RANK_MULTIPLIERS[mob.rank]?.dropRate || 0.3;
     
-    if (Math.random() < dropChance) {
-      const slots: EquipmentSlot[] = ["mainHand", "offHand", "head", "chest", "legs", "feet"];
+    // Usar o novo sistema de drop profissional
+    const dropResult = rollEquipmentDrop(mob.rank, mob.type, state.level);
+    
+    if (dropResult && dropResult.dropped) {
+      const slots: EquipmentSlot[] = ["mainHand", "offHand", "head", "chest", "legs", "feet", "earrings", "necklace", "ring1", "cape"];
       const slot = slots[Math.floor(Math.random() * slots.length)];
       
-      // Tier baseado no rank do mob
-      const tierMap: Record<string, EquipmentBase["tier"]> = {
-        "F": "F", "E": "E", "D": "D", "C": "C", "B": "B",
-        "A": "A", "S": "S", "SS": "SS", "SSS": "SSS", "SSS+": "SSS+"
-      };
-      const tier = tierMap[mob.rank] || "F";
+      const tier = dropResult.tier as EquipmentBase["tier"];
       
       const item = generateRandomEquipment(slot, tier, mob.level);
       if (item) {
+        // Converter qualidade string para o tipo correto
+        const qualityMap: Record<string, string> = {
+          "common": "common",
+          "uncommon": "uncommon", 
+          "rare": "rare",
+          "epic": "epic",
+          "legendary": "legendary",
+          "mythic": "mythic",
+          "divine": "divine",
+        };
+        
         // Adicionar campos extras do Item
         const fullItem: Item = {
           ...item,
-          quality: "common",
+          quality: (qualityMap[dropResult.quality] || "common") as any,
           luck: 0,
           lifeSteal: 0,
           armorPen: 0,

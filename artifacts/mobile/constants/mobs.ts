@@ -502,7 +502,7 @@ export function findRandomMob(playerLevel: number, biomeMobs: MobDef[]): MobDef 
   return suitableMobs[0];
 }
 
-// Calcular drops
+// Calcular drops de moedas
 export function calculateDrops(mob: MobDef): { gold: number; diamonds: number; mithril: number } {
   const rankMult = MOB_RANK_MULTIPLIERS[mob.rank];
   
@@ -521,4 +521,190 @@ export function calculateDrops(mob: MobDef): { gold: number; diamonds: number; m
   }
   
   return { gold, diamonds, mithril };
+}
+
+// ============================================
+// SISTEMA DE DROP DE EQUIPAMENTOS PROFISSIONAL
+// ============================================
+
+// Tiers de equipamentos possíveis por rank do mob
+const DROP_TIERS_BY_MOB_RANK: Record<MobRank, { normal: string[]; boss: string[] }> = {
+  "F": { normal: ["F", "E"], boss: ["F", "E", "D"] },
+  "E": { normal: ["E", "D"], boss: ["E", "D", "C"] },
+  "D": { normal: ["D", "C"], boss: ["D", "C", "B"] },
+  "C": { normal: ["C", "B"], boss: ["C", "B", "A"] },
+  "B": { normal: ["B", "A"], boss: ["B", "A", "S"] },
+  "A": { normal: ["E", "D", "C", "B", "A", "S"], boss: ["D", "C", "B", "A", "S", "SS"] },
+  "S": { normal: ["E", "D", "C", "B", "A", "S", "SS"], boss: ["E", "D", "C", "B", "A", "S", "SS"] },
+  "SS": { normal: ["C", "B", "A", "S", "SS", "SSS"], boss: ["C", "B", "A", "S", "SS", "SSS"] },
+  "SSS": { normal: ["B", "A", "S", "SS", "SSS", "SSS+"], boss: ["B", "A", "S", "SS", "SSS", "SSS+"] },
+  "SSS+": { normal: ["A", "S", "SS", "SSS", "SSS+"], boss: ["A", "S", "SS", "SSS", "SSS+"] },
+};
+
+// Taxas de drop base por tier de equipamento
+const BASE_DROP_RATES: Record<string, number> = {
+  "F": 0.45,    // 45%
+  "E": 0.40,    // 40%
+  "D": 0.30,    // 30%
+  "C": 0.25,    // 25%
+  "B": 0.20,    // 20%
+  "A": 0.10,    // 10%
+  "S": 0.05,    // 5%
+  "SS": 0.01,   // 1%
+  "SSS": 0.005, // 0.5%
+  "SSS+": 0.0001, // 0.01%
+};
+
+// Multiplicadores de drop para bosses (aumentam chance do tier do mob)
+const BOSS_DROP_MULTIPLIERS: Record<MobRank, Record<string, number>> = {
+  "F": { "F": 1.0, "E": 0.88, "D": 0.66 },
+  "E": { "E": 1.0, "D": 0.75, "C": 0.62 },
+  "D": { "D": 1.5, "C": 1.16, "B": 1.0 },  // Boss D: D=45%, C=35%, B=30%
+  "C": { "C": 1.5, "B": 1.2, "A": 1.0 },
+  "B": { "B": 1.5, "A": 1.25, "S": 1.0 },
+  "A": { "A": 1.5, "S": 1.5, "SS": 1.0 },
+  "S": { "S": 1.5, "SS": 1.5 },
+  "SS": { "SS": 1.5, "SSS": 1.5 },
+  "SSS": { "SSS": 1.5, "SSS+": 1.5 },
+  "SSS+": { "SSS+": 2.0 },
+};
+
+// Qualidades possíveis por tier de equipamento
+const QUALITIES_BY_TIER: Record<string, string[]> = {
+  "F": ["common", "uncommon"],
+  "E": ["common", "uncommon", "rare"],
+  "D": ["uncommon", "rare", "epic"],
+  "C": ["rare", "epic"],
+  "B": ["rare", "epic", "legendary"],
+  "A": ["epic", "legendary"],
+  "S": ["epic", "legendary", "mythic"],
+  "SS": ["legendary", "mythic"],
+  "SSS": ["legendary", "mythic", "divine"],
+  "SSS+": ["mythic", "divine"],
+};
+
+// Peso das qualidades para cálculo de probabilidade
+const QUALITY_WEIGHTS: Record<string, number> = {
+  "common": 50,
+  "uncommon": 30,
+  "rare": 15,
+  "epic": 4,
+  "legendary": 0.9,
+  "mythic": 0.09,
+  "divine": 0.01,
+};
+
+/**
+ * Sistema de drop de equipamentos profissional
+ * @param mobRank Rank do mob derrotado
+ * @param mobType Tipo do mob (normal, elite, boss)
+ * @param playerLevel Nível do jogador
+ * @returns Objeto com tier e qualidade do equipamento, ou null se não dropou
+ */
+export function rollEquipmentDrop(
+  mobRank: MobRank, 
+  mobType: MobType, 
+  playerLevel: number
+): { tier: string; quality: string; dropped: boolean } | null {
+  
+  const isBoss = mobType === "boss" || mobType === "unique";
+  const possibleTiers = DROP_TIERS_BY_MOB_RANK[mobRank][isBoss ? "boss" : "normal"];
+  
+  // Calcular chance de drop base (se vai dropar algum item)
+  const baseDropChance = isBoss ? 0.70 : 0.45; // 70% para boss, 45% para normal
+  
+  if (Math.random() > baseDropChance) {
+    return null; // Não dropou nada
+  }
+  
+  // Calcular probabilidades para cada tier possível
+  const tierProbabilities: { tier: string; probability: number }[] = [];
+  let totalProbability = 0;
+  
+  for (const tier of possibleTiers) {
+    let probability = BASE_DROP_RATES[tier] || 0.05;
+    
+    // Aplicar multiplicador de boss se for boss
+    if (isBoss && BOSS_DROP_MULTIPLIERS[mobRank]?.[tier]) {
+      probability *= BOSS_DROP_MULTIPLIERS[mobRank][tier];
+    }
+    
+    // Penalidade se o tier for muito acima do nível do jogador
+    const tierLevelReq = getTierLevelRequirement(tier);
+    if (playerLevel < tierLevelReq) {
+      probability *= 0.1; // 90% de redução se não atender requisito de nível
+    }
+    
+    tierProbabilities.push({ tier, probability });
+    totalProbability += probability;
+  }
+  
+  // Normalizar probabilidades
+  for (const tp of tierProbabilities) {
+    tp.probability /= totalProbability;
+  }
+  
+  // Rolar o tier
+  const roll = Math.random();
+  let cumulative = 0;
+  let selectedTier = possibleTiers[0];
+  
+  for (const tp of tierProbabilities) {
+    cumulative += tp.probability;
+    if (roll <= cumulative) {
+      selectedTier = tp.tier;
+      break;
+    }
+  }
+  
+  // Rolar a qualidade baseada no tier
+  const possibleQualities = QUALITIES_BY_TIER[selectedTier] || ["common"];
+  const qualityWeights = possibleQualities.map(q => QUALITY_WEIGHTS[q] || 1);
+  const totalWeight = qualityWeights.reduce((a, b) => a + b, 0);
+  
+  let qualityRoll = Math.random() * totalWeight;
+  let selectedQuality = possibleQualities[0];
+  
+  for (let i = 0; i < possibleQualities.length; i++) {
+    qualityRoll -= qualityWeights[i];
+    if (qualityRoll <= 0) {
+      selectedQuality = possibleQualities[i];
+      break;
+    }
+  }
+  
+  return { tier: selectedTier, quality: selectedQuality, dropped: true };
+}
+
+/**
+ * Retorna o nível mínimo recomendado para equipamentos de determinado tier
+ */
+function getTierLevelRequirement(tier: string): number {
+  const requirements: Record<string, number> = {
+    "F": 1,
+    "E": 5,
+    "D": 15,
+    "C": 30,
+    "B": 50,
+    "A": 75,
+    "S": 100,
+    "SS": 150,
+    "SSS": 200,
+    "SSS+": 250,
+  };
+  return requirements[tier] || 1;
+}
+
+/**
+ * Informações sobre o sistema de drop para exibição ao jogador
+ */
+export function getDropInfo(mobRank: MobRank, mobType: MobType): string {
+  const isBoss = mobType === "boss" || mobType === "unique";
+  const tiers = DROP_TIERS_BY_MOB_RANK[mobRank][isBoss ? "boss" : "normal"];
+  
+  if (isBoss) {
+    return `👑 Boss: Pode dropar tier ${tiers.join(", ")}`;
+  } else {
+    return `👤 Normal: Pode dropar tier ${tiers.join(", ")}`;
+  }
 }
