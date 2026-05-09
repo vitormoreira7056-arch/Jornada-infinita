@@ -7,7 +7,7 @@ import { BiomeId, DungeonDef, DiscoveredDungeon, BIOMES, tryDiscoverDungeon, cal
 import { MobDef, FOREST_MOBS, findRandomMob, calculateDrops, MOB_RANK_MULTIPLIERS, generateMob, rollEquipmentDrop } from "@/constants/mobs";
 import { 
   EquipmentBase,
-  generateRandomEquipment, generateBossLoot, generateMiniBossLoot, generateMobLoot,
+  generateRandomEquipment, generateBossLoot, generateMiniBossLoot,
   getActiveSetBonuses, calculateTotalStatsWithSets, getTierColor, getTierName
 } from "@/constants/equipment";
 
@@ -207,7 +207,7 @@ interface GameContextType {
     res: Record<ElementId, number>;
   };
   getAllRaceStats: (raceId: RaceId) => any;
-  startCombat: (mob: MobDef, towerFloor?: number) => void;
+  startCombat: (mobs: MobDef | MobDef[], towerFloor?: number) => void;
   endCombat: (victory: boolean) => void;
   playerAttack: () => { damage: number; isCrit: boolean };
   playerUseSkill: (skillIndex: number) => { success: boolean; damage?: number; message?: string };
@@ -215,7 +215,7 @@ interface GameContextType {
   regenHpMp: () => void;
   healHp: (amount: number) => void;
   restoreMp: (amount: number) => void;
-  findEncounter: (biomeId: BiomeId) => { type: "mob" | "resource" | "dungeon" | "nothing"; mob?: MobDef; message: string };
+  findEncounter: (biomeId: BiomeId) => { type: "mob" | "resource" | "dungeon" | "nothing"; mobs?: MobDef[]; message: string };
   tickSkillCooldowns: () => void;
   resetSkillCooldowns: () => void;
   hasTowerKey: (floor: number) => boolean;
@@ -563,9 +563,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       const silver = Math.floor(remaining / 100); remaining %= 100;
       const copper = remaining;
       
-      // Gerar loot de equipamentos baseado no tipo do mob
-      const mobType = mob.type || "normal";
-      const itemDrops = generateMobLoot(mob.name, mob.level, mob.rank, mobType as any);
+      // Gerar loot de equipamentos usando o sistema profissional
+      const itemDrops = generateLootFromMob(mob);
       const itemDropMessages: string[] = [];
       
       setState(prev => {
@@ -1157,6 +1156,32 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       resBlood: 0, resVoid: 0, resChaos: 0, resHoly: 0,
       resShadow: 0, resInfernal: 0, resStorm: 0, resRunic: 0, resDivine: 0,
     } as Item));
+  };
+
+  // Resetar conta - apaga dados do personagem e volta para seleção de raça
+  const resetAccount = async () => {
+    // Manter apenas username e senha, resetar todo o progresso do personagem
+    setState(prev => ({
+      ...DEFAULT_STATE,
+      username: prev.username,
+      isLoggedIn: true, // Mantém logado
+    }));
+    
+    // Salvar no AsyncStorage
+    try {
+      const userData = await AsyncStorage.getItem(CURRENT_USER_KEY);
+      if (userData) {
+        const user = JSON.parse(userData);
+        const resetState = {
+          ...DEFAULT_STATE,
+          username: user.username,
+          isLoggedIn: true,
+        };
+        await AsyncStorage.setItem(CURRENT_USER_KEY, JSON.stringify(resetState));
+      }
+    } catch (error) {
+      console.error("Erro ao resetar conta:", error);
+    }
   };
 
   return (

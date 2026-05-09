@@ -595,6 +595,25 @@ const QUALITY_WEIGHTS: Record<string, number> = {
 };
 
 /**
+ * Retorna o nível mínimo recomendado para equipamentos de determinado tier
+ */
+function getTierLevelRequirement(tier: string): number {
+  const requirements: Record<string, number> = {
+    "F": 1,
+    "E": 5,
+    "D": 15,
+    "C": 30,
+    "B": 50,
+    "A": 75,
+    "S": 100,
+    "SS": 150,
+    "SSS": 200,
+    "SSS+": 250,
+  };
+  return requirements[tier] || 1;
+}
+
+/**
  * Sistema de drop de equipamentos profissional
  * @param mobRank Rank do mob derrotado
  * @param mobType Tipo do mob (normal, elite, boss)
@@ -674,25 +693,6 @@ export function rollEquipmentDrop(
   }
   
   return { tier: selectedTier, quality: selectedQuality, dropped: true };
-}
-
-/**
- * Retorna o nível mínimo recomendado para equipamentos de determinado tier
- */
-function getTierLevelRequirement(tier: string): number {
-  const requirements: Record<string, number> = {
-    "F": 1,
-    "E": 5,
-    "D": 15,
-    "C": 30,
-    "B": 50,
-    "A": 75,
-    "S": 100,
-    "SS": 150,
-    "SSS": 200,
-    "SSS+": 250,
-  };
-  return requirements[tier] || 1;
 }
 
 /**
