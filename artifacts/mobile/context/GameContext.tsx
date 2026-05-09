@@ -22,8 +22,12 @@ export interface EnemyState {
 const USERS_KEY = "rpg_idle_users_v5";
 const CURRENT_USER_KEY = "rpg_idle_current_user_v5";
 
-// Slots de equipamento (9 slots principais)
-export type EquipmentSlot = "mainHand" | "offHand" | "head" | "chest" | "legs" | "feet" | "earrings" | "necklace" | "face";
+// Slots de equipamento (15 slots totais)
+export type EquipmentSlot = 
+  | "mainHand" | "offHand" | "head" | "chest" | "legs" | "feet"
+  | "earrings" | "necklace" | "face"
+  | "ring1" | "ring2" | "ring3" | "ring4"
+  | "cape" | "bracelet";
 
 // Item de equipamento usando o novo sistema
 // Inclui todas as propriedades de EquipmentBase + propriedades extras do jogo
@@ -136,6 +140,8 @@ const DEFAULT_STATE: GameState = {
   equipment: {
     head: null, chest: null, legs: null, feet: null, mainHand: null, offHand: null,
     earrings: null, necklace: null, face: null,
+    ring1: null, ring2: null, ring3: null, ring4: null,
+    cape: null, bracelet: null,
   },
   // Versão do save para migrações futuras
   saveVersion: 2,

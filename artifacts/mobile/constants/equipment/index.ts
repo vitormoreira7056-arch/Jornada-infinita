@@ -4,6 +4,9 @@ export * from "./weapons";
 export * from "./armor";
 export * from "./offhand";
 export * from "./accessories";
+export * from "./rings";
+export * from "./capes";
+export * from "./bracelets";
 export * from "./sets";
 export * from "./demo";
 
@@ -13,6 +16,9 @@ import { generateWeapon, generateWeaponPool, generateUniqueWeapon } from "./weap
 import { generateHead, generateChest, generateLegs, generateFeet, generateArmorPool } from "./armor";
 import { generateOffHand, generateOffHandPool, generateUniqueOffHand } from "./offhand";
 import { generateEarrings, generateNecklace, generateFace, generateAccessoriesPool } from "./accessories";
+import { generateRing, generateRingForSlot, generateRingsPool } from "./rings";
+import { generateCape, generateCapesPool } from "./capes";
+import { generateBracelet, generateBraceletsPool } from "./bracelets";
 
 // Gerar item aleatório para um slot específico
 export function generateRandomEquipment(
@@ -57,6 +63,20 @@ export function generateRandomEquipment(
     case "face":
       const faceTypes = ["mascara", "oculos", "piercing", "bandana", "venda", "monoculo", "tatuagem"] as const;
       return generateFace(faceTypes[Math.floor(Math.random() * faceTypes.length)], tier, level, setName);
+    
+    case "ring1":
+    case "ring2":
+    case "ring3":
+    case "ring4":
+      return generateRingForSlot(slot, tier, level, setName);
+    
+    case "cape":
+      const capeTypes = ["capa", "capa_real", "capa_sombria", "capa_elfica", "capa_guilda", "capa_gelo", "capa_fogo", "capa_trovao", "capa_natureza", "capa_vazio", "capa_demoniaca", "capa_angelical", "capa_dragonica", "capa_fantasma", "capa_manto"] as const;
+      return generateCape(capeTypes[Math.floor(Math.random() * capeTypes.length)], tier, level, setName);
+    
+    case "bracelet":
+      const braceletTypes = ["bracelete", "bracelete_corrente", "bracelete_couro", "bracelete_metal", "bracelete_runico", "bracelete_magico", "bracelete_gema", "bracelete_tribal", "pulseira", "pulseira_perolas", "pulseira_cristais", "pulseira_ossos", "manopla", "manopla_guerra", "manopla_magica", "manopla_protetora", "luva", "luva_couro", "luva_metal", "luva_magica"] as const;
+      return generateBracelet(braceletTypes[Math.floor(Math.random() * braceletTypes.length)], tier, level, setName);
     
     default:
       return null;
@@ -171,8 +191,8 @@ export function generateMobLoot(
     tier = tierBoost[tier] || tier;
   }
   
-  // Gerar os itens (todos os 9 slots)
-  const slots: EquipmentSlot[] = ["mainHand", "offHand", "head", "chest", "legs", "feet", "earrings", "necklace", "face"];
+  // Gerar os itens (todos os 15 slots)
+  const slots: EquipmentSlot[] = ["mainHand", "offHand", "head", "chest", "legs", "feet", "earrings", "necklace", "face", "ring1", "ring2", "ring3", "ring4", "cape", "bracelet"];
   
   for (let i = 0; i < itemsToDrop; i++) {
     const slot = slots[Math.floor(Math.random() * slots.length)];

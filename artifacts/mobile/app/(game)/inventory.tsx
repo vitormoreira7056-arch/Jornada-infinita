@@ -7,12 +7,18 @@ const SLOT_CONFIG: { slot: EquipmentSlot; name: string; icon: string }[] = [
   { slot: "head", name: "Cabeça", icon: "⛑️" },
   { slot: "face", name: "Rosto", icon: "🎭" },
   { slot: "necklace", name: "Colar", icon: "📿" },
+  { slot: "cape", name: "Capa", icon: "🦸" },
   { slot: "chest", name: "Peitoral", icon: "👕" },
+  { slot: "bracelet", name: "Bracelete", icon: "🔗" },
   { slot: "legs", name: "Pernas", icon: "👖" },
   { slot: "feet", name: "Pés", icon: "👢" },
   { slot: "mainHand", name: "Mão Primária", icon: "⚔️" },
   { slot: "offHand", name: "Mão Secundária", icon: "🛡️" },
   { slot: "earrings", name: "Brincos", icon: "💎" },
+  { slot: "ring1", name: "Anel 1", icon: "💍" },
+  { slot: "ring2", name: "Anel 2", icon: "💍" },
+  { slot: "ring3", name: "Anel 3", icon: "💍" },
+  { slot: "ring4", name: "Anel 4", icon: "💍" },
 ];
 
 type Tab = "items" | "equipment";

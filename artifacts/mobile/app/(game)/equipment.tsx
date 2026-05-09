@@ -13,12 +13,18 @@ export default function EquipmentScreen() {
     { id: "head", name: "Cabeça", icon: "⛑️" },
     { id: "face", name: "Rosto", icon: "🎭" },
     { id: "necklace", name: "Colar", icon: "📿" },
+    { id: "cape", name: "Capa", icon: "🦸" },
     { id: "chest", name: "Peitoral", icon: "🛡️" },
+    { id: "bracelet", name: "Bracelete", icon: "🔗" },
     { id: "legs", name: "Pernas", icon: "👖" },
     { id: "feet", name: "Pés", icon: "🥾" },
     { id: "mainHand", name: "Mão Principal", icon: "⚔️" },
     { id: "offHand", name: "Mão Secundária", icon: "🛡️" },
     { id: "earrings", name: "Brincos", icon: "💎" },
+    { id: "ring1", name: "Anel 1", icon: "💍" },
+    { id: "ring2", name: "Anel 2", icon: "💍" },
+    { id: "ring3", name: "Anel 3", icon: "💍" },
+    { id: "ring4", name: "Anel 4", icon: "💍" },
   ] as const;
   
   const stats = getTotalStats();

@@ -23,20 +23,40 @@ export type EarringsType = "brinco" | "pendente" | "argola" | "plug" | "alargado
 export type NecklaceType = "colar" | "amuleto" | "medalhao" | "gargantilha" | "rosario" | "pingente";
 export type FaceType = "mascara" | "oculos" | "piercing" | "bandana" | "venda" | "monoculo" | "tatuagem";
 
-// Slots de equipamento (9 slots principais + 3 novos = 12 slots)
+// Tipos de anéis
+export type RingType = 
+  | "anel" | "anel_selo" | "anel_sinete" | "anel_claddagh" | "anel_pois"
+  | "anel_sol" | "anel_lua" | "anel_estrela" | "anel_dragao" | "anel_fenix"
+  | "anel_lobo" | "anel_urso" | "anel_tigre" | "anel_serpente" | "anel_coruja"
+  | "anel_elemental" | "anel_runico" | "anel_magico" | "anel_sagrado" | "anel_profano";
+
+// Tipos de capas
+export type CapeType = 
+  | "capa" | "capa_real" | "capa_sombria" | "capa_elfica" | "capa_guilda"
+  | "capa_gelo" | "capa_fogo" | "capa_trovao" | "capa_natureza" | "capa_vazio"
+  | "capa_demoniaca" | "capa_angelical" | "capa_dragonica" | "capa_fantasma" | "capa_manto";
+
+// Tipos de braceletes
+export type BraceletType = 
+  | "bracelete" | "bracelete_corrente" | "bracelete_couro" | "bracelete_metal"
+  | "bracelete_runico" | "bracelete_magico" | "bracelete_gema" | "bracelete_tribal"
+  | "pulseira" | "pulseira_perolas" | "pulseira_cristais" | "pulseira_ossos"
+  | "manopla" | "manopla_guerra" | "manopla_magica" | "manopla_protetora"
+  | "luva" | "luva_couro" | "luva_metal" | "luva_magica";
+
+// Slots de equipamento (12 slots + 6 novos = 18 slots totais)
 export type EquipmentSlot = 
   | "mainHand" | "offHand" 
   | "head" | "chest" | "legs" | "feet"
-  | "earrings" | "necklace" | "face";
-
-// Slots futuros (não implementados ainda)
-export type FutureEquipmentSlot = "ring1" | "ring2" | "bracelet" | "cape";
+  | "earrings" | "necklace" | "face"
+  | "ring1" | "ring2" | "ring3" | "ring4"
+  | "cape" | "bracelet";
 
 export interface EquipmentBase {
   id: string;
   name: string;
   slot: EquipmentSlot;
-  type: WeaponType | HeadType | ChestType | LegsType | FeetType | OffHandType | EarringsType | NecklaceType | FaceType;
+  type: WeaponType | HeadType | ChestType | LegsType | FeetType | OffHandType | EarringsType | NecklaceType | FaceType | RingType | CapeType | BraceletType;
   tier: "F" | "E" | "D" | "C" | "B" | "A" | "S" | "SS" | "SSS" | "SSS+";
   level: number;
   // Stats base
