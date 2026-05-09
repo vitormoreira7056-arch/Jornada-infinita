@@ -626,8 +626,20 @@ export function rollEquipmentDrop(
   playerLevel: number
 ): { tier: string; quality: string; dropped: boolean } | null {
   
+  // Validação de entrada
+  if (!mobRank || !DROP_TIERS_BY_MOB_RANK[mobRank]) {
+    console.warn(`Rank de mob inválido: ${mobRank}`);
+    return null;
+  }
+  
   const isBoss = mobType === "boss" || mobType === "unique";
   const possibleTiers = DROP_TIERS_BY_MOB_RANK[mobRank][isBoss ? "boss" : "normal"];
+  
+  // Verificar se há tiers possíveis
+  if (!possibleTiers || possibleTiers.length === 0) {
+    console.warn(`Nenhum tier possível para mob ${mobRank} ${mobType}`);
+    return null;
+  }
   
   // Calcular chance de drop base (se vai dropar algum item)
   const baseDropChance = isBoss ? 0.70 : 0.45; // 70% para boss, 45% para normal

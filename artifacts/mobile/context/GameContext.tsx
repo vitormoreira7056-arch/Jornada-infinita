@@ -599,7 +599,17 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       
       // Gerar loot de equipamentos usando o sistema profissional
       const itemDrops = generateLootFromMob(mob);
-      const itemDropMessages: string[] = [];
+      
+      // Processar drops antes do setState para ter informações completas
+      const processedDrops = {
+        items: itemDrops,
+        itemsAdded: 0,
+        itemsDropped: itemDrops.length,
+        inventoryFull: false,
+      };
+      
+      // Calcular XP ganho
+      const expGained = Math.floor(mob.level * 10 * (MOB_RANK_MULTIPLIERS[mob.rank]?.statMult || 1));
       
       setState(prev => {
         const newCurrencies = { ...prev.currencies };
@@ -612,35 +622,16 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         // Adicionar itens ao inventário (se houver espaço)
         const newInventory = [...prev.inventory];
         let itemsAdded = 0;
-        let itemsDropped = 0;
         
         for (const item of itemDrops) {
-          itemsDropped++;
           if (newInventory.length < prev.inventorySize) {
             newInventory.push(item);
             itemsAdded++;
-            // Mostrar tier e qualidade do item
-            const qualityEmoji: Record<string, string> = {
-              "common": "⚪",
-              "uncommon": "🟢",
-              "rare": "🔵", 
-              "epic": "🟣",
-              "legendary": "🟠",
-              "mythic": "🔴",
-              "divine": "🟡",
-            };
-            const emoji = qualityEmoji[item.quality] || "⚪";
-            itemDropMessages.push(`${emoji} ${item.icon} ${item.name} [${item.tier}] (${item.quality})`);
           }
         }
         
-        if (itemsDropped > 0 && itemsAdded === 0) {
-          itemDropMessages.push("📦 Inventário cheio! Itens perdidos...");
-        } else if (itemsDropped === 0) {
-          itemDropMessages.push("📭 Nenhum item dropado desta vez");
-        }
-        
-        const expGained = Math.floor(mob.level * 10 * (MOB_RANK_MULTIPLIERS[mob.rank]?.statMult || 1));
+        processedDrops.itemsAdded = itemsAdded;
+        processedDrops.inventoryFull = itemsAdded === 0 && itemDrops.length > 0;
         
         // Verificar se é combate de torre
         const isTowerCombat = prev.currentTowerFloor !== null;
@@ -693,26 +684,85 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         const totalExp = prev.exp + expGained;
         const { newLevel, remainingExp, levelsGained } = checkLevelUp(totalExp, prev.level);
         
-        // Mensagens de level up
-        const levelUpMessages: string[] = [];
+        // === LOG DETALHADO DE RECOMPENSAS ===
+        const combatLogMessages: string[] = [];
+        
+        // Header de vitória
+        combatLogMessages.push(`╔════════════════════════════════════╗`);
+        combatLogMessages.push(`║        🎉 VITÓRIA COMPLETA!         ║`);
+        combatLogMessages.push(`╠════════════════════════════════════╣`);
+        
+        // Inimigo derrotado
+        const rankEmoji: Record<string, string> = {
+          F: "⚪", E: "🟢", D: "🔵", C: "🟣", B: "🟠", A: "🔴", S: "🟡", SS: "👑", U: "🔱"
+        };
+        combatLogMessages.push(`║ 👹 ${rankEmoji[mob.rank] || "⚪"} ${mob.name}`);
+        combatLogMessages.push(`║    Nível ${mob.level} • Rank ${mob.rank}`);
+        combatLogMessages.push(`╠════════════════════════════════════╣`);
+        
+        // Experiência
+        combatLogMessages.push(`║ 📊 EXPERIÊNCIA GANHA`);
+        combatLogMessages.push(`║    +${expGained.toLocaleString()} XP`);
         if (levelsGained > 0) {
-          levelUpMessages.push(`🆙 LEVEL UP! Nv.${prev.level} → Nv.${newLevel}`);
+          combatLogMessages.push(`║    🆙 LEVEL UP! Nv.${prev.level} → Nv.${newLevel}`);
           if (levelsGained > 1) {
-            levelUpMessages.push(`   (Subiu ${levelsGained} níveis de uma vez!)`);
+            combatLogMessages.push(`║       (Subiu ${levelsGained} níveis!)`);
           }
         }
+        combatLogMessages.push(`╠════════════════════════════════════╣`);
         
-        const combatLogMessages: string[] = [
-          `🎉 Vitória! +${expGained} XP`,
-          ...levelUpMessages,
-          ...(isTowerCombat ? [`🏰 Torre Andar ${towerFloor} completado!`] : []),
-          ...(keyDropped ? [`🔑 Chave do Andar ${towerFloor} dropada!`] : []),
-          ...(questCompleted ? [`✅ Quest do Andar ${towerFloor} completada!`] : []),
-          ...(drops.gold > 0 ? [`💰 +${drops.gold} ouro`] : []),
-          ...(drops.diamonds > 0 ? [`💎 +${drops.diamonds} diamantes`] : []),
-          ...(drops.mithril > 0 ? [`✨ +${drops.mithril} mithril`] : []),
-          ...(itemDropMessages.length > 0 ? ["📦 Drops:", ...itemDropMessages] : []),
-        ];
+        // Moedas detalhadas
+        const hasAnyCurrency = gold > 0 || silver > 0 || copper > 0 || drops.diamonds > 0 || drops.mithril > 0;
+        if (hasAnyCurrency) {
+          combatLogMessages.push(`║ 💰 MOEDAS OBTIDAS`);
+          if (gold > 0) combatLogMessages.push(`║    🥇 ${gold.toLocaleString()} ouro`);
+          if (silver > 0) combatLogMessages.push(`║    🥈 ${silver.toLocaleString()} prata`);
+          if (copper > 0) combatLogMessages.push(`║    🥉 ${copper.toLocaleString()} cobre`);
+          if (drops.diamonds > 0) combatLogMessages.push(`║    💎 ${drops.diamonds.toLocaleString()} diamantes`);
+          if (drops.mithril > 0) combatLogMessages.push(`║    ✨ ${drops.mithril.toLocaleString()} mithril`);
+          combatLogMessages.push(`╠════════════════════════════════════╣`);
+        }
+        
+        // Itens dropados
+        if (processedDrops.itemsDropped > 0) {
+          combatLogMessages.push(`║ 📦 ITENS DROPADOS (${itemsAdded}/${processedDrops.itemsDropped})`);
+          itemDrops.forEach((item) => {
+            const qualityEmoji: Record<string, string> = {
+              "common": "⚪", "uncommon": "🟢", "rare": "🔵", 
+              "epic": "🟣", "legendary": "🟠", "mythic": "🔴", "divine": "🟡"
+            };
+            const tierEmoji: Record<string, string> = {
+              "F": "🔘", "E": "🍃", "D": "💧", "C": "🔮", "B": "⚔️", "A": "🔥", "S": "⭐", "SS": "👑", "U": "🌟"
+            };
+            const qEmoji = qualityEmoji[item.quality] || "⚪";
+            const tEmoji = tierEmoji[item.tier] || "🔘";
+            combatLogMessages.push(`║    ${tEmoji} ${item.icon} ${item.name}`);
+            combatLogMessages.push(`║       ${qEmoji} ${item.quality} • Tier ${item.tier}`);
+          });
+          if (processedDrops.inventoryFull) {
+            combatLogMessages.push(`║    ⚠️ Inventário cheio! Itens perdidos...`);
+          }
+          combatLogMessages.push(`╠════════════════════════════════════╣`);
+        } else {
+          combatLogMessages.push(`║ 📭 Nenhum item dropado`);
+          combatLogMessages.push(`╠════════════════════════════════════╣`);
+        }
+        
+        // Progressão da Torre
+        if (isTowerCombat && towerFloor) {
+          combatLogMessages.push(`║ 🏰 TORRE - Andar ${towerFloor}`);
+          if (keyDropped) combatLogMessages.push(`║    🔑 Chave do Andar ${towerFloor} obtida!`);
+          if (questCompleted) combatLogMessages.push(`║    ✅ Quest completada!`);
+          else if (questUpdated) {
+            const quest = newTowerQuests.find(q => q.floor === towerFloor && !q.completed);
+            if (quest) combatLogMessages.push(`║    📝 Quest: ${quest.current}/${quest.target}`);
+          }
+          combatLogMessages.push(`╠════════════════════════════════════╣`);
+        }
+        
+        // Footer
+        combatLogMessages.push(`║ ✅ Combate finalizado!`);
+        combatLogMessages.push(`╚════════════════════════════════════╝`);
         
         return {
           ...prev, 
