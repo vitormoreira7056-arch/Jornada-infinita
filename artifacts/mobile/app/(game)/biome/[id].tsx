@@ -174,42 +174,75 @@ type LogEntry = {
   timestamp: number;
 };
 
+// Mob count per tier for solo dungeons
+const DUNGEON_MOB_COUNT: Record<string, number> = {
+  "F": 10,   // Tier F: 10 mobs + boss
+  "E": 15,   // Tier E: 15 mobs + boss
+  "D": 25,   // Tier D: 25 mobs + boss
+  "C": 35,   // Tier C: 35 mobs + boss
+  "B": 45,   // Tier B: 45 mobs + boss
+  "A": 50,   // Tier A: 50 mobs + boss
+  "S": 60,   // Tier S: 60 mobs + boss
+  "SS": 75,  // Tier SS: 75 mobs + boss
+  "SSS": 90, // Tier SSS: 90 mobs + boss
+  "SSS+": 100, // Tier SSS+: 100 mobs + boss
+};
+
 // Generate dungeon mobs based on tier
 function generateDungeonMobs(dungeon: DungeonDef) {
   const tierMult = { "F": 1, "E": 1.3, "D": 1.7, "C": 2.2, "B": 2.8, "A": 3.5, "S": 4.5, "SS": 6, "SSS": 8, "SSS+": 12 };
   const mult = tierMult[dungeon.tier] || 1;
   const baseLevel = dungeon.minLevel;
   
-  // Generate 3-5 mobs for the dungeon
-  const mobCount = 3 + Math.floor(Math.random() * 3);
+  // Quantidade de mobs baseada no tier (apenas para dungeons solo)
+  const baseMobCount = dungeon.type === "solo" ? (DUNGEON_MOB_COUNT[dungeon.tier] || 10) : 5;
+  const mobCount = baseMobCount + 1; // +1 para o boss final
+  
   const mobs = [];
   
   for (let i = 0; i < mobCount; i++) {
-    const isBoss = i === mobCount - 1; // Last mob is the boss
-    const level = baseLevel + (isBoss ? 5 : Math.floor(Math.random() * 3));
+    const isBoss = i === mobCount - 1; // Último mob é o boss
+    const level = baseLevel + (isBoss ? 10 : Math.floor(i / 5)); // Level aumenta a cada 5 mobs
+    
+    // Rank aumenta conforme progresso na dungeon
+    let rank: string = "F";
+    if (i < baseMobCount * 0.2) rank = "F";
+    else if (i < baseMobCount * 0.4) rank = "E";
+    else if (i < baseMobCount * 0.6) rank = "D";
+    else if (i < baseMobCount * 0.8) rank = "C";
+    else rank = "B";
+    
+    if (isBoss) rank = dungeon.tier; // Boss tem o rank do tier da dungeon
+    
+    const mobName = isBoss 
+      ? `👑 Chefe: Guardião ${dungeon.name}` 
+      : `Guardião ${i + 1}`;
     
     mobs.push({
-      id: `dungeon_${dungeon.id}_mob_${i}`,
-      name: isBoss ? `Chefe: ${dungeon.name}` : `Guardião ${i + 1}`,
-      rank: isBoss ? (dungeon.tier >= "C" ? "B" : "C") : "D",
+      id: `dungeon_${dungeon.id}_mob_${i}_${Date.now()}`,
+      name: mobName,
+      rank,
       type: isBoss ? "boss" : "normal",
       level,
-      hp: Math.floor(100 * mult * (isBoss ? 3 : 1) * (level * 0.5)),
-      atkF: Math.floor(20 * mult * (isBoss ? 2 : 1)),
-      atkM: Math.floor(10 * mult),
-      def: Math.floor(10 * mult),
-      armor: Math.floor(5 * mult),
-      magicRes: Math.floor(3 * mult),
-      critRate: 0.05 + (mult * 0.01),
+      hp: Math.floor(100 * mult * (isBoss ? 5 : 1) * (level * 0.5)),
+      atkF: Math.floor(20 * mult * (isBoss ? 2.5 : 1) * (1 + i * 0.02)),
+      atkM: Math.floor(10 * mult * (1 + i * 0.01)),
+      def: Math.floor(10 * mult * (1 + i * 0.015)),
+      armor: Math.floor(5 * mult * (1 + i * 0.01)),
+      magicRes: Math.floor(3 * mult * (1 + i * 0.01)),
+      critRate: 0.05 + (mult * 0.01) + (i * 0.001),
       critDmg: 1.5 + (mult * 0.1),
       atkSpeed: 1 + (mult * 0.05),
-      dodge: 0.02,
+      dodge: 0.02 + (i * 0.0005),
       element: dungeon.element || "neutral",
-      skills: [],
-      dropGold: Math.floor(50 * mult * level),
-      dropDiamonds: dungeon.tier >= "A" ? Math.floor(mult * 2) : 0,
-      dropMithrilChance: 0,
-      dropMithrilMax: 0,
+      skills: isBoss ? [
+        { name: "Golpe Devastador", description: "Ataque poderoso", damageMultiplier: 2, cooldown: 3 },
+        { name: "Fúria", description: "Aumenta ataque", damageMultiplier: 0, cooldown: 5, effect: "rage" },
+      ] : [],
+      dropGold: Math.floor(50 * mult * level * (isBoss ? 5 : 1)),
+      dropDiamonds: isBoss ? Math.floor(mult * 5) : (dungeon.tier >= "A" ? 1 : 0),
+      dropMithrilChance: isBoss ? 10 : 0,
+      dropMithrilMax: isBoss ? 50 : 0,
       encounterRate: 100,
     });
   }

@@ -182,6 +182,23 @@ export default function CombatScreen() {
           </TouchableOpacity>
         </View>
         
+        {/* Combat Queue Progress */}
+        {state.combatQueue.length > 1 && (
+          <View style={queueStyles.container}>
+            <Text style={queueStyles.text}>
+              👹 {state.currentEnemyIndex + 1} / {state.combatQueue.length} INIMIGOS
+            </Text>
+            <View style={queueStyles.bar}>
+              <View 
+                style={[
+                  queueStyles.fill, 
+                  { width: `${((state.currentEnemyIndex + 1) / state.combatQueue.length) * 100}%` }
+                ]} 
+              />
+            </View>
+          </View>
+        )}
+        
         {/* Enemy Card */}
         <View style={[styles.enemyCard, { borderColor: rankMult.color }]}>
           <View style={[styles.enemyRankBadge, { backgroundColor: `${rankMult.color}20` }]}>
@@ -534,5 +551,35 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     fontSize: 18,
     fontWeight: "800",
+  },
+});
+
+const queueStyles = StyleSheet.create({
+  container: {
+    backgroundColor: "rgba(239, 68, 68, 0.1)",
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "rgba(239, 68, 68, 0.3)",
+  },
+  text: {
+    color: "#ef4444",
+    fontSize: 12,
+    fontWeight: "800",
+    textAlign: "center",
+    marginBottom: 8,
+    letterSpacing: 1,
+  },
+  bar: {
+    height: 8,
+    backgroundColor: "rgba(0, 0, 0, 0.3)",
+    borderRadius: 4,
+    overflow: "hidden",
+  },
+  fill: {
+    height: "100%",
+    backgroundColor: "#ef4444",
+    borderRadius: 4,
   },
 });

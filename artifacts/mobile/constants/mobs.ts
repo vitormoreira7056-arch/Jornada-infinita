@@ -417,42 +417,46 @@ export function generateTowerMobs(floor: number): MobDef[] {
   
   const level = floor * 2;
   
-  // Mobs normais - quantidade aumenta com o andar
-  const normalCount = floor <= 5 ? 2 : floor <= 10 ? 3 : 4;
-  for (let i = 0; i < normalCount; i++) {
+  // Quantidade de mobs baseada no andar (1-20 mobs)
+  // Andar 1: 1-3 mobs, Andar 20: 15-20 mobs
+  const minMobs = Math.min(20, Math.floor(floor * 0.8) + 1);
+  const maxMobs = Math.min(20, Math.floor(floor * 1.2) + 3);
+  const mobCount = Math.floor(Math.random() * (maxMobs - minMobs + 1)) + minMobs;
+  
+  // Gerar mobs normais
+  for (let i = 0; i < mobCount; i++) {
     const name = TOWER_MOB_NAMES.normal[Math.floor(Math.random() * TOWER_MOB_NAMES.normal.length)];
     const element = elements[Math.floor(Math.random() * elements.length)];
     
-    mobs.push(generateMob(
-      `${name} do Andar ${floor}`,
-      rank,
-      "normal",
-      level,
-      element,
-      ["lobo", "aranha", "elemental"][Math.floor(Math.random() * 3)],
-      100
-    ));
-  }
-  
-  // Elite em andares específicos (3, 7, 13, 17)
-  if (floor === 3 || floor === 7 || floor === 13 || floor === 17) {
-    const eliteRank: MobRank = floor <= 7 ? "D" : "C";
-    const name = TOWER_MOB_NAMES.elite[Math.floor(Math.random() * TOWER_MOB_NAMES.elite.length)];
-    const element = elements[Math.floor(Math.random() * elements.length)];
-    const skillSet = ["guardian", "mage", "assassin"][Math.floor(Math.random() * 3)];
+    // A cada 5 mobs, adicionar um elite
+    const isElite = i > 0 && i % 5 === 0;
     
-    mobs.push(generateMob(
-      `${name} [Elite]`,
-      eliteRank,
-      "elite",
-      level + 3,
-      element,
-      skillSet,
-      100
-    ));
+    if (isElite) {
+      const eliteRank: MobRank = floor <= 10 ? "D" : "C";
+      const eliteName = TOWER_MOB_NAMES.elite[Math.floor(Math.random() * TOWER_MOB_NAMES.elite.length)];
+      mobs.push(generateMob(
+        `${eliteName} [Elite]`,
+        eliteRank,
+        "elite",
+        level + 2,
+        element,
+        ["guardian", "mage", "assassin"][Math.floor(Math.random() * 3)],
+        100
+      ));
+    } else {
+      mobs.push(generateMob(
+        `${name} do Andar ${floor}`,
+        rank,
+        "normal",
+        level,
+        element,
+        ["lobo", "aranha", "elemental"][Math.floor(Math.random() * 3)],
+        100
+      ));
+    }
   }
   
-  // Boss a cada 5 andares (5, 10, 15, 20)
+  // Boss sempre no final (se andar for múltiplo de 5)
   if (floor % 5 === 0) {
     const bossRank: MobRank = floor === 5 ? "D" : floor === 10 ? "C" : floor === 15 ? "B" : "A";
     const element = elements[Math.floor(Math.random() * elements.length)];

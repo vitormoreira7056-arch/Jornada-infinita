@@ -129,6 +129,9 @@ export interface GameState {
   currentTowerFloor: number | null; // Andar atual da torre (null se não estiver na torre)
   towerKeys: Record<number, boolean>; // Chaves da torre por andar (true = tem a chave)
   towerQuests: TowerQuest[]; // Quests ativas da torre
+  // Sistema de encontros múltiplos
+  combatQueue: EnemyState[]; // Fila de inimigos para combate sequencial
+  currentEnemyIndex: number; // Índice do inimigo atual na fila
   saveVersion?: number; // Versão do save para migrações
 }
 
@@ -166,6 +169,8 @@ const DEFAULT_STATE: GameState = {
   currentTowerFloor: null,
   towerKeys: {}, // Chaves da torre (ex: {1: true, 2: true} = tem chave dos andares 1 e 2)
   towerQuests: [], // Quests ativas da torre
+  combatQueue: [], // Fila de inimigos para combate sequencial
+  currentEnemyIndex: 0, // Índice do inimigo atual na fila
   activeSetBonuses: new Map(),
 };
 
@@ -482,18 +487,74 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   };
 
   // ============ SISTEMA DE COMBATE ============
-  const startCombat = (mob: MobDef, towerFloor?: number) => {
-    setState(prev => ({
-      ...prev, inCombat: true,
-      currentTowerFloor: towerFloor ?? null,
-      currentEnemy: { mob, currentHp: mob.hp, maxHp: mob.hp, skillCooldowns: mob.skills.map(() => 0) },
-      combatLog: [`⚔️ Combate iniciado contra ${mob.name}!`],
+  const startCombat = (mobs: MobDef | MobDef[], towerFloor?: number) => {
+    const mobArray = Array.isArray(mobs) ? mobs : [mobs];
+    
+    if (mobArray.length === 0) return;
+    
+    // Criar fila de inimigos
+    const enemyQueue: EnemyState[] = mobArray.map(mob => ({
+      mob,
+      currentHp: mob.hp,
+      maxHp: mob.hp,
+      skillCooldowns: mob.skills.map(() => 0),
     }));
+    
+    const firstMob = mobArray[0];
+    const logMessage = mobArray.length === 1 
+      ? `⚔️ Combate iniciado contra ${firstMob.name}!`
+      : `⚔️ Combate iniciado! ${mobArray.length} inimigos na fila. Primeiro: ${firstMob.name}`;
+    
+    setState(prev => ({
+      ...prev, 
+      inCombat: true,
+      currentTowerFloor: towerFloor ?? null,
+      combatQueue: enemyQueue,
+      currentEnemyIndex: 0,
+      currentEnemy: enemyQueue[0],
+      combatLog: [logMessage],
+    }));
+  };
+  
+  // Avançar para o próximo inimigo na fila
+  const advanceToNextEnemy = (): boolean => {
+    const nextIndex = state.currentEnemyIndex + 1;
+    
+    if (nextIndex < state.combatQueue.length) {
+      const nextEnemy = state.combatQueue[nextIndex];
+      setState(prev => ({
+        ...prev,
+        currentEnemyIndex: nextIndex,
+        currentEnemy: nextEnemy,
+        combatLog: [...prev.combatLog, `👹 Próximo inimigo: ${nextEnemy.mob.name}!`],
+      }));
+      return true;
+    }
+    
+    return false; // Não há mais inimigos
   };
 
   const endCombat = (victory: boolean) => {
     if (!state.currentEnemy) return;
     const mob = state.currentEnemy.mob;
+    
+    // Verificar se há mais inimigos na fila
+    const hasMoreEnemies = state.currentEnemyIndex < state.combatQueue.length - 1;
+    
+    if (victory && hasMoreEnemies) {
+      // Ainda há inimigos - avançar para o próximo
+      const nextIndex = state.currentEnemyIndex + 1;
+      const nextEnemy = state.combatQueue[nextIndex];
+      
+      setState(prev => ({
+        ...prev,
+        currentEnemyIndex: nextIndex,
+        currentEnemy: nextEnemy,
+        combatLog: [...prev.combatLog, `✅ ${mob.name} derrotado!`, `👹 Próximo: ${nextEnemy.mob.name} (${nextIndex + 1}/${prev.combatQueue.length})`],
+      }));
+      return; // Não termina o combate ainda
+    }
+    
     if (victory) {
       const drops = calculateDrops(mob);
       let remaining = drops.gold;
@@ -581,8 +642,22 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           }
         }
         
+        // Calcular novo nível com o XP ganho
+        const totalExp = prev.exp + expGained;
+        const { newLevel, remainingExp, levelsGained } = checkLevelUp(totalExp, prev.level);
+        
+        // Mensagens de level up
+        const levelUpMessages: string[] = [];
+        if (levelsGained > 0) {
+          levelUpMessages.push(`🆙 LEVEL UP! Nv.${prev.level} → Nv.${newLevel}`);
+          if (levelsGained > 1) {
+            levelUpMessages.push(`   (Subiu ${levelsGained} níveis de uma vez!)`);
+          }
+        }
+        
         const combatLogMessages: string[] = [
           `🎉 Vitória! +${expGained} XP`,
+          ...levelUpMessages,
           ...(isTowerCombat ? [`🏰 Torre Andar ${towerFloor} completado!`] : []),
           ...(keyDropped ? [`🔑 Chave do Andar ${towerFloor} dropada!`] : []),
           ...(questCompleted ? [`✅ Quest do Andar ${towerFloor} completada!`] : []),
@@ -597,19 +672,30 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           inCombat: false, 
           currentEnemy: null,
           currentTowerFloor: null,
+          combatQueue: [], // Limpar fila de combate
+          currentEnemyIndex: 0,
           towerProgress: newTowerProgress,
           unlockedFloors: newUnlockedFloors,
           towerKeys: newTowerKeys,
           towerQuests: newTowerQuests,
           currencies: newCurrencies, 
-          exp: prev.exp + expGained,
+          level: newLevel,
+          exp: remainingExp,
           inventory: newInventory,
           combatLog: [...prev.combatLog, ...combatLogMessages],
         };
       });
     } else {
       resetSkillCooldowns(); // Resetar cooldowns ao sair do combate
-      setState(prev => ({ ...prev, inCombat: false, currentEnemy: null, currentTowerFloor: null, combatLog: [...prev.combatLog, "💀 Derrota!"] }));
+      setState(prev => ({ 
+        ...prev, 
+        inCombat: false, 
+        currentEnemy: null, 
+        currentTowerFloor: null,
+        combatQueue: [], // Limpar fila de combate
+        currentEnemyIndex: 0,
+        combatLog: [...prev.combatLog, "💀 Derrota!"] 
+      }));
     }
   };
 
@@ -855,17 +941,55 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const getExpNeeded = () => calculateExpNeeded(state.level);
   const getExpProgress = () => (state.exp / calculateExpNeeded(state.level)) * 100;
 
+  // Sistema de Level Up - verifica e sobe de nível se necessário
+  const checkLevelUp = (currentExp: number, currentLevel: number): { newLevel: number; remainingExp: number; levelsGained: number } => {
+    let level = currentLevel;
+    let exp = currentExp;
+    let levelsGained = 0;
+    
+    // Limite máximo de nível: 300
+    const maxLevel = 300;
+    
+    while (level < maxLevel) {
+      const expNeeded = calculateExpNeeded(level);
+      if (expNeeded === Infinity) break;
+      
+      if (exp >= expNeeded) {
+        exp -= expNeeded;
+        level++;
+        levelsGained++;
+      } else {
+        break;
+      }
+    }
+    
+    return { newLevel: level, remainingExp: exp, levelsGained };
+  };
+
   const climbTower = (floor: number): boolean => {
     if (!state.unlockedFloors.includes(floor)) return false;
     if (state.towerProgress >= floor) return false;
     return true;
   };
 
-  const findEncounter = (biomeId: BiomeId): { type: "mob" | "resource" | "dungeon" | "nothing"; mob?: MobDef; message: string } => {
+  const findEncounter = (biomeId: BiomeId): { type: "mob" | "resource" | "dungeon" | "nothing"; mobs?: MobDef[]; message: string } => {
     const roll = Math.random() * 100;
     if (roll < 40) {
-      const mob = findRandomMob(state.level, FOREST_MOBS);
-      if (mob) return { type: "mob", mob, message: `Você encontrou um ${mob.name}!` };
+      // Encontro de múltiplos mobs (1-6 mobs)
+      const mobCount = Math.floor(Math.random() * 6) + 1; // 1 a 6 mobs
+      const mobs: MobDef[] = [];
+      
+      for (let i = 0; i < mobCount; i++) {
+        const mob = findRandomMob(state.level, FOREST_MOBS);
+        if (mob) mobs.push(mob);
+      }
+      
+      if (mobs.length > 0) {
+        const message = mobCount === 1 
+          ? `Você encontrou um ${mobs[0].name}!`
+          : `Você encontrou um grupo de ${mobCount} inimigos!`;
+        return { type: "mob", mobs, message };
+      }
     }
     if (roll < 60) return { type: "dungeon", message: "Você sente uma presença misteriosa..." };
     if (roll < 75) return { type: "resource", message: "Você encontrou alguns recursos!" };
