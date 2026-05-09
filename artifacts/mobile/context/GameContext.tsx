@@ -452,23 +452,35 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     });
 
     // Aplicar bônus de sets
-    const activeSetBonuses = state.activeSetBonuses || new Map();
-    for (const [setName, bonuses] of activeSetBonuses) {
-      for (const bonus of bonuses) {
-        if (bonus.stats) {
-          hp += bonus.stats.hp || 0;
-          mp += bonus.stats.mp || 0;
-          atkF += bonus.stats.atkF || 0;
-          atkM += bonus.stats.atkM || 0;
-          def += bonus.stats.def || 0;
-          armor += bonus.stats.armor || 0;
-          magicRes += bonus.stats.magicRes || 0;
-          critRate += bonus.stats.critRate || 0;
-          critDmg += bonus.stats.critDmg || 0;
-          atkSpeed += bonus.stats.atkSpeed || 0;
-          dodge += bonus.stats.dodge || 0;
+    let activeSetBonuses = state.activeSetBonuses;
+    // Garantir que activeSetBonuses seja um Map válido
+    if (!activeSetBonuses || !(activeSetBonuses instanceof Map)) {
+      activeSetBonuses = new Map();
+    }
+    
+    // Iterar sobre os bônus de sets com segurança
+    try {
+      for (const [setName, bonuses] of activeSetBonuses) {
+        if (Array.isArray(bonuses)) {
+          for (const bonus of bonuses) {
+            if (bonus && bonus.stats) {
+              hp += bonus.stats.hp || 0;
+              mp += bonus.stats.mp || 0;
+              atkF += bonus.stats.atkF || 0;
+              atkM += bonus.stats.atkM || 0;
+              def += bonus.stats.def || 0;
+              armor += bonus.stats.armor || 0;
+              magicRes += bonus.stats.magicRes || 0;
+              critRate += bonus.stats.critRate || 0;
+              critDmg += bonus.stats.critDmg || 0;
+              atkSpeed += bonus.stats.atkSpeed || 0;
+              dodge += bonus.stats.dodge || 0;
+            }
+          }
         }
       }
+    } catch (e) {
+      console.error("Erro ao aplicar bônus de sets:", e);
     }
 
     critRate = Math.min(critRate, 0.8); dodge = Math.min(dodge, 0.6); lifeSteal = Math.min(lifeSteal, 0.25);
@@ -1083,7 +1095,13 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   const getItemColor = (item: Item): string => getTierColor(item.tier);
   const getItemTierName = (item: Item): string => getTierName(item.tier);
-  const getEquippedSetBonuses = (): Map<string, any[]> => state.activeSetBonuses || new Map();
+  const getEquippedSetBonuses = (): Map<string, any[]> => {
+    // Garantir que sempre retornamos um Map válido
+    if (!state.activeSetBonuses || !(state.activeSetBonuses instanceof Map)) {
+      return new Map();
+    }
+    return state.activeSetBonuses;
+  };
   
   // Gerar loot de mob comum usando o sistema profissional de drop
   const generateLootFromMob = (mob: MobDef): Item[] => {
