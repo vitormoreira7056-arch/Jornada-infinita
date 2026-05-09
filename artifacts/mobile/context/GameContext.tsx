@@ -4,7 +4,7 @@ import { RaceId, getRaceById, RaceAbility } from "@/constants/races";
 import { ElementId } from "@/constants/elements";
 import { TierId, QualityId, rollTier, rollQuality, getTotalMultiplier, TIERS, QUALITIES } from "@/constants/tiers";
 import { BiomeId, DungeonDef, DiscoveredDungeon, BIOMES, tryDiscoverDungeon, calculateExpNeeded, TOWER_FLOORS_DATA, TowerFloor, getDiscoveredDungeonsForBiome, getBiomeDiscoveryProgress } from "@/constants/adventure";
-import { MobDef, FOREST_MOBS, findRandomMob, calculateDrops, MOB_RANK_MULTIPLIERS } from "@/constants/mobs";
+import { MobDef, FOREST_MOBS, findRandomMob, calculateDrops, MOB_RANK_MULTIPLIERS, generateMob } from "@/constants/mobs";
 import { 
   EquipmentBase,
   generateRandomEquipment, generateBossLoot, generateMiniBossLoot, generateMobLoot,
@@ -223,6 +223,7 @@ interface GameContextType {
   getTowerQuest: (floor: number) => TowerQuest | undefined;
   generateTowerQuest: (floor: number) => TowerQuest;
   updateTowerQuest: (floor: number, progress: number) => void;
+  resetAccount: () => Promise<void>;
 }
 
 const GameContext = createContext<GameContextType | null>(null);
@@ -974,13 +975,25 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   const findEncounter = (biomeId: BiomeId): { type: "mob" | "resource" | "dungeon" | "nothing"; mobs?: MobDef[]; message: string } => {
     const roll = Math.random() * 100;
-    if (roll < 40) {
+    if (roll < 60) { // Aumentado para 60% chance de encontrar mob
       // Encontro de múltiplos mobs (1-6 mobs)
       const mobCount = Math.floor(Math.random() * 6) + 1; // 1 a 6 mobs
       const mobs: MobDef[] = [];
       
       for (let i = 0; i < mobCount; i++) {
-        const mob = findRandomMob(state.level, FOREST_MOBS);
+        let mob = findRandomMob(state.level, FOREST_MOBS);
+        
+        // Se não encontrou mob adequado, gerar um dinamicamente
+        if (!mob) {
+          const elements = ["natureza", "terra", "veneno", "escuridao", "ar"];
+          const names = ["Lobo Selvagem", "Aranha Gigante", "Goblin Florestal", "Mosca Carnívora", "Cobra Venenosa"];
+          const name = names[Math.floor(Math.random() * names.length)];
+          const element = elements[Math.floor(Math.random() * elements.length)];
+          
+          // Importar generateMob dinamicamente
+          mob = generateMob(name, "F", "normal", state.level, element, "lobo", 100);
+        }
+        
         if (mob) mobs.push(mob);
       }
       
@@ -991,7 +1004,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         return { type: "mob", mobs, message };
       }
     }
-    if (roll < 60) return { type: "dungeon", message: "Você sente uma presença misteriosa..." };
+    if (roll < 75) return { type: "dungeon", message: "Você sente uma presença misteriosa..." };
     if (roll < 75) return { type: "resource", message: "Você encontrou alguns recursos!" };
     return { type: "nothing", message: "Você explorou a área mas não encontrou nada de interessante." };
   };
@@ -1135,6 +1148,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       startCombat, endCombat, playerAttack, playerUseSkill, enemyAttack, regenHpMp, healHp, restoreMp, findEncounter,
       tickSkillCooldowns, resetSkillCooldowns,
       hasTowerKey, addTowerKey, getTowerQuest, generateTowerQuest, updateTowerQuest,
+      resetAccount,
     }}>
       {children}
     </GameContext.Provider>

@@ -58,17 +58,18 @@ export const MOB_RANK_MULTIPLIERS: Record<MobRank, {
   mithrilChance: number;
   mithrilMax: number;
   color: string;
+  dropRate: number; // Chance de dropar item (0-1)
 }> = {
-  "F": { statMult: 0.5, goldMult: 1, diamondMin: 0, diamondMax: 0, mithrilChance: 0, mithrilMax: 0, color: "#9ca3af" },
-  "E": { statMult: 0.7, goldMult: 1.5, diamondMin: 0, diamondMax: 0, mithrilChance: 0, mithrilMax: 0, color: "#22c55e" },
-  "D": { statMult: 1, goldMult: 2.5, diamondMin: 0, diamondMax: 0, mithrilChance: 0, mithrilMax: 0, color: "#3b82f6" },
-  "C": { statMult: 1.4, goldMult: 4, diamondMin: 0, diamondMax: 0, mithrilChance: 0, mithrilMax: 0, color: "#a855f7" },
-  "B": { statMult: 2, goldMult: 7, diamondMin: 0, diamondMax: 0, mithrilChance: 0, mithrilMax: 0, color: "#f59e0b" },
-  "A": { statMult: 3, goldMult: 12, diamondMin: 1, diamondMax: 5, mithrilChance: 0, mithrilMax: 0, color: "#ef4444" },
-  "S": { statMult: 5, goldMult: 25, diamondMin: 10, diamondMax: 50, mithrilChance: 5, mithrilMax: 100, color: "#ec4899" },
-  "SS": { statMult: 8, goldMult: 60, diamondMin: 100, diamondMax: 500, mithrilChance: 15, mithrilMax: 1000, color: "#22d3ee" },
-  "SSS": { statMult: 15, goldMult: 200, diamondMin: 1000, diamondMax: 5000, mithrilChance: 35, mithrilMax: 5000, color: "#fbbf24" },
-  "SSS+": { statMult: 30, goldMult: 1000, diamondMin: 10000, diamondMax: 100000, mithrilChance: 50, mithrilMax: 10000, color: "#ffffff" },
+  "F": { statMult: 0.5, goldMult: 1, diamondMin: 0, diamondMax: 0, mithrilChance: 0, mithrilMax: 0, color: "#9ca3af", dropRate: 0.45 },
+  "E": { statMult: 0.7, goldMult: 1.5, diamondMin: 0, diamondMax: 0, mithrilChance: 0, mithrilMax: 0, color: "#22c55e", dropRate: 0.50 },
+  "D": { statMult: 1, goldMult: 2.5, diamondMin: 0, diamondMax: 0, mithrilChance: 0, mithrilMax: 0, color: "#3b82f6", dropRate: 0.55 },
+  "C": { statMult: 1.4, goldMult: 4, diamondMin: 0, diamondMax: 0, mithrilChance: 0, mithrilMax: 0, color: "#a855f7", dropRate: 0.60 },
+  "B": { statMult: 2, goldMult: 7, diamondMin: 0, diamondMax: 0, mithrilChance: 0, mithrilMax: 0, color: "#f59e0b", dropRate: 0.65 },
+  "A": { statMult: 3, goldMult: 12, diamondMin: 1, diamondMax: 5, mithrilChance: 0, mithrilMax: 0, color: "#ef4444", dropRate: 0.70 },
+  "S": { statMult: 5, goldMult: 25, diamondMin: 10, diamondMax: 50, mithrilChance: 5, mithrilMax: 100, color: "#ec4899", dropRate: 0.75 },
+  "SS": { statMult: 8, goldMult: 60, diamondMin: 100, diamondMax: 500, mithrilChance: 15, mithrilMax: 1000, color: "#22d3ee", dropRate: 0.80 },
+  "SSS": { statMult: 15, goldMult: 200, diamondMin: 1000, diamondMax: 5000, mithrilChance: 35, mithrilMax: 5000, color: "#fbbf24", dropRate: 0.85 },
+  "SSS+": { statMult: 30, goldMult: 1000, diamondMin: 10000, diamondMax: 100000, mithrilChance: 50, mithrilMax: 10000, color: "#ffffff", dropRate: 0.95 },
 };
 
 // Nomes de mobs por bioma (Floresta Encantada - níveis 1-100)
@@ -148,7 +149,7 @@ const MOB_SKILLS: Record<string, MobSkill[]> = {
 };
 
 // Gerar mob base
-function generateMob(
+export function generateMob(
   name: string,
   rank: MobRank,
   type: MobType,

@@ -57,25 +57,48 @@ function CurrencyDisplay({ icon, value, color }: { icon: string; value: number; 
 
 // Menu Modal
 function MenuModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
-  const { logout } = useGame();
+  const { logout, resetAccount } = useGame();
 
-  const handleLogout = async () => {
+  const handleLogout = () => {
     onClose();
-    Alert.alert(
-      "Sair",
-      "Deseja sair da conta?",
-      [
-        { text: "Cancelar", style: "cancel" },
-        { 
-          text: "Sair", 
-          style: "destructive",
-          onPress: async () => {
-            await logout();
-            router.replace("/login");
-          }
-        },
-      ]
-    );
+    setTimeout(() => {
+      Alert.alert(
+        "Sair",
+        "Deseja sair da conta?",
+        [
+          { text: "Cancelar", style: "cancel" },
+          { 
+            text: "Sair", 
+            style: "destructive",
+            onPress: async () => {
+              await logout();
+              router.replace("/login");
+            }
+          },
+        ]
+      );
+    }, 300);
+  };
+
+  const handleResetAccount = () => {
+    onClose();
+    setTimeout(() => {
+      Alert.alert(
+        "⚠️ Resetar Conta",
+        "ATENÇÃO: Isso apagará TODOS os dados do personagem atual (nível, itens, progresso, etc.) e voltará para a seleção de raça.\n\nEsta ação não pode ser desfeita!\n\nTem certeza?",
+        [
+          { text: "Cancelar", style: "cancel" },
+          { 
+            text: "Resetar", 
+            style: "destructive",
+            onPress: async () => {
+              await resetAccount();
+              router.replace("/character-creation");
+            }
+          },
+        ]
+      );
+    }, 300);
   };
 
   return (
@@ -94,6 +117,13 @@ function MenuModal({ visible, onClose }: { visible: boolean; onClose: () => void
           <TouchableOpacity style={menuStyles.menuItem} onPress={() => { onClose(); /* TODO: Settings */ }}>
             <Text style={menuStyles.menuIcon}>⚙️</Text>
             <Text style={menuStyles.menuText}>Configurações</Text>
+          </TouchableOpacity>
+          
+          <View style={menuStyles.divider} />
+          
+          <TouchableOpacity style={[menuStyles.menuItem, menuStyles.resetItem]} onPress={handleResetAccount}>
+            <Text style={menuStyles.menuIcon}>🔄</Text>
+            <Text style={[menuStyles.menuText, menuStyles.resetText]}>Resetar Conta</Text>
           </TouchableOpacity>
           
           <View style={menuStyles.divider} />
@@ -302,6 +332,12 @@ const menuStyles = StyleSheet.create({
   },
   logoutText: {
     color: "#ef4444",
+  },
+  resetItem: {
+    backgroundColor: "rgba(245, 158, 11, 0.08)",
+  },
+  resetText: {
+    color: "#f59e0b",
   },
 });
 
