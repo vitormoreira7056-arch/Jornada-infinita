@@ -72,25 +72,30 @@ export default function CombatScreen() {
     }).start();
   }, []);
   
-  // Regeneração passiva e verificar fim de combate
+  // Regeneração passiva
   useEffect(() => {
     const interval = setInterval(() => {
       if (state.inCombat && enemy && enemy.currentHp > 0) {
         regenHpMp();
         setCombatTick(t => t + 1);
       }
-      
-      // Verificar se o combate acabou (vitória)
-      if (!state.inCombat && !state.currentEnemy && state.combatLog.length > 0) {
-        const lastLog = state.combatLog[state.combatLog.length - 1];
-        if (lastLog.includes("Vitória")) {
-          // Redirecionar para tela de loot
-          router.push("/(game)/loot");
-        }
-      }
     }, 1000);
     return () => clearInterval(interval);
-  }, [state.inCombat, enemy, state.currentEnemy, state.combatLog]);
+  }, [state.inCombat, enemy, regenHpMp]);
+  
+  // Verificar fim de combate (vitória) - separado para evitar loops
+  useEffect(() => {
+    if (!state.inCombat && !state.currentEnemy && state.combatLog.length > 0) {
+      const lastLog = state.combatLog[state.combatLog.length - 1];
+      if (lastLog && lastLog.includes("Vitória")) {
+        // Redirecionar para tela de loot após um pequeno delay
+        const timeout = setTimeout(() => {
+          router.push("/(game)/loot");
+        }, 500);
+        return () => clearTimeout(timeout);
+      }
+    }
+  }, [state.inCombat, state.currentEnemy, state.combatLog]);
   
   // Reduzir cooldowns
   useEffect(() => {

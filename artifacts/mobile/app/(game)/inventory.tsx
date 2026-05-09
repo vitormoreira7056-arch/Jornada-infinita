@@ -4,24 +4,12 @@ import { useGame, Item, EquipmentSlot } from "@/context/GameContext";
 import { TIERS, QUALITIES, TierId, QualityId } from "@/constants/tiers";
 
 const SLOT_CONFIG: { slot: EquipmentSlot; name: string; icon: string }[] = [
-  { slot: "helmet", name: "Elmo", icon: "⛑️" },
-  { slot: "face", name: "Rosto", icon: "🎭" },
-  { slot: "necklace", name: "Colar", icon: "📿" },
-  { slot: "earrings", name: "Brincos", icon: "💎" },
-  { slot: "shoulders", name: "Ombros", icon: "🛡️" },
-  { slot: "cape", name: "Capa", icon: "🦸" },
+  { slot: "head", name: "Cabeça", icon: "⛑️" },
   { slot: "chest", name: "Peitoral", icon: "👕" },
-  { slot: "bracelet", name: "Pulseira", icon: "📿" },
+  { slot: "legs", name: "Pernas", icon: "👖" },
+  { slot: "feet", name: "Pés", icon: "👢" },
   { slot: "mainHand", name: "Mão Primária", icon: "⚔️" },
   { slot: "offHand", name: "Mão Secundária", icon: "🛡️" },
-  { slot: "ring1", name: "Anel 1", icon: "💍" },
-  { slot: "ring2", name: "Anel 2", icon: "💍" },
-  { slot: "ring3", name: "Anel 3", icon: "💍" },
-  { slot: "ring4", name: "Anel 4", icon: "💍" },
-  { slot: "legs", name: "Calças", icon: "👖" },
-  { slot: "boots", name: "Botas", icon: "👢" },
-  { slot: "pet", name: "Mascote", icon: "🐺" },
-  { slot: "spirit", name: "Espírito", icon: "👻" },
 ];
 
 type Tab = "items" | "equipment";
@@ -141,7 +129,7 @@ export default function Inventory() {
 
   // Filter items by selected slot type
   const filteredItems = selectedSlot
-    ? state.inventory.filter((item) => item.slot === selectedSlot)
+    ? state.inventory.filter((item) => item.slot === selectedSlot || item.slot === (selectedSlot as any))
     : state.inventory;
 
   return (

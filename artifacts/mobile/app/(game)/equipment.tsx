@@ -43,7 +43,8 @@ export default function EquipmentScreen() {
   };
   
   const getSlotItem = (slotId: string): Item | null => {
-    return state.equipment[slotId as keyof typeof state.equipment] || null;
+    const equipment = state.equipment as Record<string, Item | null>;
+    return equipment[slotId] || null;
   };
   
   return (

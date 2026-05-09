@@ -11,7 +11,7 @@ export default function LootScreen() {
   const recentLoot = state.inventory.slice(-6).reverse();
   
   const handleEquip = (item: Item) => {
-    equipItem(item, item.slot);
+    equipItem(item, item.slot as any);
     router.back();
   };
   

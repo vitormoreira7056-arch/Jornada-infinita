@@ -18,9 +18,11 @@ export type OffHandType =
   | "escudo" | "orb" | "tocha" | "grimorio" | "lume" 
   | "bengala" | "lanterna" | "totem" | "livro" | "adaga_off";
 
-export type EquipmentSlot = 
-  | "mainHand" | "offHand" | "head" | "chest" | "legs" | "feet"
-  | "necklace" | "ring1" | "ring2" | "bracelet" | "cape" | "earrings";
+// Slots principais de equipamento (6 slots)
+export type EquipmentSlot = "mainHand" | "offHand" | "head" | "chest" | "legs" | "feet";
+
+// Slots futuros (não implementados ainda)
+export type FutureEquipmentSlot = "necklace" | "ring1" | "ring2" | "bracelet" | "cape" | "earrings";
 
 export interface EquipmentBase {
   id: string;
