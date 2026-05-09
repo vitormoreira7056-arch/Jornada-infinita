@@ -11,11 +11,14 @@ export default function EquipmentScreen() {
   
   const slots = [
     { id: "head", name: "Cabeça", icon: "⛑️" },
+    { id: "face", name: "Rosto", icon: "🎭" },
+    { id: "necklace", name: "Colar", icon: "📿" },
     { id: "chest", name: "Peitoral", icon: "🛡️" },
     { id: "legs", name: "Pernas", icon: "👖" },
     { id: "feet", name: "Pés", icon: "🥾" },
     { id: "mainHand", name: "Mão Principal", icon: "⚔️" },
     { id: "offHand", name: "Mão Secundária", icon: "🛡️" },
+    { id: "earrings", name: "Brincos", icon: "💎" },
   ] as const;
   
   const stats = getTotalStats();

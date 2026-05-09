@@ -5,11 +5,14 @@ import { TIERS, QUALITIES, TierId, QualityId } from "@/constants/tiers";
 
 const SLOT_CONFIG: { slot: EquipmentSlot; name: string; icon: string }[] = [
   { slot: "head", name: "Cabeça", icon: "⛑️" },
+  { slot: "face", name: "Rosto", icon: "🎭" },
+  { slot: "necklace", name: "Colar", icon: "📿" },
   { slot: "chest", name: "Peitoral", icon: "👕" },
   { slot: "legs", name: "Pernas", icon: "👖" },
   { slot: "feet", name: "Pés", icon: "👢" },
   { slot: "mainHand", name: "Mão Primária", icon: "⚔️" },
   { slot: "offHand", name: "Mão Secundária", icon: "🛡️" },
+  { slot: "earrings", name: "Brincos", icon: "💎" },
 ];
 
 type Tab = "items" | "equipment";

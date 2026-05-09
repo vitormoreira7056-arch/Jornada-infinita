@@ -3,6 +3,7 @@ export * from "./base";
 export * from "./weapons";
 export * from "./armor";
 export * from "./offhand";
+export * from "./accessories";
 export * from "./sets";
 export * from "./demo";
 
@@ -11,6 +12,7 @@ import { EquipmentBase, EquipmentSlot } from "./base";
 import { generateWeapon, generateWeaponPool, generateUniqueWeapon } from "./weapons";
 import { generateHead, generateChest, generateLegs, generateFeet, generateArmorPool } from "./armor";
 import { generateOffHand, generateOffHandPool, generateUniqueOffHand } from "./offhand";
+import { generateEarrings, generateNecklace, generateFace, generateAccessoriesPool } from "./accessories";
 
 // Gerar item aleatório para um slot específico
 export function generateRandomEquipment(
@@ -43,6 +45,18 @@ export function generateRandomEquipment(
     case "feet":
       const feetTypes = ["botas", "sandalias", "sapatos", "grevas_pes", "meias"] as const;
       return generateFeet(feetTypes[Math.floor(Math.random() * feetTypes.length)], tier, level, setName);
+    
+    case "earrings":
+      const earringsTypes = ["brinco", "pendente", "argola", "plug", "alargador", "corrente"] as const;
+      return generateEarrings(earringsTypes[Math.floor(Math.random() * earringsTypes.length)], tier, level, setName);
+    
+    case "necklace":
+      const necklaceTypes = ["colar", "amuleto", "medalhao", "gargantilha", "rosario", "pingente"] as const;
+      return generateNecklace(necklaceTypes[Math.floor(Math.random() * necklaceTypes.length)], tier, level, setName);
+    
+    case "face":
+      const faceTypes = ["mascara", "oculos", "piercing", "bandana", "venda", "monoculo", "tatuagem"] as const;
+      return generateFace(faceTypes[Math.floor(Math.random() * faceTypes.length)], tier, level, setName);
     
     default:
       return null;
@@ -157,8 +171,8 @@ export function generateMobLoot(
     tier = tierBoost[tier] || tier;
   }
   
-  // Gerar os itens
-  const slots: EquipmentSlot[] = ["mainHand", "offHand", "head", "chest", "legs", "feet"];
+  // Gerar os itens (todos os 9 slots)
+  const slots: EquipmentSlot[] = ["mainHand", "offHand", "head", "chest", "legs", "feet", "earrings", "necklace", "face"];
   
   for (let i = 0; i < itemsToDrop; i++) {
     const slot = slots[Math.floor(Math.random() * slots.length)];

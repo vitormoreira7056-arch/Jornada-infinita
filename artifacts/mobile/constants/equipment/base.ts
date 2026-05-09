@@ -18,17 +18,25 @@ export type OffHandType =
   | "escudo" | "orb" | "tocha" | "grimorio" | "lume" 
   | "bengala" | "lanterna" | "totem" | "livro" | "adaga_off";
 
-// Slots principais de equipamento (6 slots)
-export type EquipmentSlot = "mainHand" | "offHand" | "head" | "chest" | "legs" | "feet";
+// Tipos de acessórios
+export type EarringsType = "brinco" | "pendente" | "argola" | "plug" | "alargador" | "corrente";
+export type NecklaceType = "colar" | "amuleto" | "medalhao" | "gargantilha" | "rosario" | "pingente";
+export type FaceType = "mascara" | "oculos" | "piercing" | "bandana" | "venda" | "monoculo" | "tatuagem";
+
+// Slots de equipamento (9 slots principais + 3 novos = 12 slots)
+export type EquipmentSlot = 
+  | "mainHand" | "offHand" 
+  | "head" | "chest" | "legs" | "feet"
+  | "earrings" | "necklace" | "face";
 
 // Slots futuros (não implementados ainda)
-export type FutureEquipmentSlot = "necklace" | "ring1" | "ring2" | "bracelet" | "cape" | "earrings";
+export type FutureEquipmentSlot = "ring1" | "ring2" | "bracelet" | "cape";
 
 export interface EquipmentBase {
   id: string;
   name: string;
   slot: EquipmentSlot;
-  type: WeaponType | HeadType | ChestType | LegsType | FeetType | OffHandType;
+  type: WeaponType | HeadType | ChestType | LegsType | FeetType | OffHandType | EarringsType | NecklaceType | FaceType;
   tier: "F" | "E" | "D" | "C" | "B" | "A" | "S" | "SS" | "SSS" | "SSS+";
   level: number;
   // Stats base
