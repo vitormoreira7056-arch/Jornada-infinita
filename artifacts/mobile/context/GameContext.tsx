@@ -189,6 +189,8 @@ interface GameContextType {
   playerUseSkill: (skillIndex: number) => { success: boolean; damage?: number; message?: string };
   enemyAttack: () => { damage: number; skillUsed?: string };
   regenHpMp: () => void;
+  healHp: (amount: number) => void;
+  restoreMp: (amount: number) => void;
   findEncounter: (biomeId: BiomeId) => { type: "mob" | "resource" | "dungeon" | "nothing"; mob?: MobDef; message: string };
 }
 
@@ -614,6 +616,20 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     }));
   };
 
+  const healHp = (amount: number) => {
+    setState(prev => ({
+      ...prev,
+      currentHp: Math.min(getTotalStats().hp, prev.currentHp + amount),
+    }));
+  };
+
+  const restoreMp = (amount: number) => {
+    setState(prev => ({
+      ...prev,
+      currentMp: Math.min(getTotalStats().mp, prev.currentMp + amount),
+    }));
+  };
+
   // ============ SISTEMA DE AVENTURA ============
   const exploreBiome = (biomeId: BiomeId): { found: boolean; dungeon?: DungeonDef; expGained: number; isNew: boolean } => {
     const biome = BIOMES[biomeId];
@@ -833,7 +849,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       getItemTierName, getEquippedSetBonuses, generateLootFromMob, generateLootFromBoss,
       exploreBiome, getDiscoveredDungeons, getBiomeProgress, enterDungeon, completeDungeon,
       getExpNeeded, getExpProgress, climbTower, getTotalStats, getAllRaceStats,
-      startCombat, endCombat, playerAttack, playerUseSkill, enemyAttack, regenHpMp, findEncounter,
+      startCombat, endCombat, playerAttack, playerUseSkill, enemyAttack, regenHpMp, healHp, restoreMp, findEncounter,
     }}>
       {children}
     </GameContext.Provider>

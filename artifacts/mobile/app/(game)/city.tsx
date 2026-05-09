@@ -1,7 +1,7 @@
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Modal, Animated, Alert } from "react-native";
 import { useGame } from "@/context/GameContext";
 import { CITY_BUILDINGS, SHOP_ITEMS, BLACKSMITH_SERVICES, ENCHANT_SERVICES, CityBuilding } from "@/constants/city";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 // Building Card
 function BuildingCard({ 
@@ -206,7 +206,137 @@ export default function CityScreen() {
         visible={selectedBuilding === "shop"} 
         onClose={() => setSelectedBuilding(null)} 
       />
+      
+      <HospitalModal 
+        visible={selectedBuilding === "hospital"} 
+        onClose={() => setSelectedBuilding(null)} 
+      />
     </ScrollView>
+  );
+}
+
+// Hospital Modal
+function HospitalModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  const { state, getTotalStats, healHp, restoreMp } = useGame();
+  const stats = getTotalStats();
+  const [timeInside, setTimeInside] = useState(0);
+  const [hpRecovered, setHpRecovered] = useState(0);
+  const [mpRecovered, setMpRecovered] = useState(0);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Regeneração: 4% por minuto = 0.067% por segundo
+  const REGEN_RATE = 0.00067; // 0.067% por segundo
+  
+  useEffect(() => {
+    if (visible) {
+      // Iniciar regeneração quando entrar no hospital
+      intervalRef.current = setInterval(() => {
+        setTimeInside(prev => prev + 1);
+        
+        // Calcular regeneração (4% por minuto = 0.067% por segundo)
+        const hpRegen = Math.max(1, Math.floor(stats.hp * REGEN_RATE));
+        const mpRegen = Math.max(1, Math.floor(stats.mp * REGEN_RATE));
+        
+        // Aplicar regeneração real no jogador
+        healHp(hpRegen);
+        restoreMp(mpRegen);
+        
+        setHpRecovered(prev => prev + hpRegen);
+        setMpRecovered(prev => prev + mpRegen);
+      }, 1000); // A cada segundo
+    }
+    
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+  }, [visible, stats.hp, stats.mp, healHp, restoreMp]);
+  
+  // Resetar quando fechar
+  useEffect(() => {
+    if (!visible) {
+      setTimeInside(0);
+      setHpRecovered(0);
+      setMpRecovered(0);
+    }
+  }, [visible]);
+  
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+  
+  return (
+    <Modal animationType="slide" transparent visible={visible} onRequestClose={onClose}>
+      <View style={modalStyles.overlay}>
+        <View style={modalStyles.container}>
+          <View style={modalStyles.header}>
+            <Text style={modalStyles.title}>🏥 HOSPITAL</Text>
+            <TouchableOpacity style={modalStyles.closeBtn} onPress={onClose}>
+              <Text style={modalStyles.closeText}>✕</Text>
+            </TouchableOpacity>
+          </View>
+          
+          {/* Status atual */}
+          <View style={hospitalStyles.statusCard}>
+            <Text style={hospitalStyles.statusTitle}>❤️ STATUS ATUAL</Text>
+            <View style={hospitalStyles.barContainer}>
+              <Text style={hospitalStyles.barLabel}>HP</Text>
+              <View style={hospitalStyles.barBg}>
+                <View style={[hospitalStyles.barFill, { width: `${(state.currentHp / stats.hp) * 100}%`, backgroundColor: "#ef4444" }]} />
+              </View>
+              <Text style={hospitalStyles.barValue}>{Math.floor(state.currentHp)}/{stats.hp}</Text>
+            </View>
+            <View style={hospitalStyles.barContainer}>
+              <Text style={hospitalStyles.barLabel}>MP</Text>
+              <View style={hospitalStyles.barBg}>
+                <View style={[hospitalStyles.barFill, { width: `${(state.currentMp / stats.mp) * 100}%`, backgroundColor: "#3b82f6" }]} />
+              </View>
+              <Text style={hospitalStyles.barValue}>{Math.floor(state.currentMp)}/{stats.mp}</Text>
+            </View>
+          </View>
+          
+          {/* Bônus do hospital */}
+          <View style={hospitalStyles.bonusCard}>
+            <Text style={hospitalStyles.bonusTitle}>✨ BÔNUS DO HOSPITAL</Text>
+            <Text style={hospitalStyles.bonusText}>+4% HP e MP por minuto</Text>
+            <Text style={hospitalStyles.bonusSubtext}>Acumula com outros bônus de regeneração</Text>
+          </View>
+          
+          {/* Tempo dentro */}
+          <View style={hospitalStyles.timeCard}>
+            <Text style={hospitalStyles.timeLabel}>⏱️ TEMPO NO HOSPITAL</Text>
+            <Text style={hospitalStyles.timeValue}>{formatTime(timeInside)}</Text>
+          </View>
+          
+          {/* Recuperação */}
+          <View style={hospitalStyles.recoveryCard}>
+            <Text style={hospitalStyles.recoveryTitle}>📈 RECUPERAÇÃO TOTAL</Text>
+            <View style={hospitalStyles.recoveryRow}>
+              <Text style={hospitalStyles.recoveryLabel}>HP Recuperado:</Text>
+              <Text style={[hospitalStyles.recoveryValue, { color: "#ef4444" }]}>+{Math.floor(hpRecovered)}</Text>
+            </View>
+            <View style={hospitalStyles.recoveryRow}>
+              <Text style={hospitalStyles.recoveryLabel}>MP Recuperado:</Text>
+              <Text style={[hospitalStyles.recoveryValue, { color: "#3b82f6" }]}>+{Math.floor(mpRecovered)}</Text>
+            </View>
+          </View>
+          
+          {/* Dica */}
+          <View style={hospitalStyles.tipCard}>
+            <Text style={hospitalStyles.tipText}>💡 Fique no hospital o quanto quiser! A regeneração continua enquanto você estiver aqui.</Text>
+          </View>
+          
+          {/* Botão sair */}
+          <TouchableOpacity style={hospitalStyles.leaveBtn} onPress={onClose}>
+            <Text style={hospitalStyles.leaveText}>SAIR DO HOSPITAL</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
   );
 }
 
@@ -496,5 +626,159 @@ const modalStyles = StyleSheet.create({
     color: "#22c55e",
     fontSize: 12,
     fontWeight: "700",
+  },
+});
+
+// Hospital Styles
+const hospitalStyles = StyleSheet.create({
+  statusCard: {
+    backgroundColor: "rgba(239, 68, 68, 0.1)",
+    borderRadius: 16,
+    padding: 16,
+    margin: 16,
+    borderWidth: 1,
+    borderColor: "rgba(239, 68, 68, 0.2)",
+  },
+  statusTitle: {
+    color: "#ef4444",
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 2,
+    marginBottom: 12,
+  },
+  barContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  barLabel: {
+    color: "#94a3b8",
+    fontSize: 12,
+    width: 30,
+  },
+  barBg: {
+    flex: 1,
+    height: 10,
+    backgroundColor: "rgba(0,0,0,0.3)",
+    borderRadius: 5,
+    overflow: "hidden",
+    marginHorizontal: 10,
+  },
+  barFill: {
+    height: "100%",
+    borderRadius: 5,
+  },
+  barValue: {
+    color: "#ffffff",
+    fontSize: 11,
+    width: 60,
+    textAlign: "right",
+  },
+  bonusCard: {
+    backgroundColor: "rgba(34, 197, 94, 0.1)",
+    borderRadius: 16,
+    padding: 16,
+    marginHorizontal: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "rgba(34, 197, 94, 0.2)",
+    alignItems: "center",
+  },
+  bonusTitle: {
+    color: "#22c55e",
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 2,
+    marginBottom: 8,
+  },
+  bonusText: {
+    color: "#ffffff",
+    fontSize: 20,
+    fontWeight: "700",
+  },
+  bonusSubtext: {
+    color: "#64748b",
+    fontSize: 11,
+    marginTop: 4,
+  },
+  timeCard: {
+    backgroundColor: "rgba(124, 58, 237, 0.1)",
+    borderRadius: 16,
+    padding: 16,
+    marginHorizontal: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "rgba(124, 58, 237, 0.2)",
+    alignItems: "center",
+  },
+  timeLabel: {
+    color: "#a855f7",
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 2,
+    marginBottom: 8,
+  },
+  timeValue: {
+    color: "#ffffff",
+    fontSize: 32,
+    fontWeight: "800",
+    fontVariant: ["tabular-nums"],
+  },
+  recoveryCard: {
+    backgroundColor: "rgba(59, 130, 246, 0.1)",
+    borderRadius: 16,
+    padding: 16,
+    marginHorizontal: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "rgba(59, 130, 246, 0.2)",
+  },
+  recoveryTitle: {
+    color: "#3b82f6",
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 2,
+    marginBottom: 12,
+  },
+  recoveryRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
+  recoveryLabel: {
+    color: "#94a3b8",
+    fontSize: 14,
+  },
+  recoveryValue: {
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  tipCard: {
+    backgroundColor: "rgba(251, 191, 36, 0.1)",
+    borderRadius: 12,
+    padding: 12,
+    marginHorizontal: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "rgba(251, 191, 36, 0.2)",
+  },
+  tipText: {
+    color: "#fbbf24",
+    fontSize: 12,
+    textAlign: "center",
+    lineHeight: 18,
+  },
+  leaveBtn: {
+    backgroundColor: "#ef4444",
+    margin: 16,
+    padding: 16,
+    borderRadius: 16,
+    alignItems: "center",
+  },
+  leaveText: {
+    color: "#ffffff",
+    fontSize: 16,
+    fontWeight: "800",
+    letterSpacing: 2,
   },
 });

@@ -1,6 +1,6 @@
 // Sistema de Cidade - Lojas e NPCs
 
-export type CityBuilding = "shop" | "blacksmith" | "enchanter" | "artisan";
+export type CityBuilding = "shop" | "blacksmith" | "enchanter" | "artisan" | "hospital";
 
 export interface BuildingDef {
   id: CityBuilding;
@@ -18,6 +18,14 @@ export const CITY_BUILDINGS: Record<CityBuilding, BuildingDef> = {
     emoji: "🏪",
     description: "Compre poções, itens consumíveis e materiais básicos",
     color: "#22c55e",
+    unlockLevel: 1,
+  },
+  hospital: {
+    id: "hospital",
+    name: "Hospital",
+    emoji: "🏥",
+    description: "Recupere HP e MP rapidamente enquanto descansa (+4% por minuto)",
+    color: "#ef4444",
     unlockLevel: 1,
   },
   blacksmith: {
