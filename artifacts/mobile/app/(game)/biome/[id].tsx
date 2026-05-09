@@ -165,17 +165,87 @@ function DiscoveryModal({
   );
 }
 
+// Adventure Log Entry Type
+type LogEntry = {
+  id: string;
+  type: "combat" | "dungeon" | "resource" | "nothing" | "xp";
+  message: string;
+  details?: string;
+  timestamp: number;
+};
+
+// Generate dungeon mobs based on tier
+function generateDungeonMobs(dungeon: DungeonDef) {
+  const tierMult = { "F": 1, "E": 1.3, "D": 1.7, "C": 2.2, "B": 2.8, "A": 3.5, "S": 4.5, "SS": 6, "SSS": 8, "SSS+": 12 };
+  const mult = tierMult[dungeon.tier] || 1;
+  const baseLevel = dungeon.minLevel;
+  
+  // Generate 3-5 mobs for the dungeon
+  const mobCount = 3 + Math.floor(Math.random() * 3);
+  const mobs = [];
+  
+  for (let i = 0; i < mobCount; i++) {
+    const isBoss = i === mobCount - 1; // Last mob is the boss
+    const level = baseLevel + (isBoss ? 5 : Math.floor(Math.random() * 3));
+    
+    mobs.push({
+      id: `dungeon_${dungeon.id}_mob_${i}`,
+      name: isBoss ? `Chefe: ${dungeon.name}` : `Guardião ${i + 1}`,
+      rank: isBoss ? (dungeon.tier >= "C" ? "B" : "C") : "D",
+      type: isBoss ? "boss" : "normal",
+      level,
+      hp: Math.floor(100 * mult * (isBoss ? 3 : 1) * (level * 0.5)),
+      atkF: Math.floor(20 * mult * (isBoss ? 2 : 1)),
+      atkM: Math.floor(10 * mult),
+      def: Math.floor(10 * mult),
+      armor: Math.floor(5 * mult),
+      magicRes: Math.floor(3 * mult),
+      critRate: 0.05 + (mult * 0.01),
+      critDmg: 1.5 + (mult * 0.1),
+      atkSpeed: 1 + (mult * 0.05),
+      dodge: 0.02,
+      element: dungeon.element || "neutral",
+      skills: [],
+      dropGold: Math.floor(50 * mult * level),
+      dropDiamonds: dungeon.tier >= "A" ? Math.floor(mult * 2) : 0,
+      dropMithrilChance: 0,
+      dropMithrilMax: 0,
+      encounterRate: 100,
+    });
+  }
+  
+  return mobs;
+}
+
 export default function BiomeScreen() {
   const { id } = useLocalSearchParams<{ id: BiomeId }>();
-  const { state, exploreBiome, getDiscoveredDungeons, getBiomeProgress, startCombat, findEncounter } = useGame();
+  const { state, exploreBiome, getDiscoveredDungeons, getBiomeProgress, startCombat, findEncounter, generateLootFromMob } = useGame();
   const [isExploring, setIsExploring] = useState(false);
   const [discoveryModal, setDiscoveryModal] = useState(false);
   const [foundDungeon, setFoundDungeon] = useState<DungeonDef | null>(null);
   const [fadeAnim] = useState(new Animated.Value(0));
   const [discoveredDungeons, setDiscoveredDungeons] = useState<DungeonDef[]>([]);
   const [progress, setProgress] = useState({ discovered: 0, total: 0, percentage: 0 });
+  const [adventureLog, setAdventureLog] = useState<LogEntry[]>([]);
+  const [currentDungeon, setCurrentDungeon] = useState<DungeonDef | null>(null);
+  const [dungeonMobs, setDungeonMobs] = useState<any[]>([]);
+  const [currentMobIndex, setCurrentMobIndex] = useState(0);
+  const [dungeonRewards, setDungeonRewards] = useState({ gold: 0, diamonds: 0, exp: 0, items: [] as any[] });
+  const [showDungeonComplete, setShowDungeonComplete] = useState(false);
   
   const biome = BIOMES[id];
+  
+  // Add log entry helper
+  const addLogEntry = (type: LogEntry["type"], message: string, details?: string) => {
+    const newEntry: LogEntry = {
+      id: Date.now().toString(),
+      type,
+      message,
+      details,
+      timestamp: Date.now(),
+    };
+    setAdventureLog(prev => [newEntry, ...prev].slice(0, 50)); // Keep last 50 entries
+  };
   
   useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -224,10 +294,74 @@ export default function BiomeScreen() {
   };
   
   const handleEnterDungeon = () => {
+    if (!foundDungeon) return;
+    
     setDiscoveryModal(false);
-    // TODO: Navegar para a dungeon
-    Alert.alert("Dungeon", "Entrando na dungeon... (em desenvolvimento)");
+    
+    // Generate dungeon mobs
+    const mobs = generateDungeonMobs(foundDungeon);
+    setDungeonMobs(mobs);
+    setCurrentMobIndex(0);
+    setCurrentDungeon(foundDungeon);
+    setDungeonRewards({ gold: 0, diamonds: 0, exp: 0, items: [] });
+    
+    addLogEntry("dungeon", `🏰 Entrou na dungeon: ${foundDungeon.name}`, `Tier ${foundDungeon.tier} • ${mobs.length} inimigos`);
+    
+    // Start combat with first mob
+    if (mobs.length > 0) {
+      startCombat(mobs[0]);
+      router.push("/(game)/combat");
+    }
   };
+  
+  // Handle dungeon combat completion - called when returning from combat
+  useEffect(() => {
+    if (!state.inCombat && currentDungeon && dungeonMobs.length > 0) {
+      // Check if we just finished a dungeon combat
+      const lastLog = state.combatLog[state.combatLog.length - 1];
+      
+      if (lastLog && lastLog.includes("Vitória")) {
+        // Victory - collect rewards
+        const defeatedMob = dungeonMobs[currentMobIndex];
+        const goldGain = defeatedMob.dropGold || 0;
+        const diamondGain = defeatedMob.dropDiamonds || 0;
+        const expGain = Math.floor(defeatedMob.level * 15);
+        
+        setDungeonRewards(prev => ({
+          gold: prev.gold + goldGain,
+          diamonds: prev.diamonds + diamondGain,
+          exp: prev.exp + expGain,
+          items: prev.items,
+        }));
+        
+        addLogEntry("combat", `⚔️ Derrotou ${defeatedMob.name}`, `+${goldGain} ouro • +${expGain} XP`);
+        
+        // Check if there are more mobs
+        const nextIndex = currentMobIndex + 1;
+        if (nextIndex < dungeonMobs.length) {
+          setCurrentMobIndex(nextIndex);
+          // Small delay before next combat
+          setTimeout(() => {
+            startCombat(dungeonMobs[nextIndex]);
+            router.push("/(game)/combat");
+          }, 500);
+        } else {
+          // Dungeon complete!
+          addLogEntry("dungeon", `✅ Dungeon completada: ${currentDungeon.name}`, `Recompensas totais coletadas`);
+          setShowDungeonComplete(true);
+          setCurrentDungeon(null);
+          setDungeonMobs([]);
+          setCurrentMobIndex(0);
+        }
+      } else if (lastLog && lastLog.includes("Derrota")) {
+        // Defeat - dungeon failed
+        addLogEntry("combat", `💀 Derrotado na dungeon`, `Dungeon falhou. Tente novamente.`);
+        setCurrentDungeon(null);
+        setDungeonMobs([]);
+        setCurrentMobIndex(0);
+      }
+    }
+  }, [state.inCombat, state.combatLog]);
   
   if (!biome) {
     return (
@@ -273,12 +407,43 @@ export default function BiomeScreen() {
           <Text style={styles.progressText}>{progress.discovered} / {progress.total} dungeons encontradas</Text>
         </View>
         
+        {/* Adventure Log Panel */}
+        {adventureLog.length > 0 && (
+          <View style={styles.logPanel}>
+            <Text style={styles.logTitle}>📜 REGISTRO DE AVENTURA</Text>
+            <ScrollView style={styles.logContent} showsVerticalScrollIndicator={true}>
+              {adventureLog.map((entry) => (
+                <View key={entry.id} style={styles.logEntry}>
+                  <Text style={[styles.logType, 
+                    entry.type === "combat" && styles.logCombat,
+                    entry.type === "dungeon" && styles.logDungeon,
+                    entry.type === "resource" && styles.logResource,
+                    entry.type === "xp" && styles.logXp,
+                  ]}>
+                    {entry.type === "combat" && "⚔️"}
+                    {entry.type === "dungeon" && "🏰"}
+                    {entry.type === "resource" && "🌿"}
+                    {entry.type === "nothing" && "🔍"}
+                    {entry.type === "xp" && "⭐"}
+                  </Text>
+                  <View style={styles.logTextContainer}>
+                    <Text style={styles.logMessage}>{entry.message}</Text>
+                    {entry.details && <Text style={styles.logDetails}>{entry.details}</Text>}
+                  </View>
+                </View>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+        
         {/* Aventurar-se Button - Unified */}
         <TouchableOpacity 
           style={[styles.adventureBtn, isExploring && styles.adventureBtnDisabled]}
           onPress={async () => {
             if (isExploring) return;
             setIsExploring(true);
+            
+            addLogEntry("nothing", "🔍 Iniciando exploração...", "Procurando por inimigos, dungeons ou recursos");
             
             // Simular tempo de exploração
             await new Promise(resolve => setTimeout(resolve, 1500));
@@ -288,7 +453,9 @@ export default function BiomeScreen() {
             
             if (encounterResult.type === "mob" && encounterResult.mob) {
               // Encontrou mob - inicia combate
-              startCombat(encounterResult.mob);
+              const mob = encounterResult.mob;
+              addLogEntry("combat", `⚔️ Encontrou: ${mob.name}`, `Nv.${mob.level} • Rank ${mob.rank}`);
+              startCombat(mob);
               setIsExploring(false);
               router.push("/(game)/combat");
               return;
@@ -298,6 +465,7 @@ export default function BiomeScreen() {
             const dungeonResult = exploreBiome(id);
             
             if (dungeonResult.found && dungeonResult.dungeon) {
+              addLogEntry("dungeon", `🏰 Dungeon descoberta: ${dungeonResult.dungeon.name}`, `Tier ${dungeonResult.dungeon.tier}`);
               setFoundDungeon(dungeonResult.dungeon);
               setDiscoveryModal(true);
               const dungeons = getDiscoveredDungeons(id);
@@ -443,6 +611,64 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.1)",
+  },
+  logPanel: {
+    backgroundColor: "rgba(0,0,0,0.4)",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "rgba(124, 58, 237, 0.3)",
+    maxHeight: 250,
+  },
+  logTitle: {
+    color: "#a855f7",
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 1,
+    marginBottom: 12,
+  },
+  logContent: {
+    maxHeight: 180,
+  },
+  logEntry: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: 10,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255,255,255,0.05)",
+  },
+  logType: {
+    fontSize: 16,
+    marginRight: 10,
+    width: 24,
+    textAlign: "center",
+  },
+  logCombat: {
+    color: "#ef4444",
+  },
+  logDungeon: {
+    color: "#f59e0b",
+  },
+  logResource: {
+    color: "#22c55e",
+  },
+  logXp: {
+    color: "#a855f7",
+  },
+  logTextContainer: {
+    flex: 1,
+  },
+  logMessage: {
+    color: "#ffffff",
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  logDetails: {
+    color: "#94a3b8",
+    fontSize: 11,
+    marginTop: 2,
   },
   progressHeader: {
     flexDirection: "row",

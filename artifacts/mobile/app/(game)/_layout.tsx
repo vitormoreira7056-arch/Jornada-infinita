@@ -108,8 +108,52 @@ function MenuModal({ visible, onClose }: { visible: boolean; onClose: () => void
   );
 }
 
+// XP Bar Component
+function XPBar({ level, exp, getExpNeeded }: { level: number; exp: number; getExpNeeded: (level: number) => number }) {
+  const expNeeded = getExpNeeded(level);
+  const expProgress = expNeeded === Infinity ? 100 : Math.min(100, (exp / expNeeded) * 100);
+  
+  return (
+    <View style={{
+      backgroundColor: "rgba(124, 58, 237, 0.1)",
+      borderRadius: 8,
+      padding: 8,
+      marginBottom: 10,
+      borderWidth: 1,
+      borderColor: "rgba(124, 58, 237, 0.2)",
+    }}>
+      <View style={{
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: 4,
+      }}>
+        <Text style={{ color: "#a855f7", fontSize: 10, fontWeight: "700" }}>
+          ⭐ NÍVEL {level}
+        </Text>
+        <Text style={{ color: "#94a3b8", fontSize: 9 }}>
+          {exp.toLocaleString()} / {expNeeded === Infinity ? "MAX" : expNeeded.toLocaleString()} XP
+        </Text>
+      </View>
+      <View style={{
+        height: 6,
+        backgroundColor: "rgba(0, 0, 0, 0.3)",
+        borderRadius: 3,
+        overflow: "hidden",
+      }}>
+        <View style={{
+          height: "100%",
+          width: `${expProgress}%`,
+          backgroundColor: "#a855f7",
+          borderRadius: 3,
+        }} />
+      </View>
+    </View>
+  );
+}
+
 function Header() {
-  const { state } = useGame();
+  const { state, getExpNeeded } = useGame();
   const race = useMemo(() => state.raceId ? getRaceById(state.raceId) : null, [state.raceId]);
   const [menuVisible, setMenuVisible] = useState(false);
 
@@ -122,6 +166,9 @@ function Header() {
       borderBottomWidth: 1,
       borderBottomColor: "rgba(124, 58, 237, 0.08)",
     }}>
+      {/* XP Progress Bar */}
+      <XPBar level={state.level} exp={state.exp} getExpNeeded={getExpNeeded} />
+      
       {/* Top Row - Player Info & Menu */}
       <View style={{
         flexDirection: "row",
