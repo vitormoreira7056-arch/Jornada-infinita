@@ -19,6 +19,19 @@ export interface EnemyState {
   skillCooldowns: number[];
 }
 
+// Quest da Torre
+export interface TowerQuest {
+  floor: number;
+  id: string;
+  description: string;
+  target: number;
+  current: number;
+  completed: boolean;
+  reward: { type: "exp" | "gold" | "diamonds" | "item"; amount: number };
+}
+
+// Chaves da Torre - dropam de mobs e permitem avançar
+
 const USERS_KEY = "rpg_idle_users_v5";
 const CURRENT_USER_KEY = "rpg_idle_current_user_v5";
 
@@ -114,6 +127,8 @@ export interface GameState {
   currentHp: number; currentMp: number; inCombat: boolean;
   currentEnemy: EnemyState | null; combatLog: string[];
   currentTowerFloor: number | null; // Andar atual da torre (null se não estiver na torre)
+  towerKeys: Record<number, boolean>; // Chaves da torre por andar (true = tem a chave)
+  towerQuests: TowerQuest[]; // Quests ativas da torre
   saveVersion?: number; // Versão do save para migrações
 }
 
@@ -149,6 +164,8 @@ const DEFAULT_STATE: GameState = {
   inventory: [], inventorySize: 50, maxZone: 1, completedZones: [],
   currentHp: 100, currentMp: 50, inCombat: false, currentEnemy: null, combatLog: [],
   currentTowerFloor: null,
+  towerKeys: {}, // Chaves da torre (ex: {1: true, 2: true} = tem chave dos andares 1 e 2)
+  towerQuests: [], // Quests ativas da torre
   activeSetBonuses: new Map(),
 };
 
@@ -194,6 +211,13 @@ interface GameContextType {
   healHp: (amount: number) => void;
   restoreMp: (amount: number) => void;
   findEncounter: (biomeId: BiomeId) => { type: "mob" | "resource" | "dungeon" | "nothing"; mob?: MobDef; message: string };
+  tickSkillCooldowns: () => void;
+  resetSkillCooldowns: () => void;
+  hasTowerKey: (floor: number) => boolean;
+  addTowerKey: (floor: number) => void;
+  getTowerQuest: (floor: number) => TowerQuest | undefined;
+  generateTowerQuest: (floor: number) => TowerQuest;
+  updateTowerQuest: (floor: number, progress: number) => void;
 }
 
 const GameContext = createContext<GameContextType | null>(null);
@@ -510,23 +534,58 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         
         const expGained = Math.floor(mob.level * 10 * (MOB_RANK_MULTIPLIERS[mob.rank]?.statMult || 1));
         
-        // Verificar se é combate de torre e subir andar se venceu
+        // Verificar se é combate de torre
         const isTowerCombat = prev.currentTowerFloor !== null;
         const towerFloor = prev.currentTowerFloor;
         let newTowerProgress = prev.towerProgress;
         let newUnlockedFloors = [...prev.unlockedFloors];
+        let newTowerKeys = { ...prev.towerKeys };
+        let newTowerQuests = [...prev.towerQuests];
+        let keyDropped = false;
+        let questUpdated = false;
+        let questCompleted = false;
         
-        if (isTowerCombat && towerFloor && towerFloor > prev.towerProgress) {
-          newTowerProgress = towerFloor;
-          // Desbloquear próximo andar
-          if (!newUnlockedFloors.includes(towerFloor + 1)) {
-            newUnlockedFloors.push(towerFloor + 1);
+        if (isTowerCombat && towerFloor) {
+          // Drop de chave (30% de chance, apenas se não tiver a chave)
+          if (!newTowerKeys[towerFloor] && Math.random() < 0.3) {
+            newTowerKeys[towerFloor] = true;
+            keyDropped = true;
+          }
+          
+          // Atualizar quest do andar
+          const quest = newTowerQuests.find(q => q.floor === towerFloor && !q.completed);
+          if (quest) {
+            quest.current += 1;
+            if (quest.current >= quest.target) {
+              quest.completed = true;
+              questCompleted = true;
+            }
+            questUpdated = true;
+          } else if (towerFloor >= 10) {
+            // Criar nova quest para andares 10+
+            const newQuest = generateTowerQuest(towerFloor);
+            newQuest.current = 1;
+            newTowerQuests.push(newQuest);
+            questUpdated = true;
+          }
+          
+          // Subir andar se venceu o boss ou completou a quest (andares 10+)
+          const canAdvance = towerFloor < 10 ? true : questCompleted;
+          
+          if (towerFloor > prev.towerProgress && canAdvance) {
+            newTowerProgress = towerFloor;
+            // Desbloquear próximo andar
+            if (!newUnlockedFloors.includes(towerFloor + 1)) {
+              newUnlockedFloors.push(towerFloor + 1);
+            }
           }
         }
         
         const combatLogMessages: string[] = [
           `🎉 Vitória! +${expGained} XP`,
           ...(isTowerCombat ? [`🏰 Torre Andar ${towerFloor} completado!`] : []),
+          ...(keyDropped ? [`🔑 Chave do Andar ${towerFloor} dropada!`] : []),
+          ...(questCompleted ? [`✅ Quest do Andar ${towerFloor} completada!`] : []),
           ...(drops.gold > 0 ? [`💰 +${drops.gold} ouro`] : []),
           ...(drops.diamonds > 0 ? [`💎 +${drops.diamonds} diamantes`] : []),
           ...(drops.mithril > 0 ? [`✨ +${drops.mithril} mithril`] : []),
@@ -540,6 +599,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           currentTowerFloor: null,
           towerProgress: newTowerProgress,
           unlockedFloors: newUnlockedFloors,
+          towerKeys: newTowerKeys,
+          towerQuests: newTowerQuests,
           currencies: newCurrencies, 
           exp: prev.exp + expGained,
           inventory: newInventory,
@@ -547,6 +608,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         };
       });
     } else {
+      resetSkillCooldowns(); // Resetar cooldowns ao sair do combate
       setState(prev => ({ ...prev, inCombat: false, currentEnemy: null, currentTowerFloor: null, combatLog: [...prev.combatLog, "💀 Derrota!"] }));
     }
   };
@@ -648,6 +710,82 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     setState(prev => ({
       ...prev,
       currentMp: Math.min(getTotalStats().mp, prev.currentMp + amount),
+    }));
+  };
+
+  // Reduzir cooldowns das skills em 1 segundo (chamado durante combate)
+  const tickSkillCooldowns = () => {
+    setState(prev => ({
+      ...prev,
+      activeSkills: prev.activeSkills.map(skill => ({
+        ...skill,
+        cooldown: Math.max(0, skill.cooldown - 1),
+      })),
+    }));
+  };
+
+  // Resetar todos os cooldowns (ao sair do combate)
+  const resetSkillCooldowns = () => {
+    setState(prev => ({
+      ...prev,
+      activeSkills: prev.activeSkills.map(skill => ({
+        ...skill,
+        cooldown: 0,
+      })),
+    }));
+  };
+
+  // ============ SISTEMA DE CHAVES DA TORRE ============
+  const hasTowerKey = (floor: number): boolean => {
+    return state.towerKeys[floor] === true;
+  };
+
+  const addTowerKey = (floor: number) => {
+    setState(prev => ({
+      ...prev,
+      towerKeys: { ...prev.towerKeys, [floor]: true },
+    }));
+  };
+
+  // ============ SISTEMA DE QUESTS DA TORRE ============
+  const getTowerQuest = (floor: number): TowerQuest | undefined => {
+    return state.towerQuests.find(q => q.floor === floor && !q.completed);
+  };
+
+  const generateTowerQuest = (floor: number): TowerQuest => {
+    const questTypes = [
+      { id: "kill", description: `Derrote ${Math.floor(floor / 2) + 3} mobs no andar ${floor}`, target: Math.floor(floor / 2) + 3 },
+      { id: "elite", description: `Derrote 1 Elite no andar ${floor}`, target: 1 },
+      { id: "damage", description: `Cause ${floor * 1000} de dano total`, target: floor * 1000 },
+    ];
+    
+    const type = questTypes[Math.floor(Math.random() * questTypes.length)];
+    
+    return {
+      floor,
+      id: `${type.id}_${floor}_${Date.now()}`,
+      description: type.description,
+      target: type.target,
+      current: 0,
+      completed: false,
+      reward: { 
+        type: floor % 3 === 0 ? "diamonds" : floor % 2 === 0 ? "gold" : "exp", 
+        amount: floor * (floor % 3 === 0 ? 5 : floor % 2 === 0 ? 100 : 50) 
+      },
+    };
+  };
+
+  const updateTowerQuest = (floor: number, progress: number) => {
+    setState(prev => ({
+      ...prev,
+      towerQuests: prev.towerQuests.map(q => {
+        if (q.floor === floor && !q.completed) {
+          const newCurrent = q.current + progress;
+          const completed = newCurrent >= q.target;
+          return { ...q, current: newCurrent, completed };
+        }
+        return q;
+      }),
     }));
   };
 
@@ -871,6 +1009,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       exploreBiome, getDiscoveredDungeons, getBiomeProgress, enterDungeon, completeDungeon,
       getExpNeeded, getExpProgress, climbTower, getTotalStats, getAllRaceStats,
       startCombat, endCombat, playerAttack, playerUseSkill, enemyAttack, regenHpMp, healHp, restoreMp, findEncounter,
+      tickSkillCooldowns, resetSkillCooldowns,
+      hasTowerKey, addTowerKey, getTowerQuest, generateTowerQuest, updateTowerQuest,
     }}>
       {children}
     </GameContext.Provider>

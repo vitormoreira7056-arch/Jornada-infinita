@@ -57,7 +57,7 @@ function SkillButton({
 }
 
 export default function CombatScreen() {
-  const { state, getTotalStats, playerAttack, playerUseSkill, enemyAttack, endCombat, regenHpMp } = useGame();
+  const { state, getTotalStats, playerAttack, playerUseSkill, enemyAttack, endCombat, regenHpMp, tickSkillCooldowns } = useGame();
   const [fadeAnim] = useState(new Animated.Value(0));
   const [combatTick, setCombatTick] = useState(0);
   
@@ -98,15 +98,15 @@ export default function CombatScreen() {
     }
   }, [state.inCombat, state.currentEnemy, state.combatLog]);
   
-  // Reduzir cooldowns
+  // Reduzir cooldowns das skills a cada segundo durante combate
   useEffect(() => {
     const interval = setInterval(() => {
       if (state.inCombat) {
-        // Cooldowns são gerenciados no GameContext
+        tickSkillCooldowns();
       }
     }, 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [state.inCombat, tickSkillCooldowns]);
   
   const handleAttack = useCallback(() => {
     if (!enemy || enemy.currentHp <= 0) return;

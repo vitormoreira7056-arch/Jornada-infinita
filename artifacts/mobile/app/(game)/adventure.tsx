@@ -7,15 +7,40 @@ import { router } from "expo-router";
 
 // Tower Modal
 function TowerModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
-  const { state, startCombat } = useGame();
+  const { state, startCombat, hasTowerKey, getTowerQuest } = useGame();
   const [selectedFloor, setSelectedFloor] = useState(1);
   
   const floorData = TOWER_FLOORS_DATA[selectedFloor - 1];
   const isUnlocked = state.unlockedFloors.includes(selectedFloor);
   const isCompleted = state.towerProgress >= selectedFloor;
+  const quest = getTowerQuest(selectedFloor);
+  
+  // Verificar se pode entrar no andar
+  const canEnter = () => {
+    if (!isUnlocked || isCompleted) return false;
+    
+    // Andares 1-9: precisa da chave do andar anterior (exceto andar 1)
+    if (selectedFloor > 1 && selectedFloor < 10) {
+      const hasPreviousKey = hasTowerKey(selectedFloor - 1);
+      if (!hasPreviousKey) {
+        Alert.alert("🔒 Chave Necessária", `Você precisa da chave do andar ${selectedFloor - 1} para entrar aqui. Derrote mobs até dropar a chave!`);
+        return false;
+      }
+    }
+    
+    // Andares 10+: precisa completar a quest
+    if (selectedFloor >= 10) {
+      if (quest && !quest.completed) {
+        Alert.alert("📜 Quest Pendente", `${quest.description}\nProgresso: ${quest.current}/${quest.target}`);
+        return false;
+      }
+    }
+    
+    return true;
+  };
   
   const enterTowerFloor = () => {
-    if (!isUnlocked || isCompleted) return;
+    if (!canEnter()) return;
     
     // Gerar mobs para o andar selecionado
     const mobs = generateTowerMobs(selectedFloor);
@@ -109,6 +134,33 @@ function TowerModal({ visible, onClose }: { visible: boolean; onClose: () => voi
           <View style={towerStyles.floorInfo}>
             <Text style={towerStyles.floorName}>{floorData.name}</Text>
             <Text style={towerStyles.floorDesc}>{floorData.description}</Text>
+            
+            {/* Info de chave */}
+            {selectedFloor > 1 && selectedFloor < 10 && (
+              <View style={towerStyles.keyInfo}>
+                <Text style={towerStyles.keyText}>
+                  {hasTowerKey(selectedFloor - 1) ? "✅" : "🔒"} Chave do Andar {selectedFloor - 1} {hasTowerKey(selectedFloor - 1) ? "(Obtida)" : "(Necessária)"}
+                </Text>
+              </View>
+            )}
+            
+            {/* Info de quest para andares 10+ */}
+            {selectedFloor >= 10 && (
+              <View style={towerStyles.questInfo}>
+                {quest ? (
+                  <>
+                    <Text style={towerStyles.questTitle}>📜 Quest Ativa:</Text>
+                    <Text style={towerStyles.questDesc}>{quest.description}</Text>
+                    <Text style={[towerStyles.questProgress, quest.completed && towerStyles.questCompleted]}>
+                      Progresso: {quest.current}/{quest.target} {quest.completed ? "✅" : ""}
+                    </Text>
+                  </>
+                ) : (
+                  <Text style={towerStyles.questDesc}>📜 Quest será gerada ao derrotar o primeiro mob</Text>
+                )}
+              </View>
+            )}
+            
             {floorData.type === "boss" && (
               <Text style={towerStyles.groupReq}>Mínimo: {floorData.minGroupSize} jogadores</Text>
             )}
@@ -572,6 +624,46 @@ const towerStyles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "600",
     marginBottom: 16,
+  },
+  keyInfo: {
+    backgroundColor: "rgba(251, 191, 36, 0.1)",
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "rgba(251, 191, 36, 0.3)",
+  },
+  keyText: {
+    color: "#fbbf24",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  questInfo: {
+    backgroundColor: "rgba(59, 130, 246, 0.1)",
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "rgba(59, 130, 246, 0.3)",
+  },
+  questTitle: {
+    color: "#3b82f6",
+    fontSize: 12,
+    fontWeight: "700",
+    marginBottom: 4,
+  },
+  questDesc: {
+    color: "#94a3b8",
+    fontSize: 12,
+    marginBottom: 6,
+  },
+  questProgress: {
+    color: "#fbbf24",
+    fontSize: 11,
+    fontWeight: "600",
+  },
+  questCompleted: {
+    color: "#22c55e",
   },
   enterBtn: {
     backgroundColor: "#7c3aed",
