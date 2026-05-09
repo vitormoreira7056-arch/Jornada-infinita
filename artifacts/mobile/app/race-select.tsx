@@ -46,8 +46,14 @@ function StatsModal({
   const activeAbilities = race.abilities.filter(a => a.type === "ativa");
   const passiveAbility = race.abilities.find(a => a.type === "passiva");
 
-  const formatPercent = (val: number) => `${(val * 100).toFixed(1)}%`;
-  const formatNumber = (val: number) => val > 0 ? `+${val}` : val.toString();
+  const formatPercent = (val: number) => {
+    if (val === undefined || val === null) return "0%";
+    return `${(val * 100).toFixed(1)}%`;
+  };
+  const formatNumber = (val: number) => {
+    if (val === undefined || val === null) return "0";
+    return val > 0 ? `+${val}` : val.toString();
+  };
 
   const activeResistances = Object.entries(stats.res)
     .filter(([_, value]) => value !== 0)

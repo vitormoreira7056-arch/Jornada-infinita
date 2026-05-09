@@ -496,7 +496,29 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     Object.entries(race.resistances).forEach(([element, value]) => {
       if (element in res && value !== undefined) res[element as ElementId] = value;
     });
-    return { ...race.stats, res };
+    
+    // Mapear stats da raça para o formato completo esperado pela UI
+    const baseStats = {
+      hp: race.stats.hp,
+      mp: Math.floor(race.stats.hp * 0.5), // MP base é 50% do HP
+      atkF: race.stats.atkF,
+      atkM: race.stats.atkM,
+      def: race.stats.def,
+      armor: race.stats.armor,
+      magicRes: race.stats.magicRes,
+      critRate: race.stats.critBonus,
+      critDmg: 1.5 + race.stats.critMultBonus, // Dano crítico base + bônus
+      atkSpeed: race.stats.speed, // Mapear speed para atkSpeed
+      luck: race.stats.luck,
+      dodge: race.stats.dodge,
+      lifeSteal: race.stats.lifeSteal,
+      armorPen: race.stats.armorPen,
+      hpRegen: race.stats.hpRegen,
+      mpRegen: race.stats.hp * 0.01, // Regen MP base
+      res,
+    };
+    
+    return baseStats;
   };
 
   // ============ SISTEMA DE COMBATE ============
