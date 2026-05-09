@@ -55,6 +55,74 @@ function CurrencyDisplay({ icon, value, color }: { icon: string; value: number; 
   );
 }
 
+// Confirmation Modal Styles (defined inline to avoid hoisting issues)
+const confirmModalStyles = {
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.8)",
+    justifyContent: "center" as const,
+    alignItems: "center" as const,
+    padding: 20,
+  },
+  container: {
+    backgroundColor: "#1e1e2e",
+    borderRadius: 16,
+    padding: 24,
+    width: "100%",
+    maxWidth: 320,
+    borderWidth: 1,
+    borderColor: "rgba(124, 58, 237, 0.3)",
+  },
+  title: {
+    color: "#ffffff",
+    fontSize: 18,
+    fontWeight: "800" as const,
+    textAlign: "center" as const,
+    marginBottom: 12,
+  },
+  message: {
+    color: "#94a3b8",
+    fontSize: 14,
+    textAlign: "center" as const,
+    lineHeight: 20,
+    marginBottom: 24,
+  },
+  buttons: {
+    flexDirection: "row" as const,
+    gap: 12,
+  },
+  cancelBtn: {
+    flex: 1,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    borderRadius: 10,
+    padding: 14,
+    alignItems: "center" as const,
+  },
+  cancelText: {
+    color: "#94a3b8",
+    fontSize: 14,
+    fontWeight: "600" as const,
+  },
+  confirmBtn: {
+    flex: 1,
+    backgroundColor: "rgba(124, 58, 237, 0.8)",
+    borderRadius: 10,
+    padding: 14,
+    alignItems: "center" as const,
+  },
+  confirmText: {
+    color: "#ffffff",
+    fontSize: 14,
+    fontWeight: "700" as const,
+  },
+  dangerBtn: {
+    backgroundColor: "rgba(239, 68, 68, 0.8)",
+  },
+  dangerText: {
+    color: "#ffffff",
+  },
+};
+
 // Confirmation Modal
 function ConfirmationModal({ 
   visible, 
@@ -80,19 +148,19 @@ function ConfirmationModal({
       visible={visible}
       onRequestClose={onClose}
     >
-      <View style={confirmStyles.overlay}>
-        <View style={confirmStyles.container}>
-          <Text style={confirmStyles.title}>{title}</Text>
-          <Text style={confirmStyles.message}>{message}</Text>
-          <View style={confirmStyles.buttons}>
-            <TouchableOpacity style={confirmStyles.cancelBtn} onPress={onClose}>
-              <Text style={confirmStyles.cancelText}>Cancelar</Text>
+      <View style={confirmModalStyles.overlay}>
+        <View style={confirmModalStyles.container}>
+          <Text style={confirmModalStyles.title}>{title}</Text>
+          <Text style={confirmModalStyles.message}>{message}</Text>
+          <View style={confirmModalStyles.buttons}>
+            <TouchableOpacity style={confirmModalStyles.cancelBtn} onPress={onClose}>
+              <Text style={confirmModalStyles.cancelText}>Cancelar</Text>
             </TouchableOpacity>
             <TouchableOpacity 
-              style={[confirmStyles.confirmBtn, danger && confirmStyles.dangerBtn]} 
+              style={[confirmModalStyles.confirmBtn, danger && confirmModalStyles.dangerBtn]} 
               onPress={() => { onClose(); onConfirm(); }}
             >
-              <Text style={[confirmStyles.confirmText, danger && confirmStyles.dangerText]}>
+              <Text style={[confirmModalStyles.confirmText, danger && confirmModalStyles.dangerText]}>
                 {confirmText}
               </Text>
             </TouchableOpacity>
@@ -147,7 +215,7 @@ function MenuModal({ visible, onClose }: { visible: boolean; onClose: () => void
           
           <View style={menuStyles.divider} />
           
-          <TouchableOpacity style={[menuStyles.menuItem, menuStyles.resetItem]} onPress={handleResetAccount}>
+          <TouchableOpacity style={[menuStyles.menuItem, menuStyles.resetItem]} onPress={() => { onClose(); setShowResetConfirm(true); }}>
             <Text style={menuStyles.menuIcon}>🔄</Text>
             <Text style={[menuStyles.menuText, menuStyles.resetText]}>Resetar Conta</Text>
           </TouchableOpacity>
@@ -455,6 +523,8 @@ const confirmStyles = StyleSheet.create({
     color: "#ffffff",
   },
 });
+
+// Note: confirmStyles foi removido pois agora usamos confirmModalStyles inline
 
 // @ts-ignore
 export default function GameLayout() {
