@@ -1,17 +1,42 @@
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Modal, Animated } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Modal, Animated, Alert } from "react-native";
 import { useGame } from "@/context/GameContext";
 import { BIOMES, BiomeId, TOWER_FLOORS_DATA, TOWER_NAME } from "@/constants/adventure";
+import { generateTowerMobs } from "@/constants/mobs";
 import { useState, useEffect } from "react";
 import { router } from "expo-router";
 
 // Tower Modal
 function TowerModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
-  const { state } = useGame();
+  const { state, startCombat } = useGame();
   const [selectedFloor, setSelectedFloor] = useState(1);
   
   const floorData = TOWER_FLOORS_DATA[selectedFloor - 1];
   const isUnlocked = state.unlockedFloors.includes(selectedFloor);
   const isCompleted = state.towerProgress >= selectedFloor;
+  
+  const enterTowerFloor = () => {
+    if (!isUnlocked || isCompleted) return;
+    
+    // Gerar mobs para o andar selecionado
+    const mobs = generateTowerMobs(selectedFloor);
+    
+    // Selecionar o primeiro mob (ou o boss se for andar de boss)
+    const targetMob = floorData.type === "boss" || floorData.type === "miniboss" 
+      ? mobs.find(m => m.type === "boss") || mobs[0]
+      : mobs[0];
+    
+    if (!targetMob) {
+      Alert.alert("Erro", "Não foi possível gerar o combate");
+      return;
+    }
+    
+    // Iniciar combate (passando o andar da torre)
+    startCombat(targetMob, selectedFloor);
+    
+    // Fechar modal e navegar para tela de combate
+    onClose();
+    router.push("/(game)/combat");
+  };
   
   return (
     <Modal
@@ -30,16 +55,16 @@ function TowerModal({ visible, onClose }: { visible: boolean; onClose: () => voi
           </View>
           
           <View style={towerStyles.progressSection}>
-            <Text style={towerStyles.progressText}>Progresso: {state.towerProgress} / 1000</Text>
+            <Text style={towerStyles.progressText}>Progresso: {state.towerProgress} / 20 (Beta)</Text>
             <View style={towerStyles.progressBar}>
-              <View style={[towerStyles.progressFill, { width: `${(state.towerProgress / 1000) * 100}%` }]} />
+              <View style={[towerStyles.progressFill, { width: `${(state.towerProgress / 20) * 100}%` }]} />
             </View>
           </View>
           
           <ScrollView style={towerStyles.floorList} showsVerticalScrollIndicator={false}>
-            {/* Floor selector */}
+            {/* Floor selector - Mostrando andares 1-20 */}
             <View style={towerStyles.floorGrid}>
-              {Array.from({ length: 100 }, (_, i) => i + 1).map((floor) => {
+              {Array.from({ length: 20 }, (_, i) => i + 1).map((floor) => {
                 const floorInfo = TOWER_FLOORS_DATA[floor - 1];
                 const unlocked = state.unlockedFloors.includes(floor);
                 const completed = state.towerProgress >= floor;
@@ -88,8 +113,9 @@ function TowerModal({ visible, onClose }: { visible: boolean; onClose: () => voi
               <Text style={towerStyles.groupReq}>Mínimo: {floorData.minGroupSize} jogadores</Text>
             )}
             <TouchableOpacity 
-              style={[towerStyles.enterBtn, !isUnlocked && towerStyles.enterBtnDisabled]}
-              disabled={!isUnlocked}
+              style={[towerStyles.enterBtn, (!isUnlocked || isCompleted) && towerStyles.enterBtnDisabled]}
+              disabled={!isUnlocked || isCompleted}
+              onPress={enterTowerFloor}
             >
               <Text style={towerStyles.enterBtnText}>
                 {isCompleted ? "✓ COMPLETADO" : isUnlocked ? "ENTRAR" : "🔒 BLOQUEADO"}

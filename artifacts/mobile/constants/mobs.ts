@@ -363,22 +363,68 @@ export function generateDungeonMobs(tier: DungeonTier, dungeonLevel: number): Mo
 }
 
 // Mobs para a Torre (andares 1-10)
+// Nomes especiais para mobs da torre (andares 1-20+)
+const TOWER_MOB_NAMES = {
+  normal: [
+    "Espectro", "Constructo", "Gárgula", "Homúnculo", "Familiar",
+    "Servo", "Guarda", "Sentinela", "Vigia", "Patrulheiro",
+    "Cristal Vivo", "Gosma", "Limo", "Vapor", "Névoa",
+    "Sombra", "Eco", "Reflexo", "Eco Temporal", "Fragmento",
+    "Ecos", "Remanescente", "Eco de Alma", "Eco de Magia", "Eco de Guerra",
+  ],
+  elite: [
+    "Cavaleiro da Torre", "Mago do Andar", "Caçador de Almas", "Executor", "Inquisidor",
+    "Paladino Corrompido", "Necromante", "Elementalista", "Invocador", "Dominador",
+    "Senhor das Sombras", "Mestre das Ilusões", "Guardião de Cristal", "Guardião de Fogo", "Guardião de Gelo",
+    "Arquimago", "Grão-Sacerdote", "Lorde Demoníaco", "Príncipe Celestial", "Avatar do Caos",
+  ],
+  boss: [
+    "Guardião do Portal", "Sentinela Eterna", "Vigilante Ancião", "Protetor Primordial", "Defensor Lendário",
+    "Mestre da Torre", "Arquiteto do Vazio", "Criador de Mundos", "Deus Menor", "Entidade Suprema",
+  ],
+};
+
+// Skills especiais da torre
+const TOWER_SKILLS: Record<string, MobSkill[]> = {
+  guardian: [
+    { name: "Golpe de Escudo", description: "Ataque com escudo", damageMultiplier: 1.2, cooldown: 0 },
+    { name: "Provocar", description: "Aumenta defesa", damageMultiplier: 0, cooldown: 5, effect: "buff_def" },
+    { name: "Golpe Poderoso", description: "Golpe devastador", damageMultiplier: 2.0, cooldown: 4 },
+  ],
+  mage: [
+    { name: "Bola de Fogo", description: "Lança fogo", damageMultiplier: 1.5, cooldown: 2, element: "fogo" },
+    { name: "Raio Gélido", description: "Gelo penetrante", damageMultiplier: 1.4, cooldown: 3, element: "gelo", effect: "slow" },
+    { name: "Tempestade", description: "Ataque elétrico em área", damageMultiplier: 2.2, cooldown: 5, element: "trovao" },
+  ],
+  assassin: [
+    { name: "Golpe Sombrio", description: "Ataque furtivo", damageMultiplier: 1.8, cooldown: 3, effect: "bleed" },
+    { name: "Veneno Mortal", description: "Aplica veneno", damageMultiplier: 0.5, cooldown: 4, effect: "poison" },
+    { name: "Execução", description: "Golpe final", damageMultiplier: 3.0, cooldown: 6 },
+  ],
+};
+
 export function generateTowerMobs(floor: number): MobDef[] {
   const mobs: MobDef[] = [];
-  const elements: ElementId[] = ["fogo", "agua", "terra", "ar", "gelo", "trovao"];
+  const elements: ElementId[] = ["fogo", "agua", "terra", "ar", "gelo", "trovao", "arcano", "caos"];
   
-  // Determinar rank baseado no andar
-  const rank: MobRank = floor <= 3 ? "F" : floor <= 6 ? "E" : floor <= 9 ? "D" : "C";
+  // Determinar rank baseado no andar (até andar 20)
+  let rank: MobRank;
+  if (floor <= 3) rank = "F";
+  else if (floor <= 6) rank = "E";
+  else if (floor <= 10) rank = "D";
+  else if (floor <= 15) rank = "C";
+  else rank = "B"; // Andares 16-20
+  
   const level = floor * 2;
   
-  // Mobs normais
-  const normalCount = floor <= 5 ? 2 : 3;
+  // Mobs normais - quantidade aumenta com o andar
+  const normalCount = floor <= 5 ? 2 : floor <= 10 ? 3 : 4;
   for (let i = 0; i < normalCount; i++) {
-    const name = FOREST_MOB_NAMES.normal[Math.floor(Math.random() * FOREST_MOB_NAMES.normal.length)];
+    const name = TOWER_MOB_NAMES.normal[Math.floor(Math.random() * TOWER_MOB_NAMES.normal.length)];
     const element = elements[Math.floor(Math.random() * elements.length)];
     
     mobs.push(generateMob(
-      `Torre ${name}`,
+      `${name} do Andar ${floor}`,
       rank,
       "normal",
       level,
@@ -388,14 +434,34 @@ export function generateTowerMobs(floor: number): MobDef[] {
     ));
   }
   
-  // Mini-boss a cada 5 andares
-  if (floor % 5 === 0) {
+  // Elite em andares específicos (3, 7, 13, 17)
+  if (floor === 3 || floor === 7 || floor === 13 || floor === 17) {
+    const eliteRank: MobRank = floor <= 7 ? "D" : "C";
+    const name = TOWER_MOB_NAMES.elite[Math.floor(Math.random() * TOWER_MOB_NAMES.elite.length)];
     const element = elements[Math.floor(Math.random() * elements.length)];
+    const skillSet = ["guardian", "mage", "assassin"][Math.floor(Math.random() * 3)];
+    
     mobs.push(generateMob(
-      `Guardião do Andar ${floor}`,
-      floor === 10 ? "C" : "D",
+      `${name} [Elite]`,
+      eliteRank,
+      "elite",
+      level + 3,
+      element,
+      skillSet,
+      100
+    ));
+  }
+  
+  // Boss a cada 5 andares (5, 10, 15, 20)
+  if (floor % 5 === 0) {
+    const bossRank: MobRank = floor === 5 ? "D" : floor === 10 ? "C" : floor === 15 ? "B" : "A";
+    const element = elements[Math.floor(Math.random() * elements.length)];
+    
+    mobs.push(generateMob(
+      `${TOWER_MOB_NAMES.boss[(floor / 5) - 1]} [BOSS]`,
+      bossRank,
       "boss",
-      level + 5,
+      level + 10,
       element,
       "boss",
       100

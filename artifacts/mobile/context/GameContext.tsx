@@ -113,6 +113,7 @@ export interface GameState {
   maxZone: number; completedZones: number[];
   currentHp: number; currentMp: number; inCombat: boolean;
   currentEnemy: EnemyState | null; combatLog: string[];
+  currentTowerFloor: number | null; // Andar atual da torre (null se não estiver na torre)
   saveVersion?: number; // Versão do save para migrações
 }
 
@@ -147,6 +148,7 @@ const DEFAULT_STATE: GameState = {
   saveVersion: 2,
   inventory: [], inventorySize: 50, maxZone: 1, completedZones: [],
   currentHp: 100, currentMp: 50, inCombat: false, currentEnemy: null, combatLog: [],
+  currentTowerFloor: null,
   activeSetBonuses: new Map(),
 };
 
@@ -183,7 +185,7 @@ interface GameContextType {
     res: Record<ElementId, number>;
   };
   getAllRaceStats: (raceId: RaceId) => any;
-  startCombat: (mob: MobDef) => void;
+  startCombat: (mob: MobDef, towerFloor?: number) => void;
   endCombat: (victory: boolean) => void;
   playerAttack: () => { damage: number; isCrit: boolean };
   playerUseSkill: (skillIndex: number) => { success: boolean; damage?: number; message?: string };
@@ -456,9 +458,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   };
 
   // ============ SISTEMA DE COMBATE ============
-  const startCombat = (mob: MobDef) => {
+  const startCombat = (mob: MobDef, towerFloor?: number) => {
     setState(prev => ({
       ...prev, inCombat: true,
+      currentTowerFloor: towerFloor ?? null,
       currentEnemy: { mob, currentHp: mob.hp, maxHp: mob.hp, skillCooldowns: mob.skills.map(() => 0) },
       combatLog: [`⚔️ Combate iniciado contra ${mob.name}!`],
     }));
@@ -507,8 +510,23 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         
         const expGained = Math.floor(mob.level * 10 * (MOB_RANK_MULTIPLIERS[mob.rank]?.statMult || 1));
         
+        // Verificar se é combate de torre e subir andar se venceu
+        const isTowerCombat = prev.currentTowerFloor !== null;
+        const towerFloor = prev.currentTowerFloor;
+        let newTowerProgress = prev.towerProgress;
+        let newUnlockedFloors = [...prev.unlockedFloors];
+        
+        if (isTowerCombat && towerFloor && towerFloor > prev.towerProgress) {
+          newTowerProgress = towerFloor;
+          // Desbloquear próximo andar
+          if (!newUnlockedFloors.includes(towerFloor + 1)) {
+            newUnlockedFloors.push(towerFloor + 1);
+          }
+        }
+        
         const combatLogMessages: string[] = [
           `🎉 Vitória! +${expGained} XP`,
+          ...(isTowerCombat ? [`🏰 Torre Andar ${towerFloor} completado!`] : []),
           ...(drops.gold > 0 ? [`💰 +${drops.gold} ouro`] : []),
           ...(drops.diamonds > 0 ? [`💎 +${drops.diamonds} diamantes`] : []),
           ...(drops.mithril > 0 ? [`✨ +${drops.mithril} mithril`] : []),
@@ -519,6 +537,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           ...prev, 
           inCombat: false, 
           currentEnemy: null,
+          currentTowerFloor: null,
+          towerProgress: newTowerProgress,
+          unlockedFloors: newUnlockedFloors,
           currencies: newCurrencies, 
           exp: prev.exp + expGained,
           inventory: newInventory,
@@ -526,7 +547,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         };
       });
     } else {
-      setState(prev => ({ ...prev, inCombat: false, currentEnemy: null, combatLog: [...prev.combatLog, "💀 Derrota!"] }));
+      setState(prev => ({ ...prev, inCombat: false, currentEnemy: null, currentTowerFloor: null, combatLog: [...prev.combatLog, "💀 Derrota!"] }));
     }
   };
 
