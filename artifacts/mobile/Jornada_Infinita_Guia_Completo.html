@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jornada Infinita - Guia Completo</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+        .header h1 { font-size: 2.5em; margin-bottom: 10px; }
+        .content { padding: 40px; }
+        .section { margin-bottom: 40px; page-break-inside: avoid; }
+        .section h2 {
+            color: #667eea;
+            font-size: 1.8em;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #667eea;
+        }
+        .section h3 {
+            color: #764ba2;
+            font-size: 1.4em;
+            margin: 25px 0 15px 0;
+        }
+        .info-box {
+            background: #f0f4ff;
+            border-left: 5px solid #667eea;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 0.9em;
+        }
+        th {
+            background: #667eea;
+            color: white;
+            padding: 12px;
+            text-align: left;
+        }
+        td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #ddd;
+        }
+        tr:nth-child(even) { background: #f8f9fa; }
+        .tier-F { color: #9ca3af; font-weight: bold; }
+        .tier-E { color: #22c55e; font-weight: bold; }
+        .tier-D { color: #3b82f6; font-weight: bold; }
+        .tier-C { color: #a855f7; font-weight: bold; }
+        .tier-B { color: #f59e0b; font-weight: bold; }
+        .tier-A { color: #ef4444; font-weight: bold; }
+        .tier-S { color: #ec4899; font-weight: bold; }
+        .tier-SS { color: #22d3ee; font-weight: bold; }
+        .tier-SSS { color: #fbbf24; font-weight: bold; }
+        .page-break { page-break-before: always; }
+        .footer {
+            background: #1a1a2e;
+            color: white;
+            text-align: center;
+            padding: 20px;
+        }
+        @media print {
+            body { background: white; }
+            .container { box-shadow: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎮 Jornada Infinita</h1>
+            <p>Guia Completo do Jogo - RPG Idle Mobile</p>
+            <p>Versão 1.0 | 2026</p>
+        </div>
+        
+        <div class="content">
+            <!-- INTRODUÇÃO -->
+            <div class="section">
+                <h2>🎮 1. Introdução ao Jogo</h2>
+                <div class="info-box">
+                    <strong>Jornada Infinita</strong> é um RPG Idle Mobile onde jogadores exploram biomas, enfrentam monstros, coletam equipamentos e sobem a Torre dos Desafios.
+                </div>
+                <h3>📊 Estatísticas Principais</h3>
+                <table>
+                    <tr><th>Recurso</th><th>Quantidade</th><th>Descrição</th></tr>
+                    <tr><td>Raças</td><td>19</td><td>Cada uma com habilidades únicas</td></tr>
+                    <tr><td>Elementos</td><td>22</td><td>Com sistema de sinergia</td></tr>
+                    <tr><td>Slots de Equipamento</td><td>15</td><td>+91,000 variações</td></tr>
+                    <tr><td>Tiers de Itens</td><td>9</td><td>De F até SSS+</td></tr>
+                    <tr><td>Moedas</td><td>6</td><td>Diferentes valores e usos</td></tr>
+                    <tr><td>Biomas</td><td>11</td><td>Cada um com mobs únicos</td></tr>
+                    <tr><td>Andares da Torre</td><td>1000</td><td>Com quests e chaves</td></tr>
+                    <tr><td>Level Cap</td><td>300</td><td>Progressão completa</td></tr>
+                </table>
+            </div>
+
+            <!-- RAÇAS -->
+            <div class="section page-break">
+                <h2>⚔️ 2. Sistema de Raças (19 Raças)</h2>
+                <table>
+                    <tr><th>Raça</th><th>Elementos</th><th>HP</th><th>ATK.f</th><th>ATK.m</th><th>Armor</th><th>Dodge</th></tr>
+                    <tr><td>Anão das Montanhas ⚒️</td><td>Terra, Metal</td><td>40</td><td>6</td><td>0</td><td>8</td><td>0.5%</td></tr>
+                    <tr><td>Anão Rúnico 🔮</td><td>Terra, Rúnico</td><td>25</td><td>0</td><td>10</td><td>3</td><td>0.5%</td></tr>
+                    <tr><td>Elfo Negro 🌑</td><td>Escuridão, Veneno</td><td>15</td><td>4</td><td>8</td><td>2</td><td>3%</td></tr>
+                    <tr><td>Alto Elfo ☀️</td><td>Luz, Arcano</td><td>20</td><td>0</td><td>12</td><td>2</td><td>1%</td></tr>
+                    <tr><td>Orc 🪓</td><td>Fogo, Terra</td><td>55</td><td>10</td><td>0</td><td>6</td><td>0.5%</td></tr>
+                    <tr><td>Humano 👤</td><td>Fogo, Água</td><td>30</td><td>4</td><td>4</td><td>3</td><td>1.5%</td></tr>
+                    <tr><td>Meio-Elfo 🌿</td><td>Luz, Ar</td><td>25</td><td>8</td><td>8</td><td>0</td><td>2%</td></tr>
+                    <tr><td>Meio-Orc 🛡️</td><td>Fogo, Terra</td><td>45</td><td>12</td><td>0</td><td>5</td><td>0.5%</td></tr>
+                    <tr><td>Draconato 🐉</td><td>Fogo, Trovão</td><td>40</td><td>12</td><td>12</td><td>8</td><td>1%</td></tr>
+                    <tr><td>Fada 🧚</td><td>Ar, Luz</td><td>5</td><td>0</td><td>16</td><td>0</td><td>6%</td></tr>
+                    <tr><td>Halfling 🍀</td><td>Terra, Ar</td><td>10</td><td>5</td><td>0</td><td>0</td><td>3%</td></tr>
+                    <tr><td>Harpia 🦅</td><td>Ar, Trovão</td><td>15</td><td>14</td><td>8</td><td>0</td><td>4%</td></tr>
+                    <tr><td>Sereia 🧜</td><td>Água, Gelo</td><td>30</td><td>0</td><td>14</td><td>0</td><td>2%</td></tr>
+                    <tr><td>Vampiro 🧛</td><td>Sangue, Escuridão</td><td>25</td><td>14</td><td>0</td><td>0</td><td>3%</td></tr>
+                    <tr><td>Homem-Lobo 🐺</td><td>Terra, Escuridão</td><td>35</td><td>16</td><td>0</td><td>0</td><td>3%</td></tr>
+                    <tr><td>Homem-Tigre 🐯</td><td>Ar, Fogo</td><td>20</td><td>18</td><td>0</td><td>0</td><td>3%</td></tr>
+                    <tr><td>Homem-Gato 🐱</td><td>Ar, Escuridão</td><td>10</td><td>10</td><td>0</td><td>0</td><td>6%</td></tr>
+                    <tr><td>Homem-Lagarto 🦎</td><td>Terra, Água</td><td>50</td><td>10</td><td>0</td><td>14</td><td>1%</td></tr>
+                    <tr><td>Kitsune 🦊</td><td>Fogo, Arcano</td><td>15</td><td>0</td><td>16</td><td>0</td><td>2.5%</td></tr>
+                </table>
+            </div>
+
+            <!-- ELEMENTOS -->
+            <div class="section page-break">
+                <h2>🔥 3. Sistema de Elementos (22 Elementos)</h2>
+                <h3>Elementos Principais</h3>
+                <table>
+                    <tr><th>Elemento</th><th>Emoji</th><th>Cor</th><th>Descrição</th></tr>
+                    <tr><td>Fogo</td><td>🔥</td><td>#ff4444</td><td>Queima tudo em seu caminho</td></tr>
+                    <tr><td>Água</td><td>💧</td><td>#4444ff</td><td>Fluido e adaptável</td></tr>
+                    <tr><td>Terra</td><td>🌍</td><td>#8b4513</td><td>Sólido e resistente</td></tr>
+                    <tr><td>Ar</td><td>💨</td><td>#87ceeb</td><td>Veloz e imprevisível</td></tr>
+                    <tr><td>Luz</td><td>☀️</td><td>#ffd700</td><td>Ilumina e purifica</td></tr>
+                    <tr><td>Escuridão</td><td>🌑</td><td>#4b0082</td><td>Consome e corrompe</td></tr>
+                    <tr><td>Gelo</td><td>❄️</td><td>#e0ffff</td><td>Congela até o tempo</td></tr>
+                    <tr><td>Trovão</td><td>⚡</td><td>#ffff00</td><td>Rápido e devastador</td></tr>
+                    <tr><td>Natureza</td><td>🌿</td><td>#228b22</td><td>Cresce e adapta-se</td></tr>
+                    <tr><td>Metal</td><td>⚙️</td><td>#c0c0c0</td><td>Indestrutível e afiado</td></tr>
+                    <tr><td>Veneno</td><td>☠️</td><td>#32cd32</td><td>Mata silenciosamente</td></tr>
+                    <tr><td>Sangue</td><td>🩸</td><td>#8b0000</td><td>Vida e morte unidas</td></tr>
+                    <tr><td>Arcano</td><td>🔮</td><td>#9370db</td><td>Magia pura e bruta</td></tr>
+                    <tr><td>Caos</td><td>🌀</td><td>#9932cc</td><td>Imprevisível e destrutivo</td></tr>
+                    <tr><td>Vazio</td><td>🕳️</td><td>#000000</td><td>O nada absoluto</td></tr>
+                    <tr><td>Infernal</td><td>👹</td><td>#dc143c</td><td>Fogo demoníaco</td></tr>
+                    <tr><td>Divino</td><td>😇</td><td>#ffffff</td><td>Poder celestial</td></tr>
+                    <tr><td>Sombras</td><td>👤</td><td>#2f2f2f</td><td>A escuridão viva</td></tr>
+                    <tr><td>Tempestade</td><td>⛈️</td><td>#4682b4</td><td>Fúria dos céus</td></tr>
+                    <tr><td>Rúnico</td><td>ᚢ</td><td>#ff8c00</td><td>Magia ancestral</td></tr>
+                    <tr><td>Astral</td><td>🌌</td><td>#191970</td><td>Energia das estrelas</td></tr>
+                    <tr><td>Sagrado</td><td>✨</td><td>#ffd700</td><td>Poder sagrado divino</td></tr>
+                </table>
+                
+                <h3>Sub-Elementos (Combinações)</h3>
+                <table>
+                    <tr><th>Sub-Elemento</th><th>Combinação</th><th>Efeito Especial</th></tr>
+                    <tr><td>Magma 🌋</td><td>Fogo + Terra</td><td>Queimadura prolongada</td></tr>
+                    <tr><td>Plasma ⚡</td><td>Fogo + Ar</td><td>Penetração de armadura</td></tr>
+                    <tr><td>Solar ☀️</td><td>Fogo + Luz</td><td>Dano extra em mortos-vivos</td></tr>
+                    <tr><td>Gelada Eterna ❄️</td><td>Água + Gelo</td><td>Congelamento profundo</td></tr>
+                    <tr><td>Abismo 🌊</td><td>Água + Escuridão</td><td>Sugamento de vida</td></tr>
+                    <tr><td>Cristal 💎</td><td>Terra + Luz</td><td>Reflexão de dano</td></tr>
+                    <tr><td>Raio ⚡</td><td>Ar + Trovão</td><td>Atordoamento</td></tr>
+                    <tr><td>Sagrado ✨</td><td>Luz + Natureza</td><td>Cura ao causar dano</td></tr>
+                    <tr><td>Necrótico 💀</td><td>Escuridão + Sangue</td><td>Dreno de vida</td></tr>
+                    <tr><td>Inferno 🔥</td><td>Fogo + Infernal</td><td>Queimadura eterna</td></tr>
+                </table>
+            </div>
+
+            <!-- EQUIPAMENTOS -->
+            <div class="section page-break">
+                <h2>🛡️ 4. Sistema de Equipamentos (15 Slots)</h2>
+                <h3>Slots de Equipamento</h3>
+                <table>
+                    <tr><th>Slot</th><th>Ícone</th><th>Tipos Disponíveis</th><th>Stats Principais</th></tr>
+                    <tr><td>Cabeça (Head)</td><td>⛑️</td><td>Elmo, Capuz, Capacete, Coroa, Máscara, Bandana</td><td>Armor, Magic Res, HP</td></tr>
+                    <tr><td>Rosto (Face)</td><td>🎭</td><td>Máscara, Óculos, Piercing, Bandana, Venda, Monóculo, Tatuagem</td><td>Crit Rate, Dodge, Luck</td></tr>
+                    <tr><td>Colar (Necklace)</td><td>📿</td><td>Colar, Amuleto, Medalhão, Gargantilha, Rosário, Pingente</td><td>MP, Magic Res, HP Regen</td></tr>
+                    <tr><td>Capa (Cape)</td><td>🦸</td><td>Capa, Capa Real, Capa Sombria, Capa Élfica, Capa Guilda, Capa Elemental, Capa Demoníaca, Capa Angelical, Capa Dracônica, Capa Fantasma, Capa Manto</td><td>Armor, Dodge, HP</td></tr>
+                    <tr><td>Peitoral (Chest)</td><td>👕</td><td>Armadura, Robe, Casaco, Colete, Túnica, Couraça</td><td>Armor, HP, Def</td></tr>
+                    <tr><td>Bracelete (Bracelet)</td><td>🔗</td><td>Bracelete, Pulseira, Manopla, Luva (20+ variações)</td><td>ATK.f, ATK.m, Crit Rate</td></tr>
+                    <tr><td>Pernas (Legs)</td><td>👖</td><td>Calça, Saia, Bermuda, Grevas, Calças</td><td>Armor, HP, Dodge</td></tr>
+                    <tr><td>Pés (Feet)</td><td>👢</td><td>Botas, Sandálias, Sapatos, Grevas de Pés, Meias</td><td>Speed, Dodge, Armor</td></tr>
+                    <tr><td>Mão Primária (Main Hand)</td><td>⚔️</td><td>Espada, Espada Dupla, Adaga, Machado, Martelo, Maça, Foice, Arco, Varinha, Cajado, Lança</td><td>ATK.f ou ATK.m</td></tr>
+                    <tr><td>Mão Secundária (Off Hand)</td><td>🛡️</td><td>Escudo, Orb, Tocha, Grimório, Lume, Bengala, Lanterna, Totem, Livro, Adaga</td><td>Def, Armor, Magic Res</td></tr>
+                    <tr><td>Brincos (Earrings)</td><td>💎</td><td>Brinco, Pendente, Argola, Plug, Alargador, Corrente</td><td>Crit Rate, Luck, Magic Res</td></tr>
+                    <tr><td>Anel 1-4 (Ring1-4)</td><td>💍</td><td>Anel, Anel de Selo, Anel Sinete, Anel Claddagh, Anel Sol, Anel Lua, Anel Estrela, Anel Dragão, Anel Fênix, Anel Lobo, Anel Urso, Anel Tigre, Anel Serpente, Anel Coruja, Anel Elemental, Anel Rúnico, Anel Mágico, Anel Sagrado, Anel Profano</td><td>Stats variados</td></tr>
+                </table>
+                
+                <div class="info-box">
+                    <strong>Total de Variações:</strong> 91,000+ combinações possíveis considerando todos os tipos, tiers e qualidades!
+                </div>
+            </div>
+
+            <!-- TIERS -->
+            <div class="section page-break">
+                <h2>⭐ 5. Tiers e Qualidades</h2>
+                <h3>Tiers de Equipamentos (9 Tiers)</h3>
+                <table>
+                    <tr><th>Tier</th><th>Cor</th><th>Multiplicador</th><th>Chance de Drop</th><th>Descrição</th></tr>
+                    <tr><td class="tier-F">F (Ferro)</td><td>#9ca3af</td><td>0.5x</td><td>35%</td><td>Equipamento básico</td></tr>
+                    <tr><td class="tier-E">E (Estanho)</td><td>#22c55e</td><td>0.7x</td><td>25%</td><td>Equipamento comum</td></tr>
+                    <tr><td class="tier-D">D (Cobre)</td><td>#3b82f6</td><td>1.0x</td><td>18%</td><td>Equipamento decente</td></tr>
+                    <tr><td class="tier-C">C (Bronze)</td><td>#a855f7</td><td>1.4x</td><td>12%</td><td>Equipamento raro</td></tr>
+                    <tr><td class="tier-B">B (Prata)</td><td>#f59e0b</td><td>2.0x</td><td>6%</td><td>Equipamento épico</td></tr>
+                    <tr><td class="tier-A">A (Ouro)</td><td>#ef4444</td><td>3.0x</td><td>3%</td><td>Equipamento lendário</td></tr>
+                    <tr><td class="tier-S">S (Platina)</td><td>#ec4899</td><td>5.0x</td><td>1%</td><td>Equipamento mítico</td></tr>
+                    <tr><td class="tier-SS">SS (Mithril)</td><td>#22d3ee</td><td>8.0x</td><td>0.4%</td><td>Equipamento divino</td></tr>
+                    <tr><td class="tier-SSS">SSS (Adamantium)</td><td>#fbbf24</td><td>15.0x</td><td>0.1%</td><td>Equipamento supremo</td></tr>
+                </table>
+                
+                <h3>Qualidades (5 Qualidades)</h3>
+                <table>
+                    <tr><th>Qualidade</th><th>Cor</th><th>Multiplicador</th><th>Chance</th></tr>
+                    <tr><td>Normal</td><td>#9ca3af</td><td>1.0x</td><td>40%</td></tr>
+                    <tr><td>Bom</td><td>#22c55e</td><td>1.15x</td><td>25%</td></tr>
+                    <tr><td>Excepcional</td><td>#3b82f6</td><td>1.35x</td><td>15%</td></tr>
+                    <tr><td>Excelente</td><td>#a855f7</td><td>1.6x</td><td>10%</td></tr>
+                    <tr><td>Obra-prima</td><td>#fbbf24</td><td>2.0x</td><td>5%</td></tr>
+                </table>
+            </div>
+
+            <!-- MOBS -->
+            <div class="section page-break">
+                <h2>👹 6. Sistema de Mobs e Ranks</h2>
+                <h3>Ranks de Mobs (10 Ranks)</h3>
+                <table>
+                    <tr><th>Rank</th><th>Cor</th><th>Mult. Stats</th><th>Mult. Ouro</th><th>Diamantes</th><th>Drop Rate</th></tr>
+                    <tr><td class="tier-F">F</td><td>#9ca3af</td><td>0.5x</td><td>1x</td><td>0</td><td>45%</td></tr>
+                    <tr><td class="tier-E">E</td><td>#22c55e</td><td>0.7x</td><td>1.5x</td><td>0</td><td>40%</td></tr>
+                    <tr><td class="tier-D">D</td><td>#3b82f6</td><td>1.0x</td><td>2.5x</td><td>0</td><td>30%</td></tr>
+                    <tr><td class="tier-C">C</td><td>#a855f7</td><td>1.4x</td><td>4x</td><td>0</td><td>25%</td></tr>
+                    <tr><td class="tier-B">B</td><td>#f59e0b</td><td>2.0x</td><td>7x</td><td>0</td><td>20%</td></tr>
+                    <tr><td class="tier-A">A</td><td>#ef4444</td><td>3.0x</td><td>12x</td><td>1-5</td><td>10%</td></tr>
+                    <tr><td class="tier-S">S</td><td>#ec4899</td><td>5.0x</td><td>25x</td><td>10-50</td><td>5%</td></tr>
+                    <tr><td class="tier-SS">SS</td><td>#22d3ee</td><td>8.0x</td><td>60x</td><td>100-500</td><td>1%</td></tr>
+                    <tr><td class="tier-SSS">SSS</td><td>#fbbf24</td><td>15.0x</td><td>200x</td><td>1000-5000</td><td>0.5%</td></tr>
+                    <tr><td class="tier-SSS-plus">SSS+</td><td>#ffffff</td><td>30.0x</td><td>1000x</td><td>10000-100000</td><td>0.01%</td></tr>
+                </table>
+                
+                <h3>Tipos de Mobs</h3>
+                <ul>
+                    <li><strong>Normal:</strong> Mobs comuns, stats base</li>
+                    <li><strong>Elite:</strong> 1.5x HP, 1.3x ATK, drops melhores</li>
+                    <li><strong>Boss:</strong> 3x HP, 2x ATK, drops especiais</li>
+                    <li><strong>Único:</strong> 5x HP, 3x ATK, drops lendários</li>
+                </ul>
+            </div>
+
+            <!-- DROPS -->
+            <div class="section page-break">
+                <h2>📦 7. Sistema de Drops</h2>
+                <h3>Tiers de Drop por Rank do Mob</h3>
+                <table>
+                    <tr><th>Mob Rank</th><th>Drop Normal</th><th>Drop Boss</th></tr>
+                    <tr><td>F</td><td>F, E</td><td>F, E, D</td></tr>
+                    <tr><td>E</td><td>E, D</td><td>E, D, C</td></tr>
+                    <tr><td>D</td><td>D, C</td><td>D, C, B</td></tr>
+                    <tr><td>C</td><td>C, B</td><td>C, B, A</td></tr>
+                    <tr><td>B</td><td>B, A</td><td>B, A, S</td></tr>
+                    <tr><td>A</td><td>E, D, C, B, A, S</td><td>D, C, B, A, S, SS</td></tr>
+                    <tr><td>S</td><td>E, D, C, B, A, S, SS</td><td>E, D, C, B, A, S, SS</td></tr>
+                    <tr><td>SS</td><td>C, B, A, S, SS, SSS</td><td>C, B, A, S, SS, SSS</td></tr>
+                    <tr><td>SSS</td><td>B, A, S, SS, SSS, SSS+</td><td>B, A, S, SS, SSS, SSS+</td></tr>
+                </table>
+                
+                <h3>Chance Base de Drop</h3>
+                <ul>
+                    <li>Mobs Normais: 45% de chance de dropar item</li>
+                    <li>Bosses: 70% de chance de dropar item</li>
+                    <li>Bosses têm +20% chance de tiers superiores</li>
+                </ul>
+            </div>
+
+            <!-- BIOMAS -->
+            <div class="section page-break">
+                <h2>🌍 8. Biomas e Dungeons (11 Biomas)</h2>
+                <h3>Lista de Biomas</h3>
+                <table>
+                    <tr><th>Bioma</th><th>Nível</th><th>Elementos</th><th>Mobs Típicos</th></tr>
+                    <tr><td>🌲 Floresta Encantada</td><td>1-100</td><td>Natureza, Terra</td><td>Lobos, Aranhas, Goblins</td></tr>
+                    <tr><td>🏔️ Montanhas Gélidas</td><td>20-120</td><td>Gelo, Terra</td><td>Yetis, Elementais de Gelo</td></tr>
+                    <tr><td>🏜️ Deserto de Areia Negra</td><td>40-140</td><td>Fogo, Terra</td><td>Escorpiões, Wyrms</td></tr>
+                    <tr><td>🦠 Pântano das Almas</td><td>60-160</td><td>Veneno, Escuridão</td><td>Slimes, Mortos-vivos</td></tr>
+                    <tr><td>🌋 Vulcão Adormecido</td><td>80-180</td><td>Fogo, Infernal</td><td>Demônios, Salamandras</td></tr>
+                    <tr><td>❄️ Tundra Eterna</td><td>100-200</td><td>Gelo, Vento</td><td>Mamutes, Dracos de Gelo</td></tr>
+                    <tr><td>🌿 Selva Profunda</td><td>120-220</td><td>Natureza, Veneno</td><td>Tigres, Serpentes</td></tr>
+                    <tr><td>⚓ Costa dos Naufrágios</td><td>140-240</td><td>Água, Trovão</td><td>Sereias, Krakens</td></tr>
+                    <tr><td>☁️ Reino Celestial</td><td>160-260</td><td>Luz, Ar</td><td>Anjos, Quimeras</td></tr>
+                    <tr><td>🔥 Abismo Infernal</td><td>180-280</td><td>Fogo, Caos</td><td>Demônios Maiores</td></tr>
+                    <tr><td>🌌 Vazio Cósmico</td><td>200-300</td><td>Vazio, Arcano</td><td>Entidades do Vazio</td></tr>
+                </table>
+                
+                <h3>Variantes de Dungeon</h3>
+                <table>
+                    <tr><th>Variante</th><th>Emoji</th><th>Efeito</th></tr>
+                    <tr><td>Normal</td><td>📍</td><td>Sem modificações</td></tr>
+                    <tr><td>Corrompida</td><td>🩸</td><td>+50% HP, +30% Dano, +40% Drop</td></tr>
+                    <tr><td>Abençoada</td><td>✨</td><td>-10% HP, -20% Dano, +20% Drop</td></tr>
+                    <tr><td>Amaldiçoada</td><td>💀</td><td>+30% HP, +40% Dano, +50% Drop</td></tr>
+                    <tr><td>Antiga</td><td>🏛️</td><td>+40% HP, +20% Dano, +60% Drop</td></tr>
+                    <tr><td>Cristalina</td><td>💎</td><td>+20% HP, +70% Drop</td></tr>
+                    <tr><td>Etérea</td><td>👻</td><td>-20% HP, +60% Dano, +50% Drop</td></tr>
+                </table>
+            </div>
+
+            <!-- TORRE -->
+            <div class="section page-break">
+                <h2>🏰 9. Torre dos Desafios (1000 Andares)</h2>
+                <h3>Sistema de Progressão</h3>
+                <ul>
+                    <li><strong>Andares 1-9:</strong> Precisa da chave do andar anterior para avançar</li>
+                    <li><strong>Andares 10+:</strong> Precisa completar a quest do andar para avançar</li>
+                    <li><strong>Chaves:</strong> Dropam de mobs (30% de chance)</li>
+                    <li><strong>Quests:</strong> Derrotar X mobs no andar</li>
+                </ul>
+                
+                <h3>Escalação de Mobs na Torre</h3>
+                <table>
+                    <tr><th>Andares</th><th>Rank</th><th>Quantidade de Mobs</th></tr>
+                    <tr><td>1-3</td><td>F</td><td>1-3</td></tr>
+                    <tr><td>4-6</td><td>E</td><td>3-6</td></tr>
+                    <tr><td>7-10</td><td>D</td><td>6-10</td></tr>
+                    <tr><td>11-15</td><td>C</td><td>10-15</td></tr>
+                    <tr><td>16-20</td><td>B</td><td>15-20</td></tr>
+                </table>
+                
+                <h3>Recompensas da Torre</h3>
+                <ul>
+                    <li>XP aumentado por andar</li>
+                    <li>Drops de tiers superiores</li>
+                    <li>Diamantes e Mithril em andares altos</li>
+                    <li>Equipamentos exclusivos (andares 50, 100, 200, etc.)</li>
+                </ul>
+            </div>
+
+            <!-- COMBATE -->
+            <div class="section page-break">
+                <h2>⚔️ 10. Sistema de Combate</h2>
+                <h3>Mecânicas de Combate</h3>
+                <ul>
+                    <li><strong>Encontros Múltiplos:</strong> 1-6 mobs em biomas, 1-20 na Torre</li>
+                    <li><strong>Fila de Combate:</strong> Mobs são enfrentados sequencialmente</li>
+                    <li><strong>Regeneração:</strong> HP/MP regeneram durante combate</li>
+                    <li><strong>Skills:</strong> 4 habilidades por raça com cooldowns</li>
+                    <li><strong>Críticos:</strong> Base 5% + bônus de equipamentos</li>
+                    <li><strong>Esquiva:</strong> Chance de evitar dano completamente</li>
+                </ul>
+                
+                <h3>Fórmula de Dano</h3>
+                <div class="info-box">
+                    <strong>Dano Físico:</strong> ATK.f × (1 + Crit Mult se crítico) - Defesa do Alvo<br>
+                    <strong>Dano Mágico:</strong> ATK.m × (1 + Crit Mult se crítico) - Resistência Mágica do Alvo<br>
+                    <strong>Dano Elemental:</strong> Aplicar resistências elementais do alvo
+                </div>
+            </div>
+
+            <!-- MOEDAS -->
+            <div class="section page-break">
+                <h2>💰 11. Sistema de Moedas (6 Moedas)</h2>
+                <table>
+                    <tr><th>Moeda</th><th>Emoji</th><th>Valor</th><th>Obtida De</th><th>Uso Principal</th></tr>
+                    <tr><td>Cobre</td><td>🥉</td><td>1</td><td>Mobs F-E, Venda de itens F-D</td><td>Itens básicos, reparos</td></tr>
+                    <tr><td>Prata</td><td>🥈</td><td>100 cobre</td><td>Mobs D-C, Venda de itens C-B</td><td>Equipamentos médios</td></tr>
+                    <tr><td>Ouro</td><td>🥇</td><td>100 prata</td><td>Mobs B-A, Venda de itens A-S</td><td>Equipamentos avançados</td></tr>
+                    <tr><td>Diamante</td><td>💎</td><td>1000 ouro</td><td>Mobs S+, Bosses, Torre</td><td>Itens premium, resets</td></tr>
+                    <tr><td>Mithril</td><td>✨</td><td>100 diamantes</td><td>Mobs SS+, Andares altos da Torre</td><td>Itens épicos, encantamentos</td></tr>
+                    <tr><td>Token de Guilda</td><td>🏰</td><td>-</td><td>Eventos de guilda</td><td>Itens exclusivos de guilda</td></tr>
+                </table>
+            </div>
+
+            <!-- PROGRESSÃO -->
+            <div class="section page-break">
+                <h2>📈 12. Progressão e Level Cap</h2>
+                <h3>Sistema de XP</h3>
+                <ul>
+                    <li><strong>Level Cap:</strong> 300</li>
+                    <li><strong>XP por Mob:</strong> Nível do Mob × 10 × Multiplicador de Rank</li>
+                    <li><strong>XP por Dungeon:</strong> Base + Bônus por variantes</li>
+                    <li><strong>XP de Exploração:</strong> Ganha mesmo sem encontrar mobs</li>
+                </ul>
+                
+                <h3>Fórmula de XP Necessário</h3>
+                <div class="info-box">
+                    XP para próximo nível = Nível Atual × 100 × (1 + Nível Atual / 50)
+                </div>
+                
+                <h3>Recompensas por Nível</h3>
+                <table>
+                    <tr><th>Nível</th><th>Recompensa</th></tr>
+                    <tr><td>10</td><td>Nova habilidade desbloqueada</td></tr>
+                    <tr><td>25</td><td>+1 slot de inventário</td></tr>
+                    <tr><td>50</td><td>Acesso a novo bioma</td></tr>
+                    <tr><td>100</td><td>Título especial + cosmeticos</td></tr>
+                    <tr><td>150</td><td>Montaria desbloqueada</td></tr>
+                    <tr><td>200</td><td>Acesso ao Vazio Cósmico</td></tr>
+                    <tr><td>300</td><td>Prestígio disponível</td></tr>
+                </table>
+            </div>
+
+            <!-- EDIFÍCIOS -->
+            <div class="section page-break">
+                <h2>🏙️ 13. Edifícios da Cidade</h2>
+                <table>
+                    <tr><th>Edifício</th><th>Emoji</th><th>Função</th></tr>
+                    <tr><td>Loja</td><td>🛒</td><td>Compra e venda de itens básicos</td></tr>
+                    <tr><td>Ferreiro</td><td>⚒️</td><td>Reparo e upgrade de equipamentos</td></tr>
+                    <tr><td>Encantador</td><td>✨</td><td>Adicionar encantamentos aos itens</td></tr>
+                    <tr><td>Artesão</td><td>🔨</td><td>Criação de itens personalizados</td></tr>
+                    <tr><td>Hospital</td><td>🏥</td><td>Regeneração +4% HP/MP por minuto</td></tr>
+                    <tr><td>Taverna</td><td>🍺</td><td>Missões diárias e sociais</td></tr>
+                    <tr><td>Templo</td><td>⛪</td><td>Bênçãos e remoção de maldições</td></tr>
+                    <tr><td>Guilda</td><td>🏰</td><td>Gerenciamento de guilda</td></tr>
+                </table>
+            </div>
+
+            <!-- MELHORIAS -->
+            <div class="section page-break">
+                <h2>🔮 14. Melhorias Futuras Planejadas</h2>
+                
+                <h3>Sistemas em Desenvolvimento</h3>
+                <ul>
+                    <li><strong>Sistema de Guildas:</strong> Criar ou entrar em guildas, participar de guerras e eventos</li>
+                    <li><strong>PvP:</strong> Arena de batalhas entre jogadores com ranking sazonal</li>
+                    <li><strong>Comércio:</strong> Mercado de jogadores para venda de itens</li>
+                    <li><strong>Crafting:</strong> Sistema completo de criação de itens</li>
+                    <li><strong>Montarias:</strong> Sistema de montarias com bônus de velocidade</li>
+                    <li><strong>Pets:</strong> Companheiros que auxiliam em combate</li>
+                    <li><strong>Conquistas:</strong> Sistema de achievements com recompensas</li>
+                    <li><strong>Eventos Sazonais:</strong> Eventos especiais com itens limitados</li>
+                    <li><strong>Raids:</strong> Dungeons em grupo com recompensas exclusivas</li>
+                    <li><strong>Prestígio:</strong> Resetar progresso por bônus permanentes</li>
+                </ul>
+                
+                <h3>Novos Biomas Planejados</h3>
+                <ul>
+                    <li>🌊 Reino Subaquático (Nível 250-350)</li>
+                    <li>🌙 Lua Crescente (Nível 300-400)</li>
+                    <li>⚡ Dimensão Elétrica (Nível 350-450)</li>
+                    <li>🌈 Nexus Prismático (Nível 400-500)</li>
+                </ul>
+                
+                <h3>Novos Sistemas de Equipamento</h3>
+                <ul>
+                    <li>Sistema de Runas para customização de itens</li>
+                    <li>Sistema de Transmog (aparência)</li>
+                    <li>Sistema de Set Bonus aprimorado</li>
+                    <li>Armas Lendárias com quests únicas</li>
+                </ul>
+                
+                <div class="info-box">
+                    <strong>Nota:</strong> Este guia será atualizado conforme novos sistemas forem implementados no jogo!
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>🎮 Jornada Infinita - Guia Completo v1.0</p>
+            <p>Desenvolvido com ❤️ em 2026</p>
+            <p>Para converter este arquivo em PDF, use a função "Imprimir" do navegador e selecione "Salvar como PDF"</p>
+        </div>
+    </div>
+</body>
+</html>
