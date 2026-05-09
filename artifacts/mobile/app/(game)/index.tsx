@@ -132,9 +132,14 @@ export default function Home() {
         {/* Character Card - Minimal */}
         <View style={styles.characterCard}>
           <View style={styles.avatarSection}>
-            <View style={[styles.avatarCircle, { borderColor: race?.color || "#7c3aed" }]}>
+            {/* Avatar clicável - abre menu de atributos */}
+            <TouchableOpacity 
+              style={[styles.avatarCircle, { borderColor: race?.color || "#7c3aed" }]}
+              onPress={() => setStatsVisible(true)}
+              activeOpacity={0.8}
+            >
               <Text style={styles.avatarEmoji}>{race?.emoji}</Text>
-            </View>
+            </TouchableOpacity>
             <View style={styles.characterInfo}>
               <Text style={styles.characterName}>{state.playerName}</Text>
               <Text style={[styles.characterRace, { color: race?.color || "#7c3aed" }]}>
@@ -144,13 +149,6 @@ export default function Home() {
                 <Text style={styles.levelText}>NÍVEL {state.level}</Text>
               </View>
             </View>
-            {/* Stats Button */}
-            <TouchableOpacity 
-              style={styles.statsButton}
-              onPress={() => setStatsVisible(true)}
-            >
-              <Text style={styles.statsButtonIcon}>📊</Text>
-            </TouchableOpacity>
           </View>
 
           {/* XP Bar */}
@@ -224,28 +222,22 @@ export default function Home() {
         {/* Quick Actions */}
         <View style={styles.actionsRow}>
           <TouchableOpacity 
-            style={[styles.actionButtonSmall, { borderColor: "#3b82f640" }]}
+            style={[styles.actionButton, { borderColor: "#3b82f640" }]}
             onPress={() => router.push("/(game)/inventory")}
             activeOpacity={0.85}
           >
-            <Text style={styles.actionButtonIconSmall}>🎒</Text>
-            <Text style={[styles.actionButtonTitleSmall, { color: "#3b82f6" }]}>MOCHILA</Text>
+            <Text style={styles.actionButtonIcon}>🎒</Text>
+            <Text style={[styles.actionButtonTitle, { color: "#3b82f6" }]}>MOCHILA</Text>
+            <Text style={styles.actionButtonSubtitle}>Equipamentos e Itens</Text>
           </TouchableOpacity>
           <TouchableOpacity 
-            style={[styles.actionButtonSmall, { borderColor: "#f59e0b40" }]}
-            onPress={() => router.push("/(game)/equipment")}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.actionButtonIconSmall}>⚔️</Text>
-            <Text style={[styles.actionButtonTitleSmall, { color: "#f59e0b" }]}>EQUIPAR</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.actionButtonSmall, { borderColor: "#ec489940" }]}
+            style={[styles.actionButton, { borderColor: "#ec489940" }]}
             onPress={() => router.push("/(game)/skills")}
             activeOpacity={0.85}
           >
-            <Text style={styles.actionButtonIconSmall}>✨</Text>
-            <Text style={[styles.actionButtonTitleSmall, { color: "#ec4899" }]}>SKILLS</Text>
+            <Text style={styles.actionButtonIcon}>✨</Text>
+            <Text style={[styles.actionButtonTitle, { color: "#ec4899" }]}>SKILLS</Text>
+            <Text style={styles.actionButtonSubtitle}>Habilidades da Raça</Text>
           </TouchableOpacity>
         </View>
 
@@ -288,6 +280,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderWidth: 2,
     marginRight: 16,
+    shadowColor: "#7c3aed",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
   },
   avatarEmoji: {
     fontSize: 36,
@@ -321,19 +318,7 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     letterSpacing: 1,
   },
-  statsButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
-    backgroundColor: "rgba(124, 58, 237, 0.15)",
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(124, 58, 237, 0.25)",
-  },
-  statsButtonIcon: {
-    fontSize: 20,
-  },
+
   xpContainer: {
     marginTop: 16,
   },
@@ -488,26 +473,31 @@ const styles = StyleSheet.create({
   },
   actionsRow: {
     flexDirection: "row",
-    gap: 8,
+    gap: 12,
     marginHorizontal: 20,
     marginBottom: 20,
   },
-  actionButtonSmall: {
+  actionButton: {
     flex: 1,
     backgroundColor: "rgba(18, 18, 26, 0.6)",
     borderRadius: 16,
-    padding: 16,
+    padding: 20,
     alignItems: "center",
     borderWidth: 1,
   },
-  actionButtonIconSmall: {
-    fontSize: 24,
+  actionButtonIcon: {
+    fontSize: 32,
     marginBottom: 8,
   },
-  actionButtonTitleSmall: {
+  actionButtonTitle: {
+    fontSize: 14,
+    fontWeight: "800",
+    letterSpacing: 1,
+    marginBottom: 4,
+  },
+  actionButtonSubtitle: {
     fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 0.5,
+    color: "#64748b",
   },
   loreCard: {
     margin: 20,

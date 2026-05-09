@@ -285,13 +285,6 @@ export default function GameLayout() {
         }}
       >
         <Tabs.Screen
-          name="index"
-          options={{
-            title: "INÍCIO",
-            tabBarIcon: ({ focused }) => <TabIcon emoji="🏠" focused={focused} />,
-          }}
-        />
-        <Tabs.Screen
           name="city"
           options={{
             title: "CIDADE",
@@ -319,31 +312,12 @@ export default function GameLayout() {
             tabBarIcon: ({ focused }) => <TabIcon emoji="✨" focused={focused} />,
           }}
         />
-        <Tabs.Screen
-          name="combat"
-          options={{
-            href: null,
-          }}
-        />
-        <Tabs.Screen
-          name="equipment"
-          options={{
-            title: "EQUIP",
-            tabBarIcon: ({ focused }) => <TabIcon emoji="⚔️" focused={focused} />,
-          }}
-        />
-        <Tabs.Screen
-          name="biome"
-          options={{
-            href: null,
-          }}
-        />
-        <Tabs.Screen
-          name="loot"
-          options={{
-            href: null,
-          }}
-        />
+        {/* Telas ocultas da navegação */}
+        <Tabs.Screen name="index" options={{ href: null }} />
+        <Tabs.Screen name="combat" options={{ href: null }} />
+        <Tabs.Screen name="equipment" options={{ href: null }} />
+        <Tabs.Screen name="biome" options={{ href: null }} />
+        <Tabs.Screen name="loot" options={{ href: null }} />
       </Tabs>
     </View>
   );
