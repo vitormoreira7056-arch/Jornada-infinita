@@ -213,11 +213,23 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         const saved = await AsyncStorage.getItem(userSaveKey);
         if (saved) {
           const parsed = JSON.parse(saved);
+          // Reconstruir Map de activeSetBonuses se necessário
+          let activeSetBonuses = new Map();
+          if (parsed.activeSetBonuses) {
+            if (parsed.activeSetBonuses instanceof Map) {
+              activeSetBonuses = parsed.activeSetBonuses;
+            } else if (typeof parsed.activeSetBonuses === 'object') {
+              // Converter objeto de volta para Map (após JSON.parse)
+              activeSetBonuses = new Map(Object.entries(parsed.activeSetBonuses));
+            }
+          }
+          
           setState({
             ...DEFAULT_STATE, ...parsed,
             currencies: { ...DEFAULT_CURRENCIES, ...(parsed.currencies || {}) },
             equipment: { ...DEFAULT_STATE.equipment, ...(parsed.equipment || {}) },
             baseRes: { ...DEFAULT_RES, ...(parsed.baseRes || {}) },
+            activeSetBonuses,
             username: currentUser, isLoggedIn: true,
           });
         } else {
@@ -399,8 +411,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     });
 
     // Aplicar bônus de sets
-    // @ts-ignore
-    for (const [setName, bonuses] of state.activeSetBonuses) {
+    const activeSetBonuses = state.activeSetBonuses || new Map();
+    for (const [setName, bonuses] of activeSetBonuses) {
       for (const bonus of bonuses) {
         if (bonus.stats) {
           hp += bonus.stats.hp || 0;
@@ -740,7 +752,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   const getItemColor = (item: Item): string => getTierColor(item.tier);
   const getItemTierName = (item: Item): string => getTierName(item.tier);
-  const getEquippedSetBonuses = (): Map<string, any[]> => state.activeSetBonuses;
+  const getEquippedSetBonuses = (): Map<string, any[]> => state.activeSetBonuses || new Map();
   
   // Gerar loot de mob comum
   const generateLootFromMob = (mob: MobDef): Item[] => {

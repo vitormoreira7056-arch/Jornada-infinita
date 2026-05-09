@@ -172,15 +172,12 @@ export default function EquipmentScreen() {
       )}
       
       {/* Bônus de Sets Ativos */}
-      {/* @ts-ignore */}
-      {setBonuses.size > 0 && (
+      {setBonuses && setBonuses instanceof Map && setBonuses.size > 0 && (
         <View style={styles.activeSetsContainer}>
           <Text style={styles.sectionTitle}>⭐ Bônus de Sets Ativos</Text>
-          {/* @ts-ignore */}
           {Array.from(setBonuses.entries()).map(([setName, bonuses]) => (
             <View key={setName} style={styles.activeSetBox}>
               <Text style={styles.activeSetName}>{setName}</Text>
-              {/* @ts-ignore */}
               {(bonuses as any[]).map((bonus, idx) => (
                 <Text key={idx} style={styles.activeBonus}>✨ {bonus.description}</Text>
               ))}

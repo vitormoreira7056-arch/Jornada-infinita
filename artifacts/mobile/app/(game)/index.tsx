@@ -2,7 +2,7 @@ import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Modal, Animated }
 import { useGame } from "@/context/GameContext";
 import { getRaceById } from "@/constants/races";
 import { router } from "expo-router";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 
 // Currency display component
 function CurrencyBadge({ icon, value, color }: { icon: string; value: number; color: string }) {
@@ -25,7 +25,7 @@ function CurrencyBadge({ icon, value, color }: { icon: string; value: number; co
 // Stats Modal
 function StatsModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const { state, getTotalStats } = useGame();
-  const stats = getTotalStats();
+  const stats = useMemo(() => getTotalStats(), [state.equipment, state.level, state.raceId]);
   const race = state.raceId ? getRaceById(state.raceId) : null;
 
   const activeResistances = Object.entries(stats.res)
@@ -124,8 +124,7 @@ export default function Home() {
 
   const expNeeded = state.level * 100;
   const expProgress = (state.exp / expNeeded) * 100;
-  // @ts-ignore
-  const stats = getTotalStats();
+  const stats = useMemo(() => getTotalStats(), [state.equipment, state.level, state.raceId]);
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>

@@ -81,7 +81,8 @@ export default function CombatScreen() {
       }
     }, 1000);
     return () => clearInterval(interval);
-  }, [state.inCombat, enemy, regenHpMp]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.inCombat, enemy]);
   
   // Verificar fim de combate (vitória) - separado para evitar loops
   useEffect(() => {

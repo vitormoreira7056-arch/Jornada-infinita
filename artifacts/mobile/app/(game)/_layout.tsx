@@ -3,7 +3,7 @@ import { Text, View, TouchableOpacity, Alert, ScrollView, Modal, StyleSheet } fr
 import { useGame } from "@/context/GameContext";
 import { getRaceById } from "@/constants/races";
 import { router } from "expo-router";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 
 function TabIcon({ emoji, focused }: { emoji: string; focused: boolean }) {
   return (
@@ -110,7 +110,7 @@ function MenuModal({ visible, onClose }: { visible: boolean; onClose: () => void
 
 function Header() {
   const { state } = useGame();
-  const race = state.raceId ? getRaceById(state.raceId) : null;
+  const race = useMemo(() => state.raceId ? getRaceById(state.raceId) : null, [state.raceId]);
   const [menuVisible, setMenuVisible] = useState(false);
 
   return (
