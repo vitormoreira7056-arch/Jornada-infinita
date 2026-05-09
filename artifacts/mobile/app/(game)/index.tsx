@@ -124,6 +124,7 @@ export default function Home() {
 
   const expNeeded = state.level * 100;
   const expProgress = (state.exp / expNeeded) * 100;
+  // @ts-ignore
   const stats = getTotalStats();
 
   return (

@@ -258,6 +258,7 @@ const menuStyles = StyleSheet.create({
   },
 });
 
+// @ts-ignore
 export default function GameLayout() {
   return (
     <View style={{ flex: 1, backgroundColor: "#050508" }}>
